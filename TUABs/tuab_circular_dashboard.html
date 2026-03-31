@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<!--
+  WeaveForward TUAB — Circular Economy Impact Dashboard  (tuab_circular.html)
+  ════════════════════════════════════════════════════════════════════════════
+  PURPOSE
+  ───────
+  Standalone reference for the Circular Economy page content.
+  Shows only what goes inside {% block content %} of base.html.
+
+  When converting to a Django template:
+    • {% extends 'base.html' %}
+    • {% block content %} ... {% endblock %}
+    • Set context: page_title = 'Circular Economy Impact Dashboard', sidebar_variant = 'tuab'
+    • Date filter: wrap in <form method="get"> and read request.GET.date_from / date_to
+    • Replace CIRC JS object with {{ circular_json|safe }} from view
+    • Export button → link to a CSV/PDF export view /tuab/circular/export/
+    • Charts stay client-side using Chart.js; data source swapped to Django JSON
+
+  Context variables expected:
+    page_title       → 'Circular Economy Impact Dashboard'
+    sidebar_variant  → 'tuab'
+    circular_json    → JSON with keys: biodeg, cities, cityData, brands, decisions
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Circular Economy — Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --gold:      #e8a020;
+      --gold-dark: #c8881a;
+      --tuab:      #c0410e;
+      --bg:        #f5f2eb;
+      --text:      #222222;
+      --muted:     #888888;
+      --green:     #4a7c59;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; }
+
+    /* ── Form inputs ── */
+    .form-input { width: 100%; border: 1.5px solid #d5d5d5; border-radius: 8px; padding: 11px 16px; font-family: 'Poppins', sans-serif; font-size: 14px; color: var(--text); outline: none; transition: border-color .2s; }
+    .form-input:focus { border-color: var(--gold); }
+
+    /* ── Date filter row ── */
+    .filter-row { display: flex; gap: 16px; align-items: center; margin-bottom: 12px; }
+    .filter-row .form-input { flex: 1; }
+    .btn-apply { flex: 1; background: var(--gold); color: #fff; border: none; border-radius: 10px; padding: 13px 0; font-size: 14px; font-family: 'Poppins', sans-serif; font-weight: 600; cursor: pointer; transition: background .2s; }
+    .btn-apply:hover { background: var(--gold-dark); }
+
+    /* ── Chart cards grid ── */
+    .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .chart-card { background: #fff; border-radius: 16px; padding: 20px 22px; min-width: 0; overflow: hidden; }
+    .chart-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+    .chart-title { font-family: 'Poppins', sans-serif; font-size: 13px; font-weight: 600; color: #1a1a1a; }
+    .chart-sub   { font-family: 'Poppins', sans-serif; font-size: 11px; color: #aaa; margin-top: 2px; }
+    .chart-badge { border-radius: 20px; padding: 3px 10px; font-size: 10px; font-family: 'Poppins', sans-serif; font-weight: 600; white-space: nowrap; }
+    .chart-legend { display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+    .legend-item { display: flex; align-items: center; gap: 5px; font-family: 'Poppins', sans-serif; font-size: 11px; color: #888; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+    /* ══════════════════════
+       MOBILE  (≤ 768px)
+    ══════════════════════ */
+    @media (max-width: 768px) {
+      .filter-row { flex-direction: column; }
+      .charts-grid { grid-template-columns: 1fr; }
+      .chart-card { overflow: hidden; }
+      canvas { max-width: 100% !important; }
+    }
+  </style>
+</head>
+<body>
+
+<!--
+  ═══════════════════════════════════════════════════════════════
+  CONTENT BLOCK — this is all that goes inside {% block content %}
+  ═══════════════════════════════════════════════════════════════
+-->
+
+  <!-- Date filter
+       Django: wrap in <form method="get"> and bind inputs to request.GET values -->
+  <div style="margin-bottom:20px">
+    <div style="font-family:'Poppins',sans-serif;font-size:13px;color:#555;margin-bottom:8px;font-weight:500">Date Range</div>
+    <div class="filter-row">
+      <input type="date" id="circ-from" class="form-input"/>
+      <input type="date" id="circ-to"   class="form-input"/>
+    </div>
+    <div style="display:flex;gap:16px">
+      <button class="btn-apply" onclick="applyFilters()">Apply Filters</button>
+      <button class="btn-apply" onclick="exportReport()">Export Report</button>
+    </div>
+  </div>
+
+  <!-- Charts grid -->
+  <div class="charts-grid">
+
+    <!-- Biodegradability histogram -->
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <div>
+          <div class="chart-title">Biodegradability Score Distribution</div>
+          <div class="chart-sub">Frequency histogram · ML-verified scores</div>
+        </div>
+        <span class="chart-badge" style="background:#e8f5ee;color:#4a7c59">ML-Verified</span>
+      </div>
+      <canvas id="bio-chart" height="160"></canvas>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--tuab)"></div>Low (&lt;40%)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--gold)"></div>Mid (40–70%)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>High (&gt;70%)</div>
+      </div>
+    </div>
+
+    <!-- Donation volume by city -->
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <div>
+          <div class="chart-title">Donation Volume by NCR City</div>
+          <div class="chart-sub">Stacked by fiber category · horizontal</div>
+        </div>
+        <span class="chart-badge" style="background:#fff3e0;color:var(--gold)">Freq. Chart</span>
+      </div>
+      <canvas id="city-chart" height="160"></canvas>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--tuab)"></div>Denim</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--gold)"></div>Cotton</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Silk</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#3d6fa0"></div>Linen</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#9b59b6"></div>Other</div>
+      </div>
+    </div>
+
+    <!-- Top brands -->
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <div class="chart-title">Top 20 Brands by Donation Volume</div>
+        <span class="chart-badge" style="background:#fce8e0;color:var(--tuab)">ML-Scraped</span>
+      </div>
+      <!-- Django: {% for brand in top_brands %} render bar {% endfor %} -->
+      <div id="brands-list" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <!-- Decisions per city -->
+    <div class="chart-card">
+      <div class="chart-card-header">
+        <div>
+          <div class="chart-title">Donation Decisions per NCR City</div>
+          <div class="chart-sub">Accepted · Rejected · Flagged · Pending</div>
+        </div>
+        <span class="chart-badge" style="background:#e8f0fe;color:#3d6fa0">Decision Flow</span>
+      </div>
+      <canvas id="decision-chart" height="160"></canvas>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Accepted</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--tuab)"></div>Rejected</div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+  /* Django: replace with {{ circular_json|safe }} from view */
+  const CIRC = {
+    biodeg:    { labels:['0–10','10–20','20–30','30–40','40–50','50–60','60–70','70–80','80–90','90–100'], raw:[25,45,60,80,100,160,200,310,280,190] },
+    cities:    ['Manila','QC','Makati','Parañaque','Taguig','Las Piñas','Muntinlupa','Caloocan','Marikina','Pasay'],
+    cityData:  { Denim:[310,290,220,170,190,140,120,150,110,90], Cotton:[220,210,180,140,160,120,100,130,90,80], Silk:[80,90,70,60,65,50,45,55,40,35], Linen:[50,60,40,30,35,25,20,30,22,18], Other:[40,55,30,25,28,18,15,22,18,12] },
+    brands:    [{name:"Levi's",val:312},{name:"H&M",val:289},{name:"Uniqlo",val:241},{name:"Zara",val:198},{name:"SM Dept.",val:176},{name:"Penshoppe",val:162},{name:"Bench",val:148},{name:"Pull&Bear",val:134},{name:"Forever21",val:121},{name:"Mango",val:108},{name:"Nike",val:97},{name:"Adidas",val:91},{name:"Gap",val:84},{name:"Topshop",val:77},{name:"Bershka",val:70},{name:"Old Navy",val:63},{name:"Cotton On",val:58},{name:"Stradivarius",val:51},{name:"Massimo Dutti",val:44},{name:"Jack & Jones",val:37}],
+    decisions: { accepted:[140,130,105,80,90,70,58,68,52,42], rejected:[35,40,30,25,28,20,15,22,18,12] }
+  };
+
+  let charts = {};
+
+  function renderCharts() {
+    Object.values(charts).forEach(ch => { try { ch.destroy(); } catch(e){} });
+    charts = {};
+
+    // Biodegradability
+    const bioCtx = document.getElementById('bio-chart');
+    if (bioCtx) {
+      const colors = CIRC.biodeg.raw.map((_,i) => i < 4 ? '#c0410e' : i < 7 ? '#e8a020' : '#4a7c59');
+      charts.bio = new Chart(bioCtx, { type:'bar', data:{ labels:CIRC.biodeg.labels, datasets:[{ data:CIRC.biodeg.raw, backgroundColor:colors, borderRadius:3, borderSkipped:false }] }, options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true, grid:{ color:'#f5f0ea' }, ticks:{ font:{ size:10, family:'Poppins' } } }, x:{ grid:{ display:false }, ticks:{ font:{ size:9, family:'Poppins' } } } } } });
+    }
+
+    // City volume
+    const cityCtx = document.getElementById('city-chart');
+    if (cityCtx) {
+      const fColors = { Denim:'#c0410e', Cotton:'#e8a020', Silk:'#4a7c59', Linen:'#3d6fa0', Other:'#9b59b6' };
+      const datasets = Object.entries(CIRC.cityData).map(([fiber, data]) => ({ label:fiber, data, backgroundColor:fColors[fiber], borderRadius:2 }));
+      charts.city = new Chart(cityCtx, { type:'bar', data:{ labels:CIRC.cities, datasets }, options:{ indexAxis:'y', responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ stacked:true, beginAtZero:true, ticks:{ font:{ size:9, family:'Poppins' } } }, y:{ stacked:true, ticks:{ font:{ size:9, family:'Poppins' } } } } } });
+    }
+
+    // Brands bar list
+    const maxBrand = CIRC.brands[0].val;
+    document.getElementById('brands-list').innerHTML = CIRC.brands.slice(0, 10).map(b => `
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-family:'Poppins',sans-serif;font-size:12px;color:#333;min-width:90px">${b.name}</span>
+        <div style="flex:1;height:8px;background:#f0ede8;border-radius:4px"><div style="width:${Math.round(b.val/maxBrand*100)}%;height:100%;background:var(--tuab);border-radius:4px"></div></div>
+        <span style="font-family:'Poppins',sans-serif;font-size:11px;color:#888;min-width:30px;text-align:right">${b.val}</span>
+      </div>`).join('');
+
+    // Decisions
+    const decCtx = document.getElementById('decision-chart');
+    if (decCtx) {
+      charts.dec = new Chart(decCtx, { type:'bar', data:{ labels:CIRC.cities, datasets:[{ label:'Accepted', data:CIRC.decisions.accepted, backgroundColor:'#4a7c59', borderRadius:2 },{ label:'Rejected', data:CIRC.decisions.rejected, backgroundColor:'#c0410e', borderRadius:2 }] }, options:{ responsive:true, plugins:{ legend:{ display:false } }, scales:{ x:{ stacked:true, ticks:{ font:{ size:9, family:'Poppins' } } }, y:{ stacked:true, beginAtZero:true, ticks:{ font:{ size:10, family:'Poppins' } } } } } });
+    }
+  }
+
+  function applyFilters() { renderCharts(); }
+
+  function exportReport() {
+    /* Django: replace with a link to the export view */
+    const csv = ['WeaveForward — Circular Economy Impact Report','','Biodegradability Score Distribution','Range,Count',
+      ...CIRC.biodeg.labels.map((l,i) => `${l},${CIRC.biodeg.raw[i]}`),
+      '','Top Brands by Donation Volume','Brand,kg',
+      ...CIRC.brands.map(b => `${b.name},${b.val}`)
+    ].join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = 'circular_economy_report.csv'; a.click();
+  }
+
+  window.addEventListener('load', renderCharts);
+</script>
+</body>
+</html>

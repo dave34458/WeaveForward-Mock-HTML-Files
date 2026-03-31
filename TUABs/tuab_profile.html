@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<!--
+  WeaveForward TUAB — Account Profile  (tuab_profile.html)
+  ══════════════════════════════════════════════════════════
+  PURPOSE
+  ───────
+  Standalone reference for the Account Profile page content.
+  Shows only what goes inside {% block content %} of base.html.
+
+  When converting to a Django template:
+    • {% extends 'base.html' %}
+    • {% block content %} ... {% endblock %}
+    • Set context: page_title = 'Account Profile', sidebar_variant = 'tuab'
+    • Replace all hardcoded values with context variables (see below)
+    • "Update Account Information" → {% url 'tuab_edit_profile' %}
+
+  Context variables expected:
+    page_title          → 'Account Profile'
+    sidebar_variant     → 'tuab'
+    org_name            → display name, e.g. 'KulturaKalikasan'
+    org_initials        → e.g. 'KK'
+    org_location        → e.g. 'Pinyahan, Quezon City, Metro Manila'
+    org_bio             → description paragraph
+    org_social_link     → e.g. 'instagram.com/kulturakalikasan'
+    total_donations     → integer
+    max_distance_km     → integer
+    barangay, city, display_address, contact_number
+    target_fibers       → list of fiber name strings
+    min_biodeg_score    → integer
+    max_pickup_distance → float (km)
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Account Profile — Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --gold:  #e8a020;
+      --tuab:  #c0410e;
+      --bg:    #f5f2eb;
+      --text:  #222222;
+      --muted: #888888;
+      --green: #4a7c59;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); }
+
+    /* ── Cards ── */
+    .prof-card { background: #fff; border-radius: 16px; padding: 22px 26px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+
+    /* ── Detail rows ── */
+    .detail-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #f5f0ea; font-family: 'Poppins', sans-serif; font-size: 13px; }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label { color: #aaa; flex-shrink: 0; }
+    .detail-val { color: #1a1a1a; font-weight: 500; text-align: right; max-width: 60%; }
+
+    /* ── Fiber tag ── */
+    .fiber-tag { background: #f0e8d8; color: #6b4c2a; border-radius: 20px; padding: 3px 11px; font-size: 12px; font-family: 'Poppins', sans-serif; font-weight: 500; }
+
+    /* ── Stat card ── */
+    .stat-num { font-family: 'Poppins', sans-serif; font-size: 36px; font-weight: 700; color: var(--gold); margin-bottom: 4px; }
+    .stat-lbl { font-family: 'Poppins', sans-serif; font-size: 12px; color: #aaa; }
+
+    /* ══════════════════════
+       MOBILE  (≤ 768px)
+    ══════════════════════ */
+    @media (max-width: 768px) {
+      .stats-row  { grid-template-columns: 1fr 1fr !important; }
+      .info-row   { grid-template-columns: 1fr !important; }
+      .hero-inner { flex-direction: column; align-items: flex-start !important; gap: 14px !important; }
+      .edit-btn   { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!--
+  ═══════════════════════════════════════════════════════════════
+  CONTENT BLOCK — this is all that goes inside {% block content %}
+  ═══════════════════════════════════════════════════════════════
+-->
+
+  <!-- Hero card -->
+  <div class="prof-card" style="margin-bottom:16px">
+    <div class="hero-inner" style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+      <!-- Django: {{ org_initials }} -->
+      <div style="width:70px;height:70px;border-radius:50%;background:#f0e8d8;display:flex;align-items:center;justify-content:center;font-family:'Poppins',sans-serif;font-size:22px;font-weight:700;color:var(--tuab);flex-shrink:0">KK</div>
+      <div style="flex:1;min-width:0">
+        <!-- Django: {{ org_name }} / {{ org_location }} -->
+        <div style="font-family:'Pixelify Sans',sans-serif;font-size:26px;font-weight:700;color:#1a1a1a;margin-bottom:4px">KulturaKalikasan</div>
+        <div style="display:flex;align-items:center;gap:6px;font-family:'Poppins',sans-serif;font-size:13px;color:#888">
+          <svg width="13" height="13" fill="none" stroke="var(--gold)" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Pinyahan, Quezon City, Metro Manila
+        </div>
+      </div>
+      <!-- Django: href="{% url 'tuab_edit_profile' %}" -->
+      <a href="tuab_edit_profile.html" class="edit-btn" style="background:var(--gold);color:#fff;border:none;border-radius:8px;padding:10px 18px;font-size:13px;font-family:'Poppins',sans-serif;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;text-decoration:none;white-space:nowrap;flex-shrink:0">
+        <svg width="14" height="14" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Update Account Information
+      </a>
+    </div>
+    <!-- Django: {{ org_bio }} -->
+    <p style="font-family:'Poppins',sans-serif;font-size:13px;color:#666;line-height:1.7;margin-top:16px;margin-bottom:14px">
+      Kultura Kalikasan is a Filipino sustainability initiative dedicated to promoting environmental stewardship through culture-based community action. Rooted in the belief that ecological responsibility and cultural identity are deeply interconnected, it advances programs that integrate environmental protection, heritage preservation, and grassroots empowerment.
+    </p>
+    <!-- Django: {{ org_social_link }} -->
+    <div style="display:flex;align-items:center;gap:6px">
+      <svg width="16" height="16" fill="none" stroke="#aaa" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+      <span style="font-family:'Poppins',sans-serif;font-size:13px;color:#888">instagram.com/kulturakalikasan</span>
+    </div>
+  </div>
+
+  <!-- Stats row -->
+  <!-- Django: {{ total_donations }} / {{ max_distance_km }} -->
+  <div class="stats-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+    <div class="prof-card">
+      <div style="font-family:'Poppins',sans-serif;font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Total Donations Received</div>
+      <div class="stat-num">23</div>
+      <div class="stat-lbl">Accepted all-time donations</div>
+    </div>
+    <div class="prof-card">
+      <div style="font-family:'Poppins',sans-serif;font-size:10px;font-weight:600;color:#aaa;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Max Distance (KM)</div>
+      <div class="stat-num">10 KM</div>
+      <div class="stat-lbl">From business location</div>
+    </div>
+  </div>
+
+  <!-- Info cards -->
+  <div class="info-row" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+
+    <div class="prof-card">
+      <div style="font-family:'Poppins',sans-serif;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:16px">Location &amp; Contact</div>
+      <!-- Django: {{ barangay }} / {{ city }} / {{ display_address }} / {{ contact_number }} -->
+      <div class="detail-row"><span class="detail-label">Barangay</span><span class="detail-val">Pinyahan</span></div>
+      <div class="detail-row"><span class="detail-label">City</span><span class="detail-val">Quezon City</span></div>
+      <div class="detail-row"><span class="detail-label">Display Address</span><span class="detail-val">V. Luna Road, Pinyahan, Diliman, QC</span></div>
+      <div class="detail-row"><span class="detail-label">Contact Number</span><span class="detail-val">+639150814395</span></div>
+    </div>
+
+    <div class="prof-card">
+      <div style="font-family:'Poppins',sans-serif;font-size:14px;font-weight:700;color:#1a1a1a;margin-bottom:16px">Fiber Preferences &amp; Matching</div>
+      <!-- Django: {% for fiber in target_fibers %}<span class="fiber-tag">{{ fiber }}</span>{% endfor %} -->
+      <div class="detail-row">
+        <span class="detail-label">Target Fibers</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+          <span class="fiber-tag">Cotton</span>
+          <span class="fiber-tag">Denim</span>
+          <span class="fiber-tag">Polyester</span>
+        </div>
+      </div>
+      <!-- Django: {{ min_biodeg_score }} / {{ max_pickup_distance }} -->
+      <div class="detail-row"><span class="detail-label">Min. Biodegradability Score</span><span class="detail-val">65/100</span></div>
+      <div class="detail-row"><span class="detail-label">Max Pickup Distance</span><span class="detail-val">10.00 km</span></div>
+    </div>
+
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<!--
+  WeaveForward TUAB — Premium Subscription  (tuab_premium.html)
+  ══════════════════════════════════════════════════════════════
+  PURPOSE
+  ───────
+  Standalone reference for the Premium Subscription page content.
+  Shows only what goes inside {% block content %} of base.html.
+
+  When converting to a Django template:
+    • {% extends 'base.html' %}
+    • {% block content %} ... {% endblock %}
+    • Set context: page_title = 'Premium Subscription', sidebar_variant = 'tuab'
+    • Subscribe button: POST to /tuab/subscribe/ with card details
+    • If user is already subscribed, show only the "Already Subscribed" state
+      (check {{ user.is_premium }} in template and conditionally render)
+    • Django: wrap payment form in a <form method="post" action="{% url 'tuab_subscribe' %}">
+              with {% csrf_token %}
+
+  Context variables expected:
+    page_title      → 'Premium Subscription'
+    sidebar_variant → 'tuab'
+    is_premium      → boolean — if True, show already-subscribed message instead of form
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Premium Subscription — Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --gold:      #e8a020;
+      --gold-dark: #c8881a;
+      --bg:        #f5f2eb;
+      --text:      #222222;
+      --muted:     #888888;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); }
+
+    .hidden { display: none !important; }
+
+    /* ── Centered card layout ── */
+    .page-center { display: flex; align-items: flex-start; justify-content: center; padding: 20px 0 40px; }
+    .prem-card { background: #fff; border-radius: 18px; padding: 36px 32px 32px; width: 460px; max-width: 100%; box-shadow: 0 4px 24px rgba(0,0,0,.07); }
+
+    /* ── Form inputs ── */
+    .form-label { font-family: 'Poppins', sans-serif; font-size: 13px; color: #444; display: block; margin-bottom: 6px; }
+    .form-input { width: 100%; border: 1.5px solid #d5d5d5; border-radius: 8px; padding: 11px 16px; font-family: 'Poppins', sans-serif; font-size: 14px; color: var(--text); outline: none; transition: border-color .2s; }
+    .form-input:focus { border-color: var(--gold); }
+    .field-group { margin-bottom: 16px; }
+    .card-meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 28px; }
+
+    /* ── Feature list ── */
+    .feature-section-title { font-family: 'Poppins', sans-serif; font-size: 13px; font-weight: 600; color: var(--gold); padding: 10px 0; border-bottom: 1px solid #f0ede8; }
+    .feature-item { font-family: 'Poppins', sans-serif; font-size: 13px; color: #1a1a1a; line-height: 1.5; padding: 12px 0; border-bottom: 1px solid #f0ede8; }
+
+    /* ── Subscribe button ── */
+    .btn-subscribe { width: 100%; background: var(--gold); color: #fff; border: none; border-radius: 30px; padding: 14px; font-size: 15px; font-family: 'Poppins', sans-serif; font-weight: 600; cursor: pointer; transition: background .2s; }
+    .btn-subscribe:hover { background: var(--gold-dark); }
+
+    /* ── Modal ── */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 8000; }
+  </style>
+</head>
+<body>
+
+<!--
+  ═══════════════════════════════════════════════════════════════
+  CONTENT BLOCK — this is all that goes inside {% block content %}
+  Django: use {% if is_premium %} to show already-subscribed notice
+          instead of the plan/payment views.
+  ═══════════════════════════════════════════════════════════════
+-->
+
+  <div class="page-center">
+
+    <!-- PLAN VIEW — shown first -->
+    <div id="plan-view" class="prem-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:22px;padding-bottom:18px;border-bottom:1.5px solid #f0ede8">
+        <svg width="20" height="20" fill="none" stroke="#1a1a1a" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        <span style="font-family:'Poppins',sans-serif;font-weight:700;font-size:20px;color:#1a1a1a">Pro Tier</span>
+      </div>
+
+      <!-- Feature group: Fiber-Match -->
+      <div style="margin-bottom:20px">
+        <div class="feature-section-title">Fiber-Match Recommendations Module</div>
+        <div class="feature-item">✓ Donation recommendations ranked by confidence score and distance</div>
+        <div class="feature-item">✓ Ranked with match probability and distance</div>
+        <div class="feature-item">✓ View a donation's biodegradability tier</div>
+      </div>
+
+      <!-- Feature group: Delivery -->
+      <div style="margin-bottom:28px">
+        <div class="feature-section-title">Delivery Method Access</div>
+        <div class="feature-item">✓ Schedule donation pickups without leaving WeaveForward</div>
+        <div class="feature-item">✓ Pickup and drop-off locations auto-field from donation data</div>
+        <div class="feature-item">✓ Pick your preferred time-window</div>
+        <div class="feature-item">✓ Track delivery status in real time</div>
+        <div style="font-family:'Poppins',sans-serif;font-size:12px;color:#aaa;padding:10px 0 4px">* Delivery fees still apply per booking</div>
+      </div>
+
+      <button class="btn-subscribe" onclick="showPaymentForm()">Subscribe for ₱499.00</button>
+    </div>
+
+    <!-- PAYMENT FORM — shown after clicking Subscribe -->
+    <div id="payment-view" class="prem-card hidden">
+      <div style="font-family:'Poppins',sans-serif;font-weight:600;font-size:18px;color:var(--gold);margin-bottom:24px">Payment Details</div>
+      <!-- Django: wrap in <form method="post" action="{% url 'tuab_subscribe' %}">{% csrf_token %} -->
+      <div class="field-group"><label class="form-label">First Name</label><input class="form-input" name="first_name" value="Juan"/></div>
+      <div class="field-group"><label class="form-label">Last Name</label><input class="form-input" name="last_name" value="Dela Cruz"/></div>
+      <div class="field-group"><label class="form-label">Card Number</label><input class="form-input" name="card_number" value="5123456789012346"/></div>
+      <div class="card-meta">
+        <div><label class="form-label">Expire Month</label><input class="form-input" name="exp_month" value="12"/></div>
+        <div><label class="form-label">Expire Year</label><input class="form-input" name="exp_year" value="2030"/></div>
+        <div><label class="form-label">CVV</label><input class="form-input" name="cvv" value="111"/></div>
+      </div>
+      <button class="btn-subscribe" onclick="showAlreadySubscribed()">Subscribe for ₱499.00</button>
+    </div>
+
+  </div>
+
+
+<!-- ═══ ALREADY SUBSCRIBED MODAL ═══
+     Django: if is_premium, show this state directly or as a flash message -->
+<div id="already-subscribed-modal" class="modal-overlay hidden">
+  <div style="background:#fff;border-radius:20px;padding:32px 36px 28px;width:420px;max-width:95vw;box-shadow:0 24px 80px rgba(0,0,0,.25);text-align:center">
+    <div style="width:56px;height:56px;border-radius:50%;background:#fef7ea;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+      <svg width="26" height="26" fill="none" stroke="var(--gold)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </div>
+    <div style="font-family:'Poppins',sans-serif;font-weight:600;font-size:17px;color:#1a1a1a;margin-bottom:10px">Already Subscribed</div>
+    <p style="font-family:'Poppins',sans-serif;font-size:13px;color:#888;line-height:1.6;margin-bottom:24px">You are already subscribed to WeaveForward Premium. This page is for simulation purposes only.</p>
+    <button onclick="document.getElementById('already-subscribed-modal').classList.add('hidden')"
+      style="background:var(--gold);color:#fff;border:none;border-radius:30px;padding:11px 36px;font-size:14px;font-family:'Poppins',sans-serif;font-weight:600;cursor:pointer">Got it</button>
+  </div>
+</div>
+
+<script>
+  function showPaymentForm() {
+    document.getElementById('plan-view').classList.add('hidden');
+    document.getElementById('payment-view').classList.remove('hidden');
+  }
+  function showAlreadySubscribed() {
+    document.getElementById('already-subscribed-modal').classList.remove('hidden');
+  }
+  document.addEventListener('click', e => {
+    if (e.target === document.getElementById('already-subscribed-modal'))
+      document.getElementById('already-subscribed-modal').classList.add('hidden');
+  });
+</script>
+</body>
+</html>

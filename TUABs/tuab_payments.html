@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<!--
+  WeaveForward TUAB — Payment History  (tuab_payments.html)
+  ═══════════════════════════════════════════════════════════
+  PURPOSE
+  ───────
+  Standalone reference for the Payment History page content.
+  Shows only what goes inside {% block content %} of base.html.
+
+  When converting to a Django template:
+    • {% extends 'base.html' %}
+    • {% block content %} ... {% endblock %}
+    • Set context: page_title = 'View Payment History', sidebar_variant = 'tuab'
+    • Replace PAYMENTS JS array with {{ payments_json|safe }} from view
+    • Or render rows server-side: {% for p in payments %} ... {% endfor %}
+    • Search can be client-side JS (as here) or server-side via GET param ?q=
+
+  Context variables expected:
+    page_title      → 'View Payment History'
+    sidebar_variant → 'tuab'
+    payments        → list of {type, amount, reference, status}
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Payment History — Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --gold:  #e8a020;
+      --bg:    #f5f2eb;
+      --text:  #222222;
+      --muted: #888888;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); }
+
+    /* ── Search bar ── */
+    .search-bar { background: #f5f3f0; border-radius: 10px; padding: 13px 18px; display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+    .search-bar input { border: none; outline: none; background: transparent; font-family: 'Poppins', sans-serif; font-size: 14px; color: #555; width: 100%; }
+
+    /* ── Table ── */
+    .tbl-wrap { background: #fff; border-radius: 14px; overflow: hidden; }
+    .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .pay-table { width: 100%; border-collapse: collapse; }
+    .pay-table th { font-family: 'Poppins', sans-serif; font-size: 12px; font-weight: 600; color: #888; text-align: left; padding: 13px 14px; border-bottom: 1.5px solid #ece8e2; background: #faf8f5; white-space: nowrap; }
+    .pay-table td { font-family: 'Poppins', sans-serif; font-size: 13px; color: #333; padding: 15px 14px; border-bottom: 1px solid #f0ede8; white-space: nowrap; }
+    .pay-table tr:last-child td { border-bottom: none; }
+    .pay-table td.ref { font-size: 12px; color: #666; }
+    .status-success { color: #4a7c59; font-weight: 500; }
+    .status-failed  { color: #e05050; font-weight: 500; }
+  </style>
+</head>
+<body>
+
+<!--
+  ═══════════════════════════════════════════════════════════════
+  CONTENT BLOCK — this is all that goes inside {% block content %}
+  ═══════════════════════════════════════════════════════════════
+-->
+
+  <!-- Search -->
+  <div class="search-bar">
+    <svg width="17" height="17" fill="none" stroke="#aaa" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input id="pay-search" placeholder="Search Payments" oninput="filterPayments()"/>
+  </div>
+
+  <div class="tbl-wrap">
+    <div class="table-scroll">
+      <!-- Django: {% for p in payments %} ... {% endfor %} -->
+      <table class="pay-table">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Payment Reference</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="pay-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+<script>
+  /* Django: replace with {{ payments_json|safe }} or render server-side */
+  const PAYMENTS = [
+    { type: 'Subscription Payment', amount: '499.00', reference: '',                    status: 'Failed'  },
+    { type: 'Order Payment',        amount: '213.00', reference: '3448120003428589780', status: 'Success' },
+    { type: 'Order Payment',        amount: '160.50', reference: '3448120003428589781', status: 'Success' },
+    { type: 'Order Payment',        amount: '290.00', reference: '3448122135628589782', status: 'Success' },
+    { type: 'Order Payment',        amount: '300.00', reference: '3448120003428529811', status: 'Success' },
+    { type: 'Subscription Payment', amount: '499.00', reference: 'b728f87ea330',        status: 'Success' },
+  ];
+
+  function renderRows(list) {
+    document.getElementById('pay-tbody').innerHTML = list.map(p => `
+      <tr>
+        <td>${p.type}</td>
+        <td>${p.amount}</td>
+        <td class="ref">${p.reference}</td>
+        <td><span class="${p.status === 'Success' ? 'status-success' : 'status-failed'}">${p.status}</span></td>
+      </tr>`).join('');
+  }
+
+  function filterPayments() {
+    const q = document.getElementById('pay-search').value.toLowerCase();
+    const list = q ? PAYMENTS.filter(p =>
+      p.reference.toLowerCase().includes(q) || p.type.toLowerCase().includes(q)
+    ) : PAYMENTS;
+    renderRows(list);
+  }
+
+  window.addEventListener('load', () => renderRows(PAYMENTS));
+</script>
+</body>
+</html>
