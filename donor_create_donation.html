@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<!--
+  WeaveForward — Create Donation  (create_donation.html)
+  ══════════════════════════════════════════════════════
+  PURPOSE
+  ───────
+  Standalone reference for the Create Donation page content.
+  Shows only what goes inside {% block content %} of base.html.
+
+  When converting to a Django template:
+    • {% extends 'base.html' %}
+    • {% block content %} ... {% endblock %}
+    • Set context: page_title = 'Create Donation', sidebar_variant = 'donor'
+    • Wrap entire content in: <form method="post" action="{% url 'create_donation' %}">
+                                {% csrf_token %}
+    • "Add Another Clothing Group" button: use Django Formsets management form
+      or a JS-dynamic form that POSTs new items
+    • Clothing type / condition / brand dropdowns: populate from context lists
+
+  Context variables expected:
+    page_title      → 'Create Donation'
+    sidebar_variant → 'donor'
+    clothing_types  → list of type strings for dropdowns
+    conditions      → list of condition strings
+    brand_materials → list of brand+material strings
+
+  Mobile:
+    Two-column layout stacks to single column.
+    Right panel (pickup + upload) moves below clothing items.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Create Donation — Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    :root {
+      --gold:      #e8a020;
+      --gold-dark: #c8881a;
+      --bg:        #f5f2eb;
+      --border:    #e0dbd4;
+      --text:      #222222;
+      --muted:     #888888;
+      --green:     #4a7c59;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); }
+    .hidden { display: none !important; }
+
+    /* ── Two-column layout ── */
+    .don-layout { display: flex; gap: 24px; align-items: flex-start; }
+    .don-left  { flex: 1; min-width: 0; }
+    .don-right { width: 330px; flex-shrink: 0; }
+
+    /* ── Clothing card ── */
+    .clothing-card { background: #fff; border-radius: 14px; padding: 20px 22px; margin-bottom: 14px; border: 1.5px solid var(--border); }
+    .clothing-num  { width: 28px; height: 28px; border-radius: 50%; background: var(--gold); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+    .trash-btn { background: none; border: none; cursor: pointer; color: var(--gold); }
+
+    /* ── Form fields ── */
+    .form-label-upper { font-family: 'Poppins', sans-serif; font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; display: block; margin-bottom: 5px; }
+    .form-input { width: 100%; border: 1.5px solid #d5d5d5; border-radius: 8px; padding: 11px 16px; font-family: 'Poppins', sans-serif; font-size: 14px; color: var(--text); outline: none; transition: border-color .2s; }
+    .form-input:focus { border-color: var(--gold); }
+    .form-select { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 36px 10px 14px; font-family: 'Poppins', sans-serif; font-size: 14px; color: var(--text); background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23e8a020' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E") no-repeat right 12px center; appearance: none; outline: none; cursor: pointer; }
+    .form-select:focus { border-color: var(--gold); }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .field-group { display: flex; flex-direction: column; gap: 4px; }
+    ._subhdr { font-size: 13px; font-weight: 600; color: #333; margin-bottom: 8px; display: block; }
+
+    /* ── Add clothing button ── */
+    .btn-dashed { background: transparent; color: var(--gold); border: 2px dashed var(--gold); border-radius: 30px; padding: 12px; font-size: 14px; width: 100%; cursor: pointer; font-family: 'Poppins', sans-serif; margin-top: 4px; transition: background .2s; }
+    .btn-dashed:hover { background: #fdf6e8; }
+
+    /* ── Right panel ── */
+    .detail-panel { background: #fff; border-radius: 14px; padding: 22px 24px; }
+    .time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    /* ── Address autocomplete ── */
+    .ac-wrap { position: relative; }
+    .address-autocomplete { position: absolute; background: #fff; border: 1.5px solid var(--border); border-radius: 8px; width: 100%; top: calc(100% + 4px); left: 0; z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,.12); max-height: 220px; overflow-y: auto; }
+    .ac-item { padding: 10px 14px; font-family: 'Poppins', sans-serif; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
+    .ac-item:hover { background: #fdf6e8; }
+    .loc-input-wrap { position: relative; }
+    .loc-input-wrap input { padding-right: 36px; }
+    .loc-pin-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--gold); }
+
+    /* ── Submit button ── */
+    .btn-submit { background: var(--gold); color: #fff; border: none; border-radius: 30px; padding: 13px; font-size: 15px; font-weight: 500; font-family: 'Poppins', sans-serif; cursor: pointer; width: 100%; margin-top: 14px; transition: background .2s; }
+    .btn-submit:hover { background: var(--gold-dark); }
+
+    /* ── Upload zone ── */
+    .upload-zone { border: 2px dashed #f0c060; border-radius: 12px; padding: 28px 20px; text-align: center; cursor: pointer; transition: background .2s; }
+    .upload-zone:hover { background: #fdf6e8; }
+
+    /* ── Map modal ── */
+    .map-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 9000; }
+    .map-modal { background: #fff; border-radius: 16px; padding: 24px; width: 620px; max-width: 95vw; position: relative; }
+    .map-close { position: absolute; top: 14px; right: 16px; background: none; border: none; cursor: pointer; font-size: 22px; color: #888; line-height: 1; }
+    #picker-map { width: 100%; height: 300px; border-radius: 8px; z-index: 1; }
+
+    /* ── Mobile ── */
+    @media (max-width: 768px) {
+      .don-layout { flex-direction: column; }
+      .don-left, .don-right { width: 100%; }
+      .field-row { grid-template-columns: 1fr; }
+      .time-row  { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!--
+  ════════════════════════════════════════════════════
+  CONTENT BLOCK — this is all that goes inside {% block content %}
+  Django: wrap in <form method="post" action="{% url 'create_donation' %}">
+          {% csrf_token %}
+  ════════════════════════════════════════════════════
+-->
+
+<div class="don-layout">
+
+  <!-- LEFT: clothing items
+       Django: use Django Formsets management form for dynamic add/delete -->
+  <div class="don-left">
+    <div id="clothing-sections">
+
+      <div class="clothing-card" id="cs-0">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="clothing-num">1</div>
+            <span style="font-family:'Poppins',sans-serif;font-weight:600;font-size:15px">Clothing 1</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <!-- Django: {% for t in clothing_types %}<option>{{ t }}</option>{% endfor %} -->
+          <div class="field-group"><label class="form-label-upper">Clothing *</label>
+            <select class="form-select" name="type_0">
+              <option>Shirt</option><option selected>Pants</option><option>Shorts</option>
+              <option>Jacket</option><option>Dress</option><option>Blouse</option>
+              <option>Skirt</option><option>Coat</option><option>Jeans</option>
+              <option>T-Shirt</option><option>Polo</option><option>Hoodie</option><option>Sweater</option>
+            </select>
+          </div>
+          <div class="field-group"><label class="form-label-upper">Estimated Weight (kg)</label>
+            <input class="form-input" type="number" step="0.1" name="weight_0" value="0.8"/>
+          </div>
+        </div>
+        <!-- Django: {% for c in conditions %}<option>{{ c }}</option>{% endfor %} -->
+        <div class="field-group" style="margin-bottom:14px"><label class="form-label-upper">Condition</label>
+          <select class="form-select" name="condition_0">
+            <option>Good</option><option>Like New</option><option selected>Fair</option><option>Poor</option>
+          </select>
+        </div>
+        <!-- Django: {% for bm in brand_materials %}<option>{{ bm }}</option>{% endfor %} -->
+        <div class="field-group"><label class="form-label-upper">Brand &amp; Material</label>
+          <select class="form-select" name="brand_0">
+            <option selected>Levi's Denim</option><option>Uniqlo Cotton</option>
+            <option>H&M Cotton</option><option>Zara Polyester</option><option>Nike Cotton</option>
+          </select>
+        </div>
+      </div>
+
+    </div>
+    <!-- Django: use Formsets management form for add/delete -->
+    <button type="button" class="btn-dashed" onclick="addClothingSection()">+ Add Another Clothing Group</button>
+  </div>
+
+  <!-- RIGHT: pickup details + image upload -->
+  <div class="don-right">
+    <div class="detail-panel">
+
+      <div class="field-group" style="margin-bottom:18px">
+        <label class="_subhdr">Preferred Pick-Up Date</label>
+        <!-- Django: name="preferred_date" -->
+        <input class="form-input" type="date" name="preferred_date" value="2026-02-10"/>
+      </div>
+
+      <div style="margin-bottom:18px">
+        <label class="_subhdr">Preferred Time Window</label>
+        <div class="time-row">
+          <!-- Django: name="time_from" / name="time_to" -->
+          <div class="field-group"><label class="form-label-upper">From</label><input class="form-input" type="time" name="time_from" value="04:02"/></div>
+          <div class="field-group"><label class="form-label-upper">To</label><input class="form-input" type="time" name="time_to" value="17:50"/></div>
+        </div>
+      </div>
+
+      <div class="field-group" style="margin-bottom:20px">
+        <label class="_subhdr">Pick-Up Location</label>
+        <div class="ac-wrap">
+          <div class="loc-input-wrap">
+            <!-- Django: name="pickup_address" -->
+            <input class="form-input" id="f-address" name="pickup_address"
+              value="Escoda Street, Barangay 675, Ermita, Manila"
+              oninput="nominatimSearch(this.value,'f-ac','f-lat','f-lng','f-address')"/>
+            <button type="button" class="loc-pin-btn" onclick="openPickerFor('f-address','f-lat','f-lng')">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            </button>
+          </div>
+          <div id="f-ac" class="address-autocomplete hidden"></div>
+          <!-- Django: name="pickup_lat" / name="pickup_lng" (store coordinates) -->
+          <input type="hidden" id="f-lat" name="pickup_lat" value="14.5890"/>
+          <input type="hidden" id="f-lng" name="pickup_lng" value="120.9822"/>
+        </div>
+      </div>
+
+      <!-- Django: POST to {% url 'create_donation' %} -->
+      <button type="button" class="btn-submit" onclick="submitDonation()">Submit Donation</button>
+    </div>
+
+    <!-- Image upload -->
+    <div class="detail-panel" style="margin-top:16px">
+      <div style="font-family:'Poppins',sans-serif;font-weight:600;font-size:14px;margin-bottom:4px">Donation Upload</div>
+      <p style="font-size:12px;color:#999;margin-bottom:14px">Add the image of your donation here</p>
+      <!-- Django: name="donation_image" (FileField) -->
+      <div class="upload-zone"
+        ondragover="event.preventDefault();this.style.background='#fdf6e8'"
+        ondragleave="this.style.background=''"
+        ondrop="handleImageDrop(event)"
+        onclick="document.getElementById('donation-img-input').click()">
+        <div id="upload-preview" style="display:none;margin-bottom:10px">
+          <img id="donation-img-preview" style="max-width:100%;max-height:140px;border-radius:8px;object-fit:cover" src="" alt="Preview"/>
+        </div>
+        <div id="upload-placeholder">
+          <div style="width:44px;height:44px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px">
+            <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          </div>
+          <p style="font-size:13px;color:#999;margin-bottom:6px">Drag your file(s) to start uploading</p>
+          <p style="font-size:12px;color:#bbb;margin-bottom:10px">OR</p>
+          <span style="border:1.5px solid var(--gold);border-radius:20px;padding:5px 14px;font-size:12px;color:var(--gold);cursor:pointer">Browse files</span>
+        </div>
+        <input type="file" id="donation-img-input" name="donation_image" accept="image/*" style="display:none" onchange="handleImageSelect(this)"/>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ MAP PICKER MODAL ═══ -->
+<div id="map-modal" class="map-modal-overlay hidden">
+  <div class="map-modal">
+    <button type="button" class="map-close" onclick="closeMapPicker()">×</button>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-family:'Poppins',sans-serif;font-weight:600;font-size:16px">
+      <svg width="16" height="16" fill="none" stroke="var(--gold)" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      Pick on Map
+    </div>
+    <p style="font-family:'Poppins',sans-serif;font-size:13px;color:#888;margin-bottom:12px">Click anywhere or drag the marker to set your pickup location.</p>
+    <div id="picker-map"></div>
+    <button type="button" style="background:var(--gold);color:#fff;border:none;border-radius:30px;padding:13px;font-size:14px;width:100%;margin-top:14px;cursor:pointer;font-family:'Poppins',sans-serif" onclick="confirmMapPicker()">Confirm Location</button>
+  </div>
+</div>
+
+<script>
+  const CLOTHING_TYPES = ['Shirt','Pants','Shorts','Jacket','Dress','Blouse','Skirt','Coat','Jeans','T-Shirt','Polo','Hoodie','Sweater'];
+  const CONDITIONS     = ['Good','Like New','Fair','Poor'];
+  const BRANDS         = ['Uniqlo','Levis','H&M','Zara','Nike','Adidas','Bench','Gap','Mango','Penshoppe'];
+  const MATERIALS      = ['Cotton','Denim','Polyester','Linen','Silk','Wool','Nylon','Rayon'];
+  let clothingCount = 1;
+
+  function addClothingSection() {
+    clothingCount++;
+    const i = clothingCount - 1;
+    const ctOpts   = CLOTHING_TYPES.map(t => `<option>${t}</option>`).join('');
+    const condOpts = CONDITIONS.map(c => `<option>${c}</option>`).join('');
+    const bmOpts   = BRANDS.flatMap(b => MATERIALS.map(m => `${b} ${m}`)).map(o => `<option>${o}</option>`).join('');
+    const card = document.createElement('div');
+    card.className = 'clothing-card'; card.id = `cs-${i}`;
+    card.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="clothing-num">${i+1}</div>
+          <span style="font-family:'Poppins',sans-serif;font-weight:600;font-size:15px">Clothing ${i+1}</span>
+        </div>
+        <button type="button" class="trash-btn" onclick="this.closest('.clothing-card').remove()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>
+      <div class="field-row">
+        <div class="field-group"><label class="form-label-upper">Clothing *</label><select class="form-select">${ctOpts}</select></div>
+        <div class="field-group"><label class="form-label-upper">Estimated Weight (kg)</label><input class="form-input" type="number" step="0.1" value="0.5"/></div>
+      </div>
+      <div class="field-group" style="margin-bottom:14px"><label class="form-label-upper">Condition</label><select class="form-select">${condOpts}</select></div>
+      <div class="field-group"><label class="form-label-upper">Brand &amp; Material</label><select class="form-select">${bmOpts}</select></div>`;
+    document.getElementById('clothing-sections').appendChild(card);
+  }
+
+  function submitDonation() {
+    /* Django: POST to {% url 'create_donation' %} */
+    alert('Donation submitted! (Django: POST to create_donation view)');
+    history.back();
+  }
+
+  function handleImageSelect(input) {
+    const file = input.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => showPreview(e.target.result);
+    reader.readAsDataURL(file);
+  }
+  function handleImageDrop(e) {
+    e.preventDefault(); e.currentTarget.style.background = '';
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) { const r = new FileReader(); r.onload = ev => showPreview(ev.target.result); r.readAsDataURL(file); }
+  }
+  function showPreview(src) {
+    document.getElementById('donation-img-preview').src = src;
+    document.getElementById('upload-preview').style.display = 'block';
+    document.getElementById('upload-placeholder').style.display = 'none';
+  }
+
+  // Nominatim autocomplete
+  const nominatimTimers = {};
+  let _acResults = [];
+  async function nominatimSearch(val, acId, latId, lngId, inputId) {
+    const ac = document.getElementById(acId); if (!ac) return;
+    if (!val || val.length < 3) { ac.classList.add('hidden'); return; }
+    clearTimeout(nominatimTimers[acId]);
+    nominatimTimers[acId] = setTimeout(async () => {
+      try {
+        const data = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val+', Philippines')}&limit=5&countrycodes=ph&addressdetails=1`, { headers: { 'Accept-Language': 'en-US' } }).then(r => r.json());
+        if (!data.length) { ac.classList.add('hidden'); return; }
+        _acResults = data;
+        ac.innerHTML = data.map((r, i) => `<div class="ac-item" onclick="selectAC(${i},'${acId}','${latId}','${lngId}','${inputId}')">${r.display_name}</div>`).join('');
+        ac.classList.remove('hidden');
+      } catch(e) { ac.classList.add('hidden'); }
+    }, 400);
+  }
+  function selectAC(i, acId, latId, lngId, inputId) {
+    const r = _acResults[i];
+    document.getElementById(inputId).value = r.display_name;
+    document.getElementById(latId).value   = r.lat;
+    document.getElementById(lngId).value   = r.lon;
+    document.getElementById(acId).classList.add('hidden');
+  }
+
+  // Map picker
+  let pickerMap = null, pickerMarker = null;
+  let pickerField = null, pickerLatId = null, pickerLngId = null;
+  let pickerLat = 14.5890, pickerLng = 120.9822;
+
+  function openPickerFor(addrId, latId, lngId) {
+    pickerField = addrId; pickerLatId = latId; pickerLngId = lngId;
+    pickerLat = parseFloat(document.getElementById(latId)?.value) || 14.5890;
+    pickerLng = parseFloat(document.getElementById(lngId)?.value) || 120.9822;
+    document.getElementById('map-modal').classList.remove('hidden');
+    setTimeout(() => {
+      if (pickerMap) { pickerMap.remove(); pickerMap = null; }
+      pickerMap = L.map('picker-map').setView([pickerLat, pickerLng], 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(pickerMap);
+      pickerMarker = L.marker([pickerLat, pickerLng], { draggable: true }).addTo(pickerMap);
+      pickerMarker.on('dragend', e => { const ll = e.target.getLatLng(); pickerLat = ll.lat; pickerLng = ll.lng; });
+      pickerMap.on('click', e => { pickerLat = e.latlng.lat; pickerLng = e.latlng.lng; pickerMarker.setLatLng([pickerLat, pickerLng]); });
+    }, 120);
+  }
+  function closeMapPicker() {
+    document.getElementById('map-modal').classList.add('hidden');
+    if (pickerMap) { pickerMap.remove(); pickerMap = null; }
+  }
+  async function confirmMapPicker() {
+    let display = `${pickerLat.toFixed(5)}, ${pickerLng.toFixed(5)}`;
+    try {
+      const data = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pickerLat}&lon=${pickerLng}&addressdetails=1`, { headers: { 'Accept-Language': 'en-US' } }).then(r => r.json());
+      if (data.display_name) display = data.display_name;
+    } catch(e) {}
+    if (pickerField) document.getElementById(pickerField).value = display;
+    if (pickerLatId) document.getElementById(pickerLatId).value = pickerLat;
+    if (pickerLngId) document.getElementById(pickerLngId).value = pickerLng;
+    closeMapPicker();
+  }
+
+  document.addEventListener('click', e => {
+    document.querySelectorAll('.address-autocomplete').forEach(ac => { if (!ac.closest('.ac-wrap')?.contains(e.target)) ac.classList.add('hidden'); });
+    if (e.target === document.getElementById('map-modal')) closeMapPicker();
+  });
+</script>
+</body>
+</html>

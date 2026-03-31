@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<!--
+  WeaveForward — My Donations  (my_donations.html)
+  ══════════════════════════════════════════════════
+  PURPOSE
+  ───────
+  Standalone reference for the My Donations page content.
+  Shows only what goes inside {% block content %} of base.html.
+
+  When converting to a Django template:
+    • {% extends 'base.html' %}
+    • {% block content %} ... {% endblock %}
+    • Set context: page_title = 'My Donations', sidebar_variant = 'donor'
+    • Donation rows: {% for donation in donations %} render a <tr> {% endfor %}
+    • Create Donation: href="{% url 'create_donation' %}"
+    • View: href="{% url 'view_donation' pk=donation.id %}"
+    • Edit: href="{% url 'edit_donation' pk=donation.id %}"
+    • Cancel: POST to {% url 'cancel_donation' pk=donation.id %}
+
+  Context variables expected:
+    page_title      → 'My Donations'
+    sidebar_variant → 'donor'
+    donations       → queryset of donation objects with fields:
+                        pickup_date, time_from, time_to, display_address,
+                        items_summary, status, claimed_by, image_url
+
+  Mobile:
+    Table is horizontally scrollable on narrow screens.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Donations — Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --gold:      #e8a020;
+      --gold-dark: #c8881a;
+      --bg:        #f5f2eb;
+      --border:    #e0dbd4;
+      --text:      #222222;
+      --muted:     #888888;
+      --green:     #4a7c59;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); }
+
+    /* ── Search + Create row ── */
+    .search-bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .search-wrap { position: relative; flex: 1; }
+    .search-wrap input {
+      width: 100%; border-radius: 8px; padding: 10px 16px 10px 40px;
+      border: 1.5px solid var(--border); background: #fff;
+      font-family: 'Poppins', sans-serif; font-size: 14px; outline: none;
+    }
+    .search-wrap input:focus { border-color: var(--gold); }
+    .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+
+    /* ── Buttons ── */
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: none; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; transition: all .2s; text-decoration: none; }
+    .btn-primary { background: var(--gold); color: #fff; border-radius: 8px; padding: 10px 20px; font-size: 14px; white-space: nowrap; }
+    .btn-primary:hover { background: var(--gold-dark); }
+    .btn-outline { background: #fff; color: #444; border: 1.5px solid #ccc; border-radius: 6px; padding: 5px 12px; font-size: 11px; }
+    .btn-outline:hover { border-color: #999; }
+
+    /* ── Table ── */
+    .table-wrap { background: #fff; border-radius: 14px; overflow-x: auto; }
+    table.dt { width: 100%; border-collapse: collapse; min-width: 700px; }
+    table.dt th {
+      font-family: 'Poppins', sans-serif; font-size: 11px; font-weight: 600;
+      color: var(--muted); text-align: left; padding: 12px 10px;
+      border-bottom: 1.5px solid var(--border); background: #fff; white-space: nowrap;
+    }
+    table.dt td {
+      font-family: 'Poppins', sans-serif; font-size: 12px; color: var(--text);
+      padding: 13px 10px; vertical-align: middle; border-bottom: 1px solid #ece8e2;
+    }
+    table.dt tr:last-child td { border-bottom: none; }
+
+    /* ── Badges ── */
+    .badge { display: inline-block; border-radius: 6px; padding: 4px 12px; font-size: 11px; font-family: 'Poppins', sans-serif; font-weight: 500; }
+    .badge-claimed  { background: #0B77DC; color: #fff; }
+    .badge-pending  { background: var(--gold); color: #fff; }
+    .badge-received { background: var(--green); color: #fff; }
+
+    /* ── Action buttons ── */
+    .action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+  </style>
+</head>
+<body>
+
+<!--
+  ════════════════════════════════════════════════════
+  CONTENT BLOCK — this is all that goes inside {% block content %}
+  ════════════════════════════════════════════════════
+-->
+
+<p style="font-family:'Poppins',sans-serif;font-weight:300;font-size:13px;color:#666;margin-bottom:10px" id="don-count">3 Donation Requests</p>
+
+<div class="search-bar-row">
+  <div class="search-wrap">
+    <div class="search-icon">
+      <svg width="17" height="17" fill="none" stroke="#aaa" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    </div>
+    <!-- Django: no action needed, JS filters client-side; or use GET params -->
+    <input id="don-search" placeholder="Search Donations" oninput="filterDonations()"/>
+  </div>
+  <!-- Django: href="{% url 'create_donation' %}" -->
+  <a href="create_donation.html" class="btn btn-primary">Create Donation</a>
+</div>
+
+<div class="table-wrap">
+  <table class="dt" id="don-table">
+    <thead>
+      <tr>
+        <th>Pick-Up Date</th>
+        <th>Time Window</th>
+        <th>Display Address</th>
+        <th>Items</th>
+        <th>Status</th>
+        <th>Claimed By</th>
+        <th>Actions</th>
+        <th>Uploaded Image</th>
+      </tr>
+    </thead>
+    <tbody id="don-tbody">
+      <!-- Django: {% for donation in donations %} -->
+      <tr>
+        <td style="white-space:nowrap">02-10-2026</td>
+        <td style="white-space:nowrap">4:02 AM – 5:50 PM</td>
+        <td style="max-width:140px">Escoda Street, Barangay 675, Ermita, Manila...</td>
+        <td style="max-width:160px">Pants - Levi's Denim, Shirt - Uniqlo Cotton</td>
+        <td><span class="badge badge-claimed">Claimed</span></td>
+        <td>KulturaKalikasan</td>
+        <td>
+          <div class="action-btns">
+            <!-- Django: href="{% url 'view_donation' pk=donation.id %}" -->
+            <a href="view_donation.html" class="btn btn-outline">View</a>
+          </div>
+        </td>
+        <td><img src="https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=300&q=70" style="width:58px;height:58px;object-fit:cover;border-radius:8px" alt="img"/></td>
+      </tr>
+      <tr>
+        <td style="white-space:nowrap">1-25-2026</td>
+        <td style="white-space:nowrap">9:00 AM – 12:00 PM</td>
+        <td style="max-width:140px">7421 Taft Avenue, Barangay 39, Malate, Manila...</td>
+        <td style="max-width:160px">Jacket - H&M Cotton, Jeans - Zara Polyester</td>
+        <td><span class="badge badge-pending">Pending</span></td>
+        <td>—</td>
+        <td>
+          <div class="action-btns">
+            <a href="view_donation.html" class="btn btn-outline">View</a>
+            <!-- Django: href="{% url 'edit_donation' pk=donation.id %}" -->
+            <a href="create_donation.html" class="btn btn-outline">Edit</a>
+            <!-- Django: POST to {% url 'cancel_donation' pk=donation.id %} -->
+            <button class="btn btn-outline">Cancel</button>
+          </div>
+        </td>
+        <td><img src="https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=300&q=70" style="width:58px;height:58px;object-fit:cover;border-radius:8px" alt="img"/></td>
+      </tr>
+      <tr>
+        <td style="white-space:nowrap">1-10-2026</td>
+        <td style="white-space:nowrap">2:00 PM – 6:00 PM</td>
+        <td style="max-width:140px">Barangay 76, Pasay City, Metro Manila</td>
+        <td style="max-width:160px">Jacket, Jeans, T-Shirt, Shorts, Dress, Blouse</td>
+        <td><span class="badge badge-received">Received</span></td>
+        <td>RIOtaso</td>
+        <td>
+          <div class="action-btns">
+            <a href="view_donation.html" class="btn btn-outline">View</a>
+          </div>
+        </td>
+        <td><img src="https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=300&q=70" style="width:58px;height:58px;object-fit:cover;border-radius:8px" alt="img"/></td>
+      </tr>
+      <!-- Django: {% endfor %} -->
+    </tbody>
+  </table>
+</div>
+
+<script>
+  function filterDonations() {
+    const q = document.getElementById('don-search').value.toLowerCase().trim();
+    const rows = document.querySelectorAll('#don-tbody tr');
+    let visible = 0;
+    rows.forEach(row => {
+      const match = !q || row.textContent.toLowerCase().includes(q);
+      row.style.display = match ? '' : 'none';
+      if (match) visible++;
+    });
+    document.getElementById('don-count').textContent = `${visible} Donation Requests`;
+  }
+</script>
+</body>
+</html>

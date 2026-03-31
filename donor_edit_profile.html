@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<!--
+  WeaveForward — Edit Profile  (edit_profile.html)
+  ══════════════════════════════════════════════════
+  PURPOSE
+  ───────
+  Standalone reference for the Edit Profile page content.
+  Shows only what goes inside {% block content %} of base.html.
+
+  When converting to a Django template:
+    • {% extends 'base.html' %}
+    • {% block content %} ... {% endblock %}
+    • Set context: page_title = 'Account Profile', sidebar_variant = 'donor'
+    • Wrap form in: <form method="post" action="{% url 'edit_profile' %}">
+                      {% csrf_token %}
+    • Profile photo: use Django ImageField / enctype="multipart/form-data"
+    • 2FA toggle: POST enabled=true/false to a separate {% url 'toggle_2fa' %}
+    • Save: POST to {% url 'edit_profile' %}
+    • Cancel: href="{% url 'profile' %}"
+
+  Context variables expected:
+    page_title      → 'Account Profile'
+    sidebar_variant → 'donor'
+    user            → user object with fields:
+                        get_initials, first_name, middle_name, last_name,
+                        phone, barangay, city, pickup_address,
+                        pickup_lat, pickup_lng, twofa_enabled
+
+  Mobile:
+    Two-column grid stacks to single column.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Edit Profile — Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    :root {
+      --gold:      #e8a020;
+      --gold-dark: #c8881a;
+      --bg:        #f5f2eb;
+      --border:    #e0dbd4;
+      --text:      #222222;
+      --muted:     #888888;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); }
+    .hidden { display: none !important; }
+
+    /* ── Cards ── */
+    .card { background: #fff; border-radius: 14px; padding: 24px; margin-bottom: 16px; }
+    .card-title { font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 15px; margin-bottom: 16px; }
+
+    /* ── Buttons ── */
+    .btn-primary { background: var(--gold); color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; font-family: 'Poppins', sans-serif; cursor: pointer; transition: background .2s; }
+    .btn-primary:hover { background: var(--gold-dark); }
+    .btn-outline { background: #fff; color: #444; border: 1.5px solid #ccc; border-radius: 8px; padding: 9px 18px; font-size: 13px; font-family: 'Poppins', sans-serif; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; }
+    .btn-outline:hover { border-color: #999; }
+    .choose-file-btn { background: #fff; border: 1.5px solid #ccc; border-radius: 20px; padding: 6px 14px; font-size: 13px; font-family: 'Poppins', sans-serif; cursor: pointer; }
+
+    /* ── Form fields ── */
+    .form-label-upper { font-family: 'Poppins', sans-serif; font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; display: block; margin-bottom: 5px; }
+    .form-input { width: 100%; border: 1.5px solid #d5d5d5; border-radius: 8px; padding: 11px 16px; font-family: 'Poppins', sans-serif; font-size: 14px; color: var(--text); outline: none; transition: border-color .2s; }
+    .form-input:focus { border-color: var(--gold); }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .field-group { display: flex; flex-direction: column; gap: 4px; }
+
+    /* ── Profile avatar ── */
+    .profile-avatar-lg { width: 68px; height: 68px; border-radius: 50%; background: #e8d5a8; display: flex; align-items: center; justify-content: center; color: #8b6914; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 17px; flex-shrink: 0; }
+
+    /* ── Address autocomplete ── */
+    .ac-wrap { position: relative; }
+    .address-autocomplete { position: absolute; background: #fff; border: 1.5px solid var(--border); border-radius: 8px; width: 100%; top: calc(100% + 4px); left: 0; z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,.12); max-height: 220px; overflow-y: auto; }
+    .ac-item { padding: 10px 14px; font-family: 'Poppins', sans-serif; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
+    .ac-item:hover { background: #fdf6e8; }
+    .loc-input-wrap { position: relative; }
+    .loc-input-wrap input { padding-right: 36px; }
+    .loc-pin-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--gold); }
+
+    /* ── 2FA toggle ── */
+    .toggle-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .toggle { width: 40px; height: 22px; border-radius: 11px; background: var(--gold); position: relative; cursor: pointer; transition: background .2s; flex-shrink: 0; }
+    .toggle.off { background: #ccc; }
+    .toggle-knob { width: 18px; height: 18px; background: #fff; border-radius: 50%; position: absolute; top: 2px; right: 2px; transition: right .2s, left .2s; }
+    .toggle.off .toggle-knob { right: auto; left: 2px; }
+
+    /* ── Map modal ── */
+    .map-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 9000; }
+    .map-modal { background: #fff; border-radius: 16px; padding: 24px; width: 620px; max-width: 95vw; position: relative; }
+    .map-close { position: absolute; top: 14px; right: 16px; background: none; border: none; cursor: pointer; font-size: 22px; color: #888; line-height: 1; }
+    #picker-map { width: 100%; height: 300px; border-radius: 8px; z-index: 1; }
+
+    /* ── 2FA modal ── */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 8000; }
+
+    /* ── Mobile ── */
+    @media (max-width: 768px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!--
+  ════════════════════════════════════════════════════
+  CONTENT BLOCK — this is all that goes inside {% block content %}
+  Django: wrap in <form method="post" enctype="multipart/form-data" action="{% url 'edit_profile' %}">
+          {% csrf_token %}
+  ════════════════════════════════════════════════════
+-->
+
+<!-- Profile photo -->
+<div class="card">
+  <div class="card-title">Profile Photo</div>
+  <div style="display:flex;align-items:center;gap:14px">
+    <!-- Django: {{ user.get_initials }} -->
+    <div class="profile-avatar-lg">JDC</div>
+    <!-- Django: name="profile_photo" (ImageField) -->
+    <button type="button" class="choose-file-btn" onclick="document.getElementById('photo-input').click()">Choose file</button>
+    <input type="file" id="photo-input" name="profile_photo" accept="image/*" style="display:none"/>
+  </div>
+</div>
+
+<!-- Edit form -->
+<div class="card">
+  <div class="card-title">Personal Information</div>
+
+  <div class="grid-2">
+    <!-- Django: name="first_name" value="{{ user.first_name }}" -->
+    <div class="field-group"><label class="form-label-upper">First Name</label><input class="form-input" name="first_name" value="Juan"/></div>
+    <!-- Django: name="middle_name" value="{{ user.middle_name }}" -->
+    <div class="field-group"><label class="form-label-upper">Middle Name</label><input class="form-input" name="middle_name" value=""/></div>
+    <!-- Django: name="last_name" value="{{ user.last_name }}" -->
+    <div class="field-group"><label class="form-label-upper">Last Name</label><input class="form-input" name="last_name" value="Dela Cruz"/></div>
+    <div class="field-group">
+      <label class="form-label-upper">Contact Number</label>
+      <div style="display:grid;grid-template-columns:60px 1fr;gap:8px">
+        <input class="form-input" value="+63" readonly/>
+        <!-- Django: name="phone" value="{{ user.phone }}" -->
+        <input class="form-input" name="phone" value="9150814395"/>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <!-- Django: name="barangay" value="{{ user.barangay }}" -->
+    <div class="field-group"><label class="form-label-upper">Barangay</label><input class="form-input" name="barangay" value="Barangay 675"/></div>
+    <!-- Django: name="city" value="{{ user.city }}" -->
+    <div class="field-group"><label class="form-label-upper">City</label><input class="form-input" name="city" value="Manila"/></div>
+  </div>
+
+  <div class="field-group" style="margin-bottom:14px">
+    <label class="form-label-upper">Pickup Address</label>
+    <div class="ac-wrap">
+      <div class="loc-input-wrap">
+        <!-- Django: name="pickup_address" value="{{ user.pickup_address }}" -->
+        <input class="form-input" id="ep-addr" name="pickup_address"
+          value="Escoda Street, Barangay 675, Ermita, Manila"
+          oninput="nominatimSearch(this.value,'ep-ac','ep-lat','ep-lng','ep-addr')"/>
+        <button type="button" class="loc-pin-btn" onclick="openPickerFor('ep-addr','ep-lat','ep-lng')">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </button>
+      </div>
+      <div id="ep-ac" class="address-autocomplete hidden"></div>
+      <!-- Django: name="pickup_lat" / name="pickup_lng" -->
+      <input type="hidden" id="ep-lat" name="pickup_lat" value="14.5890"/>
+      <input type="hidden" id="ep-lng" name="pickup_lng" value="120.9822"/>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <!-- Django: name="new_password" (leave blank to keep current) -->
+    <div class="field-group"><label class="form-label-upper">New Password (leave blank to keep current)</label><input class="form-input" type="password" name="new_password"/></div>
+    <!-- Django: name="confirm_password" -->
+    <div class="field-group"><label class="form-label-upper">Confirm Password</label><input class="form-input" type="password" name="confirm_password"/></div>
+  </div>
+
+  <!-- 2FA toggle
+       Django: POST to {% url 'toggle_2fa' %} separately, or handle in same view -->
+  <div class="toggle-row">
+    <div class="toggle off" id="twofa-toggle" onclick="toggle2FA()">
+      <div class="toggle-knob"></div>
+    </div>
+    <span style="font-size:14px">Two-Factor Authentication</span>
+  </div>
+
+  <div style="display:flex;gap:12px;flex-wrap:wrap">
+    <!-- Django: type="submit" -->
+    <button type="button" class="btn-primary" onclick="saveProfile()">Save Changes</button>
+    <!-- Django: href="{% url 'profile' %}" -->
+    <a href="profile.html" class="btn-outline">Cancel</a>
+  </div>
+</div>
+
+<!-- ═══ MAP PICKER MODAL ═══ -->
+<div id="map-modal" class="map-modal-overlay hidden">
+  <div class="map-modal">
+    <button type="button" class="map-close" onclick="closeMapPicker()">×</button>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-family:'Poppins',sans-serif;font-weight:600;font-size:16px">
+      <svg width="16" height="16" fill="none" stroke="var(--gold)" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      Pick on Map
+    </div>
+    <p style="font-family:'Poppins',sans-serif;font-size:13px;color:#888;margin-bottom:12px">Click anywhere or drag the marker to set your pickup location.</p>
+    <div id="picker-map"></div>
+    <button type="button" style="background:var(--gold);color:#fff;border:none;border-radius:30px;padding:13px;font-size:14px;width:100%;margin-top:14px;cursor:pointer;font-family:'Poppins',sans-serif" onclick="confirmMapPicker()">Confirm Location</button>
+  </div>
+</div>
+
+<!-- ═══ 2FA MODAL ═══
+     Django: on verify, POST TOTP code to {% url 'verify_2fa' %} -->
+<div id="twofa-modal" class="modal-overlay hidden">
+  <div style="background:#fff;border-radius:20px;padding:36px 40px 32px;width:440px;max-width:95vw;box-shadow:0 24px 80px rgba(0,0,0,.22)">
+    <h3 style="font-family:'Poppins',sans-serif;font-weight:600;font-size:18px;margin-bottom:8px;color:#1a1a1a">Enable Two-Factor Authentication</h3>
+    <p style="font-family:'Poppins',sans-serif;font-size:13px;color:#aaa;margin-bottom:22px;line-height:1.5">Scan the key below with your authenticator app, then enter the 6-digit code to confirm.</p>
+    <!-- Django: {{ twofa_secret_key }} -->
+    <div style="background:#fef7ea;border:1.5px solid #f5d898;border-radius:12px;padding:15px 20px;font-family:'Poppins',sans-serif;font-size:13px;font-weight:500;color:#e8a020;text-align:center;letter-spacing:.5px;margin-bottom:20px;word-break:break-all;">
+      KZMFQ2LONRUXG5DFMZTWQ3LQN5ZXIYQK
+    </div>
+    <!-- Django: name="totp_code" -->
+    <input id="twofa-totp-input" type="password" placeholder="● ● ● ● ● ●" maxlength="6"
+      style="width:100%;border:1.5px solid #ede8e0;border-radius:12px;padding:11px 16px;font-family:'Poppins',sans-serif;font-size:22px;letter-spacing:8px;text-align:center;background:#fafaf8;color:#333;outline:none;margin-bottom:24px"/>
+    <div style="display:flex;gap:12px;justify-content:flex-end">
+      <button type="button" onclick="cancelTwoFA()" style="border-radius:30px;padding:11px 32px;font-size:14px;background:#fef7ea;border:1.5px solid #f5d898;color:#888;font-family:'Poppins',sans-serif;cursor:pointer;font-weight:500">Cancel</button>
+      <button type="button" onclick="verifyTwoFA()" style="background:var(--gold);color:#fff;border:none;border-radius:30px;padding:11px 32px;font-size:14px;font-family:'Poppins',sans-serif;cursor:pointer;font-weight:500">Verify &amp; Enable</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let twoFAEnabled = false;
+  let _2FAStaged = null;
+
+  function toggle2FA() {
+    const tog = document.getElementById('twofa-toggle');
+    if (twoFAEnabled) { _2FAStaged = false; tog.classList.add('off'); }
+    else              { _2FAStaged = true;  tog.classList.remove('off'); }
+  }
+
+  function saveProfile() {
+    if (_2FAStaged === true) {
+      document.getElementById('twofa-modal').classList.remove('hidden');
+      return;
+    }
+    commitSave();
+  }
+  function commitSave() {
+    if (_2FAStaged !== null) twoFAEnabled = _2FAStaged;
+    _2FAStaged = null;
+    /* Django: POST form to edit_profile view */
+    alert('Profile saved! (Django: POST to edit_profile view)');
+    window.location.href = 'profile.html';
+  }
+  function cancelTwoFA() {
+    const tog = document.getElementById('twofa-toggle');
+    twoFAEnabled ? tog.classList.remove('off') : tog.classList.add('off');
+    _2FAStaged = null;
+    document.getElementById('twofa-modal').classList.add('hidden');
+  }
+  function verifyTwoFA() {
+    const code = document.getElementById('twofa-totp-input').value;
+    if (!code || code.length < 6) { alert('Please enter a 6-digit code.'); return; }
+    /* Django: POST code to {% url 'verify_2fa' %} */
+    document.getElementById('twofa-modal').classList.add('hidden');
+    commitSave();
+  }
+
+  // Nominatim autocomplete
+  const nominatimTimers = {};
+  let _acResults = [];
+  async function nominatimSearch(val, acId, latId, lngId, inputId) {
+    const ac = document.getElementById(acId); if (!ac) return;
+    if (!val || val.length < 3) { ac.classList.add('hidden'); return; }
+    clearTimeout(nominatimTimers[acId]);
+    nominatimTimers[acId] = setTimeout(async () => {
+      try {
+        const data = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val+', Philippines')}&limit=5&countrycodes=ph&addressdetails=1`, { headers: { 'Accept-Language': 'en-US' } }).then(r => r.json());
+        if (!data.length) { ac.classList.add('hidden'); return; }
+        _acResults = data;
+        ac.innerHTML = data.map((r, i) => `<div class="ac-item" onclick="selectAC(${i},'${acId}','${latId}','${lngId}','${inputId}')">${r.display_name}</div>`).join('');
+        ac.classList.remove('hidden');
+      } catch(e) { ac.classList.add('hidden'); }
+    }, 400);
+  }
+  function selectAC(i, acId, latId, lngId, inputId) {
+    const r = _acResults[i];
+    document.getElementById(inputId).value = r.display_name;
+    document.getElementById(latId).value   = r.lat;
+    document.getElementById(lngId).value   = r.lon;
+    document.getElementById(acId).classList.add('hidden');
+  }
+
+  // Map picker
+  let pickerMap = null, pickerMarker = null;
+  let pickerField = null, pickerLatId = null, pickerLngId = null;
+  let pickerLat = 14.5890, pickerLng = 120.9822;
+
+  function openPickerFor(addrId, latId, lngId) {
+    pickerField = addrId; pickerLatId = latId; pickerLngId = lngId;
+    pickerLat = parseFloat(document.getElementById(latId)?.value) || 14.5890;
+    pickerLng = parseFloat(document.getElementById(lngId)?.value) || 120.9822;
+    document.getElementById('map-modal').classList.remove('hidden');
+    setTimeout(() => {
+      if (pickerMap) { pickerMap.remove(); pickerMap = null; }
+      pickerMap = L.map('picker-map').setView([pickerLat, pickerLng], 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(pickerMap);
+      pickerMarker = L.marker([pickerLat, pickerLng], { draggable: true }).addTo(pickerMap);
+      pickerMarker.on('dragend', e => { const ll = e.target.getLatLng(); pickerLat = ll.lat; pickerLng = ll.lng; });
+      pickerMap.on('click', e => { pickerLat = e.latlng.lat; pickerLng = e.latlng.lng; pickerMarker.setLatLng([pickerLat, pickerLng]); });
+    }, 120);
+  }
+  function closeMapPicker() {
+    document.getElementById('map-modal').classList.add('hidden');
+    if (pickerMap) { pickerMap.remove(); pickerMap = null; }
+  }
+  async function confirmMapPicker() {
+    let display = `${pickerLat.toFixed(5)}, ${pickerLng.toFixed(5)}`;
+    try {
+      const data = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pickerLat}&lon=${pickerLng}&addressdetails=1`, { headers: { 'Accept-Language': 'en-US' } }).then(r => r.json());
+      if (data.display_name) display = data.display_name;
+    } catch(e) {}
+    if (pickerField) document.getElementById(pickerField).value = display;
+    if (pickerLatId) document.getElementById(pickerLatId).value = pickerLat;
+    if (pickerLngId) document.getElementById(pickerLngId).value = pickerLng;
+    closeMapPicker();
+  }
+
+  document.addEventListener('click', e => {
+    document.querySelectorAll('.address-autocomplete').forEach(ac => { if (!ac.closest('.ac-wrap')?.contains(e.target)) ac.classList.add('hidden'); });
+    if (e.target === document.getElementById('map-modal'))   closeMapPicker();
+    if (e.target === document.getElementById('twofa-modal')) cancelTwoFA();
+  });
+</script>
+</body>
+</html>
