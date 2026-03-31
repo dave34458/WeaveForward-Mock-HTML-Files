@@ -2,3 +2,5 @@
 These HTML files currently contain hardcoded data instead of dynamically rendering information from Django endpoints (which would typically be passed as JSON via views.py). However, they still serve as useful references for how the Django template HTML files in the templates folder of the WeaveForward frontend API should be structured.
 
 Each HTML file includes guidelines on how it could be used, but not necessarily how it should be used in the final implementation. For example, some placeholders suggest values to parse from the JSON passed through views.py (e.g., {{ donation.picture }}). While these examples are conceptually correct, the actual variable names and structure may differ once development begins, so they should be treated as illustrative rather than definitive.
+
+These pages closely follow the design of the Figma prototype, maintaining consistency with its layout and styling. They are also built to be responsive
