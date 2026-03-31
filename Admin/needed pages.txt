@@ -1,0 +1,11 @@
+View Donations (just a table)
+View Donation (use tuab view donation without the claim options)
+Update Donation (hard one)
+
+View Donors (just a dashboard table view)
+View Donor (just a table view)
+Update Donor (table view of donor with editable fields)
+
+View TUABs (just a dashboard table view)
+View TUAB (just a table view)
+Update TUAB (table view of donor with editable fields)
