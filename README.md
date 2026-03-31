@@ -6,7 +6,8 @@ They serve as references for structuring Django templates in the `templates` fol
 
 ## Usage
 Placeholders (e.g. `{{ donation.picture }}`) show how data *could* be passed from `views.py`.  
-They are **illustrative only**—actual variable names and structures may change.
+They are **illustrative only**—actual variable names and structures may change.  
+Use these files as a **guide**, but they can also be **converted into Django templates** during development.
 
 ## Design
 - Based closely on the Figma prototype  
