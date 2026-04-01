@@ -20,13 +20,14 @@
   page_title      → 'View Donation'
   sidebar_variant → 'donor'
   donation        → object with pickup_date, time_from, time_to, pickup_address, image_url
-  clothing_items  → list of {clothing_type, weight, condition, brand, material, material_tier}
+  clothing_items  → list of {clothing_type, weight, condition, brand_fiber_lookup_id,
+                        brand_fiber_lookup: {id, clothing, brand, material, scraped_at}}
 
   READ-ONLY BRAND/MATERIAL RULE
   ─────────────────────────────
-  • Show Brand and Material as separate readonly fields.
-  • If material_tier == 0, show selected material text.
-  • If material_tier != 0, show approximation text (e.g., latest approximation label).
+  • DonationItem stores brand_fiber_lookup_id (FK).
+  • For view page, read Brand/Material directly from item.brand_fiber_lookup fields.
+  • Do not recompute approximation logic in this page.
 -->
 <html lang="en">
 <head>
@@ -52,7 +53,7 @@
 <body>
 <div class="layout">
   <div class="left">
-    <!-- Django: {% for item in clothing_items %} -->
+    <!-- Django: {% for item in clothing_items %} (each item has brand_fiber_lookup FK data) -->
     <div class="card">
       <div class="head"><div class="num">1</div><span style="font-weight:600;font-size:15px">Clothing 1</span></div>
       <div class="row">
@@ -61,8 +62,8 @@
       </div>
       <div class="group" style="margin-bottom:14px"><label class="up">Condition</label><input class="in" value="Fair" readonly/></div>
       <div class="row" style="margin-bottom:0">
-        <div class="group"><label class="up">Brand</label><input class="in" value="Levi's" readonly/></div>
-        <div class="group"><label class="up">Material</label><input class="in" value="99% Cotton, 1% Elastane" readonly/></div>
+        <!-- Django: {{ item.brand_fiber_lookup.brand }} --><div class="group"><label class="up">Brand</label><input class="in" value="Levi's" readonly/></div>
+        <!-- Django: {{ item.brand_fiber_lookup.material }} --><div class="group"><label class="up">Material</label><input class="in" value="99% Cotton, 1% Elastane" readonly/></div>
       </div>
     </div>
 
@@ -74,8 +75,8 @@
       </div>
       <div class="group" style="margin-bottom:14px"><label class="up">Condition</label><input class="in" value="Good" readonly/></div>
       <div class="row" style="margin-bottom:0">
-        <div class="group"><label class="up">Brand</label><input class="in" value="Uniqlo" readonly/></div>
-        <div class="group"><label class="up">Material</label><input class="in" value="Approximated (latest for typed combo)" readonly/></div>
+        <!-- Django: {{ item.brand_fiber_lookup.brand }} --><div class="group"><label class="up">Brand</label><input class="in" value="Uniqlo" readonly/></div>
+        <!-- Django: {{ item.brand_fiber_lookup.material }} --><div class="group"><label class="up">Material</label><input class="in" value="100% Cotton" readonly/></div>
       </div>
     </div>
     <!-- Django: {% endfor %} -->
