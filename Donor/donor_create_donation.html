@@ -72,8 +72,8 @@
   <style>
     :root{--gold:#e8a020;--gold-dark:#c8881a;--bg:#f5f2eb;--border:#e0dbd4;--text:#222;--muted:#888;--light:#fdf6e8;--disabled:#aaa}
     *{box-sizing:border-box;margin:0;padding:0} body{font-family:Poppins,sans-serif;background:var(--bg);color:var(--text)} .hidden{display:none!important}
-    .layout{display:flex;gap:24px;align-items:flex-start}.left{flex:1}.right{width:330px;flex-shrink:0}
-    .card,.panel{background:#fff;border:1.5px solid var(--border);border-radius:14px}.card{padding:20px 22px;margin-bottom:14px}.panel{padding:22px 24px}
+    .layout{display:flex;gap:24px;align-items:flex-start}.left{flex:1;min-width:0}.right{width:330px;flex-shrink:0}
+    .card,.panel{background:#fff;border:1.5px solid var(--border);border-radius:14px}.card{width:100%;padding:20px 22px;margin-bottom:14px}.panel{padding:22px 24px}
     .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}.group{display:flex;flex-direction:column;gap:4px}
     label.up{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}.sub{font-size:13px;font-weight:600;color:#333;margin-bottom:8px}
     .in,.sel,.cb-in{width:100%;height:44px;border:1.5px solid #d5d5d5;border-radius:8px;padding:10px 14px;font:14px Poppins,sans-serif;outline:none;background:#fff}
