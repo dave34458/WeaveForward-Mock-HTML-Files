@@ -23,10 +23,10 @@
   • Clothing + Brand are comboboxes (typed vs selected-from-list is tracked).
   • Material tier logic:
       Tier 0: clothing+brand found in lookup → material select
-      Tier 1: both from list, combo not in lookup → approximated
+      Tier 1: both typed/manual, combo exists in lookup → approximated (latest scraped_at)
       Tier 2: clothing typed + brand from list → approximated
       Tier 3: clothing from list + brand typed → approximated
-      Tier 4: both typed → approximated
+      Tier 4: fallback approximation (e.g., manual combo not in lookup)
   • Pick-up location supports Nominatim autocomplete + Leaflet map picker.
   • Upload supports click and drag/drop preview.
 -->
@@ -99,10 +99,10 @@
     d:['Good','Like New','Fair','Poor'],
     b:['Uniqlo',"Levi's",'H&M','Zara','Nike','Adidas','Bench','Gap','Mango','Penshoppe'],
     l:[
-      {id:1,c:'Pants',b:"Levi's",m:'80% Cotton, 20% Polyester'},{id:2,c:'Pants',b:"Levi's",m:'99% Cotton, 1% Elastane'},
-      {id:3,c:'Shirt',b:'Uniqlo',m:'100% Cotton'},{id:4,c:'Shirt',b:'H&M',m:'50% Cotton, 50% Polyester'},
-      {id:5,c:'Jacket',b:'Nike',m:'100% Polyester'},{id:6,c:'Jeans',b:"Levi's",m:'99% Cotton, 1% Elastane'},
-      {id:7,c:'Jacket',b:'H&M',m:'65% Cotton, 35% Polyester'}
+      {id:1,c:'Pants',b:"Levi's",m:'80% Cotton, 20% Polyester',s:'2026-03-20T08:30:00Z'},{id:2,c:'Pants',b:"Levi's",m:'99% Cotton, 1% Elastane',s:'2026-03-28T14:10:00Z'},
+      {id:3,c:'Shirt',b:'Uniqlo',m:'100% Cotton',s:'2026-03-11T09:00:00Z'},{id:4,c:'Shirt',b:'H&M',m:'50% Cotton, 50% Polyester',s:'2026-03-18T10:00:00Z'},
+      {id:5,c:'Jacket',b:'Nike',m:'100% Polyester',s:'2026-03-05T13:00:00Z'},{id:6,c:'Jeans',b:"Levi's",m:'99% Cotton, 1% Elastane',s:'2026-03-27T06:20:00Z'},
+      {id:7,c:'Jacket',b:'H&M',m:'65% Cotton, 35% Polyester',s:'2026-03-29T16:45:00Z'}
     ]
   };
   const el=id=>document.getElementById(id), uniq=a=>[...new Set(a)];
@@ -117,7 +117,21 @@
   function toggleCb(e,t,i){e.preventDefault();const l=el(`${t}l-${i}`);l.classList.contains('hidden')?openCb(t,i):closeCb(t,i)}
   function onType(t,i,v){const x=el(`${t}-${i}`);x.dataset.db='0';x.dataset.v='';renderCb(t,i,v);el(`${t}l-${i}`).classList.remove('hidden');tier(i)}
   function pick(e,t,i,v){e.preventDefault();const x=el(`${t}-${i}`);x.value=v;x.dataset.db='1';x.dataset.v=v;closeCb(t,i);tier(i)}
-  function tier(i){const c=el(`c-${i}`),b=el(`b-${i}`),m=el(`m-${i}`),a=el(`a-${i}`),t=el(`t-${i}`),cdb=c.dataset.db==='1',bdb=b.dataset.db==='1',cv=c.dataset.v||c.value.trim(),bv=b.dataset.v||b.value.trim();const hits=O.l.filter(x=>x.c===cv&&x.b===bv),lv=(!cdb&&!bdb)?4:(!cdb&&bdb)?2:(cdb&&!bdb)?3:(hits.length?0:1);t.value=lv;if(lv===0){m.classList.remove('hidden');a.classList.add('hidden');m.innerHTML='<option value="">— select material —</option>'+hits.map(x=>`<option value="${x.id}">${x.m}</option>`).join('');if(m.dataset.id&&hits.some(x=>String(x.id)===m.dataset.id))m.value=m.dataset.id}else{m.classList.add('hidden');a.classList.remove('hidden')}}
+  function tier(i){
+    const c=el(`c-${i}`),b=el(`b-${i}`),m=el(`m-${i}`),a=el(`a-${i}`),t=el(`t-${i}`),cdb=c.dataset.db==='1',bdb=b.dataset.db==='1',cv=c.dataset.v||c.value.trim(),bv=b.dataset.v||b.value.trim();
+    const hits=O.l.filter(x=>x.c===cv&&x.b===bv).sort((x,y)=>new Date(y.s||0)-new Date(x.s||0));
+    const lv=(cdb&&bdb&&hits.length)?0:(!cdb&&!bdb&&hits.length)?1:(!cdb&&bdb)?2:(cdb&&!bdb)?3:4;
+    t.value=lv;
+    if(lv===0){
+      m.classList.remove('hidden');a.classList.add('hidden');
+      m.innerHTML='<option value="">— select material —</option>'+hits.map(x=>`<option value="${x.id}">${x.m}</option>`).join('');
+      if(m.dataset.id&&hits.some(x=>String(x.id)===m.dataset.id))m.value=m.dataset.id;
+      a.value='Will be approximated';
+    }else{
+      m.classList.add('hidden');a.classList.remove('hidden');
+      a.value=lv===1&&hits[0]?`Will be approximated (latest: ${hits[0].m})`:'Will be approximated';
+    }
+  }
   function addCard(p){el('cards').insertAdjacentHTML('beforeend',card(n,p));tier(n);n++}
 
   function handleImageSelect(i){const f=i.files?.[0];if(!f)return;const r=new FileReader();r.onload=e=>showPreview(e.target.result);r.readAsDataURL(f)}
