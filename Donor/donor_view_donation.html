@@ -1,29 +1,41 @@
 <!DOCTYPE html>
 <!--
-  WeaveForward — View Donation  (view_donation.html)
-  ══════════════════════════════════════════════════
+  WeaveForward — View Donation  (donor_view_donation.html)
+  ═══════════════════════════════════════════════════════════════
+  SYNC NOTE
+  ─────────
+  This file reflects the latest conflict-resolved reference version.
+
+  MAIN SYNC NOTE
+  ──────────────
+  Latest main-branch reference snapshot.
+
   PURPOSE
   ───────
-  Standalone reference for the View Donation (read-only) page content.
-  Shows only what goes inside {% block content %} of base.html.
+  Read-only version of Donation Details for donors.
+  This should stay structurally close to Create Donation for easier
+  template conversion and long-term maintenance consistency.
 
-  When converting to a Django template:
-    • {% extends 'base.html' %}
-    • {% block content %} ... {% endblock %}
-    • Set context: page_title = 'View Donation', sidebar_variant = 'donor'
-    • Back button: href="{% url 'my_donations' %}"
-    • Clothing items: {% for item in donation.items.all %} render a clothing card {% endfor %}
+  DJANGO CONVERSION NOTES
+  ───────────────────────
+  • {% extends 'base.html' %}
+  • {% block content %} ... {% endblock %}
+  • This page is display-only: no editable controls, no submission.
+  • Back button should point to donor donations list.
 
-  Context variables expected:
-    page_title      → 'View Donation'
-    sidebar_variant → 'donor'
-    donation        → donation object with fields:
-                        pickup_date, time_from, time_to, pickup_address, image_url
-    clothing_items  → list of items with: clothing_type, weight, condition, brand_material
+  CONTEXT VARIABLES EXPECTED
+  ──────────────────────────
+  page_title      → 'View Donation'
+  sidebar_variant → 'donor'
+  donation        → object with pickup_date, time_from, time_to, pickup_address, image_url
+  clothing_items  → list of {clothing_type, weight, condition, brand_fiber_lookup_id,
+                        brand_fiber_lookup: {id, clothing, brand, material, scraped_at}}
 
-  Mobile:
-    Two-column layout stacks to single column.
-    Right panel (pickup details) moves below clothing items.
+  READ-ONLY BRAND/MATERIAL RULE
+  ─────────────────────────────
+  • DonationItem stores brand_fiber_lookup_id (FK).
+  • For view page, read Brand/Material directly from item.brand_fiber_lookup fields.
+  • Do not recompute approximation logic in this page.
 -->
 <html lang="en">
 <head>
@@ -32,153 +44,64 @@
   <title>View Donation — Reference</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
-    :root {
-      --gold:   #e8a020;
-      --bg:     #f5f2eb;
-      --border: #e0dbd4;
-      --text:   #222222;
-      --muted:  #888888;
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); }
-
-    /* ── Two-column layout ── */
-    .don-layout { display: flex; gap: 24px; align-items: flex-start; }
-    .don-left  { flex: 1; min-width: 0; }
-    .don-right { width: 330px; flex-shrink: 0; }
-
-    /* ── Clothing card ── */
-    .clothing-card { background: #fff; border-radius: 14px; padding: 20px 22px; margin-bottom: 14px; border: 1.5px solid var(--border); }
-    .clothing-num  { width: 28px; height: 28px; border-radius: 50%; background: var(--gold); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 700; flex-shrink: 0; }
-
-    /* ── Form fields (read-only) ── */
-    .form-label-upper { font-family: 'Poppins', sans-serif; font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; display: block; margin-bottom: 5px; }
-    .form-input { width: 100%; border: 1.5px solid #d5d5d5; border-radius: 8px; padding: 11px 16px; font-family: 'Poppins', sans-serif; font-size: 14px; color: var(--text); outline: none; background: #faf8f5; }
-    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
-    .field-group { display: flex; flex-direction: column; gap: 4px; }
-
-    /* ── Right panel ── */
-    .detail-panel { background: #fff; border-radius: 14px; padding: 22px 24px; }
-    .time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .icon-wrap { position: relative; }
-    .icon-wrap input { padding-right: 36px; }
-    .icon-abs { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); pointer-events: none; }
-    ._subhdr { font-size: 13px; font-weight: 600; color: #333; margin-bottom: 8px; display: block; }
-
-    /* ── Image panel ── */
-    .image-panel { background: #fff; border-radius: 14px; padding: 22px 24px; margin-top: 16px; }
-    .image-panel-title { font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 14px; margin-bottom: 12px; }
-
-    /* ── Mobile ── */
-    @media (max-width: 768px) {
-      .don-layout { flex-direction: column; }
-      .don-left, .don-right { width: 100%; }
-      .field-row { grid-template-columns: 1fr; }
-      .time-row  { grid-template-columns: 1fr; }
-    }
+    :root{--gold:#e8a020;--bg:#f5f2eb;--border:#e0dbd4;--text:#222;--muted:#888}
+    *{box-sizing:border-box;margin:0;padding:0} body{font-family:Poppins,sans-serif;background:var(--bg);color:var(--text)}
+    .layout{display:flex;gap:24px;align-items:flex-start}.left{flex:1}.right{width:330px;flex-shrink:0}
+    .card,.panel{background:#fff;border:1.5px solid var(--border);border-radius:14px}.card{padding:20px 22px;margin-bottom:14px}.panel{padding:22px 24px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}.group{display:flex;flex-direction:column;gap:4px}
+    label.up{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}.sub{font-size:13px;font-weight:600;color:#333;margin-bottom:8px}
+    .in{width:100%;height:44px;border:1.5px solid #d5d5d5;border-radius:8px;padding:10px 14px;font:14px Poppins,sans-serif;background:#faf8f5;color:var(--text)}
+    .head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.num{width:28px;height:28px;border-radius:50%;background:var(--gold);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+    .time{display:grid;grid-template-columns:1fr 1fr;gap:12px}.img-panel{margin-top:16px}
+    @media (max-width:768px){.layout{flex-direction:column;align-items:stretch}.left,.right{width:100%}.row,.time{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
-
-<!--
-  ════════════════════════════════════════════════════
-  CONTENT BLOCK — this is all that goes inside {% block content %}
-  ════════════════════════════════════════════════════
--->
-
-<div class="don-layout">
-
-  <!-- LEFT: clothing items (read-only)
-       Django: {% for item in donation.items.all %} render a clothing card {% endfor %} -->
-  <div class="don-left">
-
-    <div class="clothing-card">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-        <div class="clothing-num">1</div>
-        <span style="font-family:'Poppins',sans-serif;font-weight:600;font-size:15px">Clothing 1</span>
+<div class="layout">
+  <div class="left">
+    <!-- Django: {% for item in clothing_items %} (each item has brand_fiber_lookup FK data) -->
+    <div class="card">
+      <div class="head"><div class="num">1</div><span style="font-weight:600;font-size:15px">Clothing 1</span></div>
+      <div class="row">
+        <div class="group"><label class="up">Clothing</label><input class="in" value="Pants" readonly/></div>
+        <div class="group"><label class="up">Estimated Weight (kg)</label><input class="in" value="0.8" readonly/></div>
       </div>
-      <div class="field-row">
-        <!-- Django: {{ item.clothing_type }} -->
-        <div class="field-group"><label class="form-label-upper">Clothing</label><input class="form-input" value="Pants" readonly/></div>
-        <!-- Django: {{ item.weight }} -->
-        <div class="field-group"><label class="form-label-upper">Estimated Weight (kg)</label><input class="form-input" value="0.8" readonly/></div>
+      <div class="group" style="margin-bottom:14px"><label class="up">Condition</label><input class="in" value="Fair" readonly/></div>
+      <div class="row" style="margin-bottom:0">
+        <!-- Django: {{ item.brand_fiber_lookup.brand }} --><div class="group"><label class="up">Brand</label><input class="in" value="Levi's" readonly/></div>
+        <!-- Django: {{ item.brand_fiber_lookup.material }} --><div class="group"><label class="up">Material</label><input class="in" value="99% Cotton, 1% Elastane" readonly/></div>
       </div>
-      <!-- Django: {{ item.condition }} -->
-      <div class="field-group" style="margin-bottom:14px"><label class="form-label-upper">Condition</label><input class="form-input" value="Fair" readonly/></div>
-      <!-- Django: {{ item.brand_material }} -->
-      <div class="field-group"><label class="form-label-upper">Brand &amp; Material</label><input class="form-input" value="Levi's Denim" readonly/></div>
     </div>
 
-    <div class="clothing-card">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
-        <div class="clothing-num">2</div>
-        <span style="font-family:'Poppins',sans-serif;font-weight:600;font-size:15px">Clothing 2</span>
+    <div class="card">
+      <div class="head"><div class="num">2</div><span style="font-weight:600;font-size:15px">Clothing 2</span></div>
+      <div class="row">
+        <div class="group"><label class="up">Clothing</label><input class="in" value="Shirt" readonly/></div>
+        <div class="group"><label class="up">Estimated Weight (kg)</label><input class="in" value="2.0" readonly/></div>
       </div>
-      <div class="field-row">
-        <div class="field-group"><label class="form-label-upper">Clothing</label><input class="form-input" value="Shirt" readonly/></div>
-        <div class="field-group"><label class="form-label-upper">Estimated Weight (kg)</label><input class="form-input" value="2.0" readonly/></div>
+      <div class="group" style="margin-bottom:14px"><label class="up">Condition</label><input class="in" value="Good" readonly/></div>
+      <div class="row" style="margin-bottom:0">
+        <!-- Django: {{ item.brand_fiber_lookup.brand }} --><div class="group"><label class="up">Brand</label><input class="in" value="Uniqlo" readonly/></div>
+        <!-- Django: {{ item.brand_fiber_lookup.material }} --><div class="group"><label class="up">Material</label><input class="in" value="100% Cotton" readonly/></div>
       </div>
-      <div class="field-group" style="margin-bottom:14px"><label class="form-label-upper">Condition</label><input class="form-input" value="Good" readonly/></div>
-      <div class="field-group"><label class="form-label-upper">Brand &amp; Material</label><input class="form-input" value="Uniqlo Cotton" readonly/></div>
     </div>
-
+    <!-- Django: {% endfor %} -->
   </div>
 
-  <!-- RIGHT: pickup details (read-only)
-       Django: {{ donation.pickup_date }}, {{ donation.time_from }}, etc. -->
-  <div class="don-right">
-    <div class="detail-panel">
-
-      <div class="field-group" style="margin-bottom:18px">
-        <label class="_subhdr">Preferred Pick-Up Date</label>
-        <div class="icon-wrap">
-          <!-- Django: {{ donation.pickup_date|date:"m-d-Y" }} -->
-          <input class="form-input" value="02-10-2026" readonly/>
-          <span class="icon-abs"><svg width="16" height="16" fill="none" stroke="var(--gold)" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
-        </div>
-      </div>
-
-      <div style="margin-bottom:18px">
-        <label class="_subhdr">Preferred Time Window</label>
-        <div class="time-row">
-          <div class="field-group">
-            <label class="form-label-upper">From</label>
-            <div class="icon-wrap">
-              <!-- Django: {{ donation.time_from }} -->
-              <input class="form-input" value="4:02 AM" readonly/>
-              <span class="icon-abs"><svg width="16" height="16" fill="none" stroke="var(--gold)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg></span>
-            </div>
-          </div>
-          <div class="field-group">
-            <label class="form-label-upper">To</label>
-            <div class="icon-wrap">
-              <!-- Django: {{ donation.time_to }} -->
-              <input class="form-input" value="5:50 PM" readonly/>
-              <span class="icon-abs"><svg width="16" height="16" fill="none" stroke="var(--gold)" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg></span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="field-group">
-        <label class="_subhdr">Pick-Up Location</label>
-        <!-- Django: {{ donation.pickup_address }} -->
-        <input class="form-input" value="Escoda Street, Barangay 675, Ermita, Fifth District, Manila, Metro Manila, 1000, Philippines" readonly/>
-      </div>
-
+  <div class="right">
+    <div class="panel">
+      <div class="group" style="margin-bottom:18px"><label class="sub">Preferred Pick-Up Date</label><input class="in" value="02-10-2026" readonly/></div>
+      <div style="margin-bottom:18px"><label class="sub">Preferred Time Window</label><div class="time"><div class="group"><label class="up">From</label><input class="in" value="4:02 AM" readonly/></div><div class="group"><label class="up">To</label><input class="in" value="5:50 PM" readonly/></div></div></div>
+      <div class="group"><label class="sub">Pick-Up Location</label><input class="in" value="Escoda Street, Barangay 675, Ermita, Fifth District, Manila, Metro Manila, 1000, Philippines" readonly/></div>
     </div>
 
-    <!-- Donation image -->
-    <div class="image-panel">
-      <div class="image-panel-title">Donation Pile Image</div>
-      <!-- Django: <img src="{{ donation.image_url }}" ...> -->
+    <div class="panel img-panel">
+      <div style="font-weight:600;font-size:14px;margin-bottom:12px">Donation Pile Image</div>
       <img src="https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=300&q=70" style="width:100%;max-height:180px;object-fit:cover;border-radius:10px" alt="Donation"/>
     </div>
   </div>
-
 </div>
-
 </body>
 </html>
