@@ -124,9 +124,7 @@
 
 <script>
   const O={
-    c:['Shirt','Pants','Shorts','Jacket','Dress','Blouse','Skirt','Coat','Jeans','T-Shirt','Polo','Hoodie','Sweater'],
     d:['Good','Like New','Fair','Poor'],
-    b:['Uniqlo',"Levi's",'H&M','Zara','Nike','Adidas','Bench','Gap','Mango','Penshoppe'],
     l:[
       {id:1,c:'Pants',b:"Levi's",m:'80% Cotton, 20% Polyester',s:'2026-03-20T08:30:00Z'},{id:2,c:'Pants',b:"Levi's",m:'99% Cotton, 1% Elastane',s:'2026-03-28T14:10:00Z'},
       {id:3,c:'Shirt',b:'Uniqlo',m:'100% Cotton',s:'2026-03-11T09:00:00Z'},{id:4,c:'Shirt',b:'H&M',m:'50% Cotton, 50% Polyester',s:'2026-03-18T10:00:00Z'},
@@ -135,13 +133,14 @@
     ]
   };
   const el=id=>document.getElementById(id), uniq=a=>[...new Set(a)];
+  const cs=()=>uniq(O.l.map(x=>x.c)), bs=()=>uniq(O.l.map(x=>x.b));
   let n=0, acR=[],acT, mp,mk,pf,pl='lat',pg='lng',pv=14.5645,pw=120.9930;
 
-  const src=(t,i)=>t==='c' ? (el(`b-${i}`)?.dataset.db==='1'?uniq(O.l.filter(x=>x.b===el(`b-${i}`).dataset.v).map(x=>x.c)):O.c) : (el(`c-${i}`)?.dataset.db==='1'?uniq(O.l.filter(x=>x.c===el(`c-${i}`).dataset.v).map(x=>x.b)):O.b);
+  const src=(t,i)=>t==='c' ? (el(`b-${i}`)?.dataset.db==='1'?uniq(O.l.filter(x=>x.b===el(`b-${i}`).dataset.v).map(x=>x.c)):cs()) : (el(`c-${i}`)?.dataset.db==='1'?uniq(O.l.filter(x=>x.c===el(`c-${i}`).dataset.v).map(x=>x.b)):bs());
 
   function card(i,p={c:'',cdb:'0',cv:'',w:'',d:'Good',b:'',bdb:'0',bv:'',id:''}){return `<div class="card" id="card-${i}"><div class="head"><div class="title-wrap"><div class="num">${i+1}</div><span style="font-weight:600;font-size:15px">Clothing ${i+1}</span></div>${i?`<button type="button" class="trash" onclick="removeCard(${i})"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`:''}</div><div class="row"><div class="group"><label class="up">Clothing *</label>${cb('c',i,{v:p.c,db:p.cdb,dv:p.cv})}</div><div class="group"><label class="up">Estimated Weight (kg)</label><input id="w-${i}" class="in" type="number" step="0.1" value="${p.w}"/></div></div><div class="group" style="margin-bottom:14px"><label class="up">Condition</label><select class="sel" id="d-${i}">${O.d.map(x=>`<option ${x===p.d?'selected':''}>${x}</option>`).join('')}</select></div><div class="row" style="margin-bottom:0"><div class="group"><label class="up">Brand</label>${cb('b',i,{v:p.b,db:p.bdb,dv:p.bv})}</div><div class="group"><label class="up">Material</label><select class="sel" id="m-${i}" data-id="${p.id}"><option value="">— select material —</option></select><input class="in hidden" id="a-${i}" value="Will be approximated" disabled style="font-style:italic"/><input type="hidden" id="t-${i}" value="1"/></div></div></div>`}
   function cb(t,i,s={}){const v=s.v||'',db=s.db??(v?'1':'0'),dv=s.dv??v;return `<div class="cb"><div class="cb-wrap"><input id="${t}-${i}" class="cb-in" value="${v}" autocomplete="off" placeholder="Select or type..." data-db="${db}" data-v="${dv}" onfocus="openCb('${t}',${i})" oninput="onType('${t}',${i},this.value)" onblur="setTimeout(()=>closeCb('${t}',${i}),120)"/><button type="button" class="cb-btn" onmousedown="toggleCb(event,'${t}',${i})">⌄</button></div><div id="${t}l-${i}" class="cb-list hidden"></div></div>`}
-  function renderCb(t,i,q=''){const l=el(`${t}l-${i}`),a=(src(t,i).length?src(t,i):(t==='c'?O.c:O.b)).filter(x=>x.toLowerCase().includes(q.toLowerCase())); l.innerHTML=a.length?a.map(x=>`<div class='cb-opt' data-v="${x}" onmousedown="pick(event,'${t}',${i},'${x.replace(/'/g,"\\'")}')">${x}</div>`).join(''):'<div class="cb-empty">No matches — typed value will be used</div>'}
+  function renderCb(t,i,q=''){const l=el(`${t}l-${i}`),a=(src(t,i).length?src(t,i):(t==='c'?cs():bs())).filter(x=>x.toLowerCase().includes(q.toLowerCase())); l.innerHTML=a.length?a.map(x=>`<div class='cb-opt' data-v="${x}" onmousedown="pick(event,'${t}',${i},'${x.replace(/'/g,"\\'")}')">${x}</div>`).join(''):'<div class="cb-empty">No matches — typed value will be used</div>'}
   function openCb(t,i){renderCb(t,i,el(`${t}-${i}`).value);el(`${t}l-${i}`).classList.remove('hidden')} function closeCb(t,i){el(`${t}l-${i}`).classList.add('hidden');tier(i)}
   function toggleCb(e,t,i){e.preventDefault();const l=el(`${t}l-${i}`);l.classList.contains('hidden')?openCb(t,i):closeCb(t,i)}
   function onType(t,i,v){const x=el(`${t}-${i}`);x.dataset.db='0';x.dataset.v='';renderCb(t,i,v);el(`${t}l-${i}`).classList.remove('hidden');tier(i)}
@@ -149,7 +148,7 @@
   function tier(i){
     const c=el(`c-${i}`),b=el(`b-${i}`),m=el(`m-${i}`),a=el(`a-${i}`),t=el(`t-${i}`),cdb=c.dataset.db==='1',bdb=b.dataset.db==='1',cv=c.dataset.v||c.value.trim(),bv=b.dataset.v||b.value.trim();
     const hits=O.l.filter(x=>x.c===cv&&x.b===bv).sort((x,y)=>new Date(y.s||0)-new Date(x.s||0));
-    const lv=(cdb&&bdb&&hits.length)?0:(!cdb&&!bdb&&hits.length)?1:(!cdb&&bdb)?2:(cdb&&!bdb)?3:4;
+    const lv=(cdb&&bdb)?0:(!cdb&&!bdb&&hits.length)?1:(!cdb&&bdb)?2:(cdb&&!bdb)?3:4;
     t.value=lv;
     if(lv===0){
       m.classList.remove('hidden');a.classList.add('hidden');
