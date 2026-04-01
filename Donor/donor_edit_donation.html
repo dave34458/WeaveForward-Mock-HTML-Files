@@ -7,6 +7,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     :root { --gold:#e8a020; --gold-dark:#c8881a; --bg:#f5f2eb; --border:#e0dbd4; --text:#222; --muted:#888; --light:#fdf6e8; --disabled:#aaa; }
     *{box-sizing:border-box;margin:0;padding:0} body{font-family:Poppins,sans-serif;background:var(--bg);color:var(--text)} .hidden{display:none!important}
@@ -25,6 +27,13 @@
     .cb-list{position:absolute;z-index:50;top:calc(100% + 4px);left:0;width:100%;max-height:180px;overflow:auto;background:#fff;border:1.5px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.1)}
     .cb-opt{padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid #f5f5f5}.cb-opt:hover,.cb-opt.h{background:var(--light)} .cb-empty{padding:9px 14px;font-size:13px;color:var(--muted);font-style:italic}
     .time{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+    .ac{position:relative}.ac-list{position:absolute;top:calc(100% + 4px);left:0;width:100%;max-height:200px;overflow:auto;background:#fff;border:1.5px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.1);z-index:60}
+    .ac-item{padding:10px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid #f5f5f5}.ac-item:hover{background:var(--light)}
+    .pin-wrap{position:relative}.pin{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--gold);cursor:pointer}
+    .upload{margin-top:16px}.drop{border:2px dashed #f0c060;border-radius:12px;padding:18px;text-align:center;cursor:pointer}.drop:hover{background:var(--light)}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:999}.modal-box{background:#fff;border-radius:16px;padding:20px;position:relative;width:min(620px,95vw)}
+    .x{position:absolute;top:10px;right:12px;border:none;background:none;font-size:22px;cursor:pointer;color:#888} #picker-map{width:100%;height:300px;border-radius:8px}
     @media (max-width:768px){.don-layout{flex-direction:column}.don-right{width:100%}.row,.time{grid-template-columns:1fr}}
   </style>
 </head>
@@ -39,11 +48,26 @@
     <div class="panel">
       <div class="group" style="margin-bottom:18px"><label class="sub">Preferred Pick-Up Date</label><input class="in" type="date" value="2026-01-25" /></div>
       <div style="margin-bottom:18px"><label class="sub">Preferred Time Window</label><div class="time"><div class="group"><label class="up">From</label><input class="in" type="time" value="09:00" /></div><div class="group"><label class="up">To</label><input class="in" type="time" value="12:00" /></div></div></div>
-      <div class="group"><label class="sub">Pick-Up Location</label><input class="in" value="7421 Taft Avenue, Barangay 39, Malate, Manila" /></div>
+      <div class="group"><label class="sub">Pick-Up Location</label>
+        <div class="ac">
+          <div class="pin-wrap"><input id="addr" class="in" value="7421 Taft Avenue, Barangay 39, Malate, Manila" oninput="nominatimSearch(this.value)"/><button type="button" class="pin" onclick="openPickerFor('addr','lat','lng')">📍</button></div>
+          <div id="ac" class="ac-list hidden"></div>
+          <input id="lat" type="hidden" value="14.5645"/><input id="lng" type="hidden" value="120.9930"/>
+        </div>
+      </div>
       <button type="button" class="btn-submit" onclick="alert('Changes saved! (Django: POST to edit_donation view)')">Save Changes</button>
+    </div>
+    <div class="panel upload"><div style="font-weight:600;font-size:14px;margin-bottom:4px">Donation Upload</div><p style="font-size:12px;color:#999;margin-bottom:12px">Replace the image of your donation here</p>
+      <div class="drop" ondragover="event.preventDefault();this.style.background='#fdf6e8'" ondragleave="this.style.background=''" ondrop="handleImageDrop(event)" onclick="document.getElementById('img-in').click()">
+        <div id="img-prev-wrap"><img id="img-prev" src="https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=300&q=70" style="max-width:100%;max-height:140px;border-radius:8px;object-fit:cover" alt="Preview"/></div>
+        <div id="img-ph" class="hidden" style="font-size:13px;color:#999">Click or drop image</div>
+        <input id="img-in" type="file" accept="image/*" style="display:none" onchange="handleImageSelect(this)"/>
+      </div>
     </div>
   </div>
 </div>
+
+<div id="map-modal" class="modal hidden"><div class="modal-box"><button type="button" class="x" onclick="closeMapPicker()">×</button><div style="font-weight:600;margin-bottom:8px">Pick on Map</div><div id="picker-map"></div><button type="button" class="btn-submit" onclick="confirmMapPicker()" style="margin-top:12px">Confirm Location</button></div></div>
 
 <script>
   const O = {
@@ -113,7 +137,20 @@
   function addCard(p){ el('clothing-sections').insertAdjacentHTML('beforeend',card(n,p)); tier(n); n++; }
   prefill.forEach(addCard);
 
-  document.addEventListener('click',e=>['c','b'].forEach(t=>{document.querySelectorAll(`[id^='${t}l-']`).forEach(l=>{ if(!l.closest('.cb')?.contains(e.target)) l.classList.add('hidden'); });}));
+  function handleImageSelect(i){const f=i.files?.[0];if(!f)return;const r=new FileReader();r.onload=e=>showPreview(e.target.result);r.readAsDataURL(f)}
+  function handleImageDrop(e){e.preventDefault();e.currentTarget.style.background='';const f=e.dataTransfer.files?.[0];if(f&&f.type.startsWith('image/')){const r=new FileReader();r.onload=x=>showPreview(x.target.result);r.readAsDataURL(f)}}
+  function showPreview(src){el('img-prev').src=src;el('img-prev-wrap').classList.remove('hidden');el('img-ph').classList.add('hidden')}
+
+  let acR=[],acT;
+  function nominatimSearch(v){const a=el('ac'); if(!v||v.length<3){a.classList.add('hidden');return;} clearTimeout(acT); acT=setTimeout(async()=>{try{const d=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(v+', Philippines')}&limit=5&countrycodes=ph&addressdetails=1`,{headers:{'Accept-Language':'en-US'}}).then(r=>r.json()); acR=d||[]; a.innerHTML=acR.length?acR.map((r,i)=>`<div class="ac-item" onmousedown="selectAC(${i})">${r.display_name}</div>`).join(''):'<div class="ac-item">No results</div>'; a.classList.remove('hidden');}catch{a.classList.add('hidden')}},350)}
+  function selectAC(i){const r=acR[i]; if(!r)return; el('addr').value=r.display_name; el('lat').value=r.lat; el('lng').value=r.lon; el('ac').classList.add('hidden')}
+
+  let mp,mk,pf,pl='lat',pg='lng',pv=14.5645,pw=120.9930;
+  function openPickerFor(f,lat,lng){pf=f;pl=lat;pg=lng;pv=parseFloat(el(lat)?.value)||14.5645;pw=parseFloat(el(lng)?.value)||120.9930;el('map-modal').classList.remove('hidden');setTimeout(()=>{if(mp){mp.remove()} mp=L.map('picker-map').setView([pv,pw],15);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(mp);mk=L.marker([pv,pw],{draggable:true}).addTo(mp);mk.on('dragend',e=>{const ll=e.target.getLatLng();pv=ll.lat;pw=ll.lng});mp.on('click',e=>{pv=e.latlng.lat;pw=e.latlng.lng;mk.setLatLng([pv,pw])});},120)}
+  function closeMapPicker(){el('map-modal').classList.add('hidden'); if(mp){mp.remove(); mp=null}}
+  async function confirmMapPicker(){let d=`${pv.toFixed(5)}, ${pw.toFixed(5)}`; try{const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pv}&lon=${pw}&addressdetails=1`,{headers:{'Accept-Language':'en-US'}}).then(x=>x.json()); if(r.display_name)d=r.display_name}catch{} if(pf)el(pf).value=d; el(pl).value=pv; el(pg).value=pw; closeMapPicker()}
+
+  document.addEventListener('click',e=>{['c','b'].forEach(t=>{document.querySelectorAll(`[id^='${t}l-']`).forEach(l=>{ if(!l.closest('.cb')?.contains(e.target)) l.classList.add('hidden'); });}); if(!el('ac')?.closest('.ac')?.contains(e.target)) el('ac')?.classList.add('hidden'); if(e.target===el('map-modal')) closeMapPicker();});
 </script>
 </body>
 </html>
