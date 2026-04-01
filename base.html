@@ -1,10 +1,15 @@
 <!DOCTYPE html>
 <!--
-  WeaveForward — Navbar (navbar.html) [DEPRECATED: use base.html]
+  WeaveForward — Base Layout (base.html)
   ====================================
-  Drop this file into your Django templates folder.
+  Drop this file into your Django templates folder as the main base template.
 
-  Prefer `base.html` directly. This file is kept only for backward compatibility.
+  Usage:
+  ─────
+    {% extends 'base.html' %}
+    {% block content %}
+      ... page content here ...
+    {% endblock %}
 
   Active-state:
   ─────────────

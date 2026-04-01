@@ -1,7 +1,7 @@
 # WeaveForward Frontend HTML Prototypes
 
 ## Overview
-These files are **mostly static HTML prototypes** with hardcoded data (instead of Django-rendered JSON from `views.py`). The **navbar is an exception** and may include reusable/dynamic behavior.  
+These files are **mostly static HTML prototypes** with hardcoded data (instead of Django-rendered JSON from `views.py`). The **base layout (`base.html`)** is the shell exception and includes reusable/dynamic navbar behavior.  
 They serve as references for structuring Django templates in the `templates` folder.
 
 ## Usage
