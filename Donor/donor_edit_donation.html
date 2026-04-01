@@ -206,7 +206,7 @@
           </div>
           <div class="field-group" id="material-group-0">
             <label class="form-label-upper">Material</label>
-            <select class="form-select" id="material-select-0" name="brand_fiber_lookup_id_0"><option value="">— select material —</option></select>
+            <select class="form-select" id="material-select-0" name="brand_fiber_lookup_id_0" data-selected-id="21"><option value="">— select material —</option></select>
             <input type="text" class="form-input hidden" id="material-approx-0" value="Will be approximated" disabled style="color:var(--disabled-text);font-style:italic"/>
             <input type="hidden" id="material-tier-0" name="material_tier_0" value="1"/>
           </div>
@@ -251,7 +251,7 @@
           </div>
           <div class="field-group" id="material-group-1">
             <label class="form-label-upper">Material</label>
-            <select class="form-select" id="material-select-1" name="brand_fiber_lookup_id_1"><option value="">— select material —</option></select>
+            <select class="form-select" id="material-select-1" name="brand_fiber_lookup_id_1" data-selected-id="22"><option value="">— select material —</option></select>
             <input type="text" class="form-input hidden" id="material-approx-1" value="Will be approximated" disabled style="color:var(--disabled-text);font-style:italic"/>
             <input type="hidden" id="material-tier-1" name="material_tier_1" value="1"/>
           </div>
@@ -385,6 +385,10 @@
     { id:18, clothing:'Shorts',  brand:'Nike',    material:'100% Polyester' },
     { id:19, clothing:'Shorts',  brand:'Adidas',  material:'100% Polyester' },
     { id:20, clothing:'Blouse',  brand:'Zara',    material:'100% Viscose' },
+    // Records that may have been created from prior approximated submissions.
+    // Edit flow should now treat these as Tier 0 selectable materials.
+    { id:21, clothing:'Jacket',  brand:'H&M',     material:'65% Cotton, 35% Polyester' },
+    { id:22, clothing:'Jeans',   brand:'Zara',    material:'98% Cotton, 2% Elastane' },
   ];
 
   // ═══════════════════════════════════════════════════════════════
@@ -593,6 +597,7 @@
 
   function populateMaterialSelect(idx, clothing, brand) {
     const matSelect = document.getElementById(`material-select-${idx}`);
+    const selectedId = matSelect?.dataset?.selectedId || '';
     const matches = BRAND_FIBER_LOOKUP.filter(
       r => r.clothing === clothing && r.brand === brand
     );
@@ -600,6 +605,10 @@
       ? `<option value="">— select material —</option>` +
         matches.map(r => `<option value="${r.id}">${r.material}</option>`).join('')
       : `<option value="">— no records found —</option>`;
+
+    if (selectedId && matches.some(r => String(r.id) === selectedId)) {
+      matSelect.value = selectedId;
+    }
   }
 
   // ═══════════════════════════════════════════════════════════════
