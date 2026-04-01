@@ -6,6 +6,8 @@
   ───────
   Standalone reference for the View Donation (read-only) page content.
   Shows only what goes inside {% block content %} of base.html.
+  Reflects separated Brand + Material presentation used by create/edit pages.
+  For non-Tier-0 records, Material should display approximation text only.
 
   When converting to a Django template:
     • {% extends 'base.html' %}
@@ -19,7 +21,7 @@
     sidebar_variant → 'donor'
     donation        → donation object with fields:
                         pickup_date, time_from, time_to, pickup_address, image_url
-    clothing_items  → list of items with: clothing_type, weight, condition, brand_material
+    clothing_items  → list of items with: clothing_type, weight, condition, brand, material, material_tier
 
   Mobile:
     Two-column layout stacks to single column.
@@ -107,8 +109,12 @@
       </div>
       <!-- Django: {{ item.condition }} -->
       <div class="field-group" style="margin-bottom:14px"><label class="form-label-upper">Condition</label><input class="form-input" value="Fair" readonly/></div>
-      <!-- Django: {{ item.brand_material }} -->
-      <div class="field-group"><label class="form-label-upper">Brand &amp; Material</label><input class="form-input" value="Levi's Denim" readonly/></div>
+      <div class="field-row" style="margin-bottom:0">
+        <!-- Django: {{ item.brand }} -->
+        <div class="field-group"><label class="form-label-upper">Brand</label><input class="form-input" value="Levi's" readonly/></div>
+        <!-- Django: if item.material_tier == 0 show selected material else approximated text -->
+        <div class="field-group"><label class="form-label-upper">Material</label><input class="form-input" value="99% Cotton, 1% Elastane" readonly/></div>
+      </div>
     </div>
 
     <div class="clothing-card">
@@ -121,7 +127,10 @@
         <div class="field-group"><label class="form-label-upper">Estimated Weight (kg)</label><input class="form-input" value="2.0" readonly/></div>
       </div>
       <div class="field-group" style="margin-bottom:14px"><label class="form-label-upper">Condition</label><input class="form-input" value="Good" readonly/></div>
-      <div class="field-group"><label class="form-label-upper">Brand &amp; Material</label><input class="form-input" value="Uniqlo Cotton" readonly/></div>
+      <div class="field-row" style="margin-bottom:0">
+        <div class="field-group"><label class="form-label-upper">Brand</label><input class="form-input" value="Uniqlo" readonly/></div>
+        <div class="field-group"><label class="form-label-upper">Material</label><input class="form-input" value="Approximated (latest for typed combo)" readonly/></div>
+      </div>
     </div>
 
   </div>
