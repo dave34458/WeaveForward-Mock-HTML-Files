@@ -17,7 +17,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
     :root{--tuab:#c0410e;--tuab-dark:#a0360c;--bg:#f5f2eb;--border:#e0dbd4;--text:#222;--muted:#888;--light:#fdf6e8;--green:#4a7c59;--red:#e05050;--disabled:#aaa}
-    *{box-sizing:border-box;margin:0;padding:0} body{font-family:Poppins,sans-serif;background:var(--bg);color:var(--text)} .hidden{display:none!important}
+    *{box-sizing:border-box;margin:0;padding:0} html{scrollbar-gutter:stable} body{font-family:Poppins,sans-serif;background:var(--bg);color:var(--text)} .hidden{display:none!important}
     .layout{display:flex;gap:24px;align-items:flex-start}.left{flex:1;min-width:0}.right{width:320px;flex-shrink:0}
     .card,.panel{background:#fff;border:1.5px solid var(--border);border-radius:14px}.card{width:100%;padding:20px 22px;margin-bottom:14px}.panel{padding:22px 24px}
     .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}.group{display:flex;flex-direction:column;gap:4px}
@@ -38,8 +38,11 @@
 </head><body>
 <div class="layout"><div class="left"><div id="cards"></div><button class="btn-add" onclick="addCard()">+ Add Another Clothing Group</button></div>
   <div class="right"><div class="panel">
-    <div class="drow"><span class="lbl">Donor</span><span class="val">Ramon Garcia</span></div><div class="drow"><span class="lbl">Status</span><span class="val" style="color:var(--green)">Claimed</span></div>
+    <div class="drow"><span class="lbl">Donation ID</span><span class="val">DN-2026-0412</span></div><div class="drow"><span class="lbl">Donor</span><span class="val">Ramon Garcia</span></div>
+    <div class="drow"><span class="lbl">Status</span><span class="val" style="color:var(--green)">Claimed</span></div><div class="drow"><span class="lbl">Created At</span><span class="val">2026-02-12 08:34 AM</span></div>
     <div class="drow"><span class="lbl">Preferred Date</span><span class="val">02-15-2026</span></div><div class="drow"><span class="lbl">Time Window</span><span class="val">10:00 AM – 2:00 PM</span></div>
+    <div class="drow"><span class="lbl">Pick-Up Address</span><span class="val">Ermita, Manila</span></div><div class="drow"><span class="lbl">Contact No.</span><span class="val">+63 917 555 2011</span></div>
+    <div class="drow"><span class="lbl">Email</span><span class="val">ramon@example.com</span></div><div class="drow"><span class="lbl">Total Items</span><span class="val">2 groups</span></div>
     <div class="sep"><button class="btn btn-ok" onclick="alert('Marked as Received!')">Received</button><button class="btn btn-bad" onclick="openReject()">Rejected</button></div>
   </div></div>
 </div>
