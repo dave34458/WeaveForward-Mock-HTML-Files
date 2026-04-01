@@ -1,41 +1,59 @@
-<!DOCTYPE html>
 <!--
   WeaveForward — Create Donation  (donor_create_donation.html)
-  ══════════════════════════════════════════════════════════════
-  COMBOBOX + TIER RULES (v3)
-  ──────────────────────────
-  • Clothing & Brand are both comboboxes (type or pick from list).
-  • fromdb=true ONLY when user explicitly clicks an option from the list.
-    Typing — even a perfect match — is always treated as manual.
-  • Bidirectional cascading filters driven by BRAND_FIBER_LOOKUP:
-      - Once a clothing is picked from list, brand list narrows to brands
-        that have records for that clothing type.
-      - Once a brand is picked from list, clothing list narrows to clothing
-        types that have records for that brand.
-  • Material 5-tier logic:
-      Tier 0 — both from dropdown + combo in BRAND_FIBER_LOOKUP →
-                Material <select> populated; submits brand_fiber_lookup_id_N
-      Tier 1 — both from dropdown + combo NOT in BRAND_FIBER_LOOKUP
-                but found in archive →
-                Material "Will be approximated" (most recent archive record);
-                submits clothing_N + brand_N as text strings
-      Tier 2 — clothing manually typed, brand from dropdown →
-                Material "Will be approximated" (median by brand);
-                submits clothing_N + brand_N as text strings
-      Tier 3 — brand manually typed, clothing from dropdown →
-                Material "Will be approximated" (median by clothing);
-                submits clothing_N + brand_N as text strings
-      Tier 4 — both manually typed →
-                Material "Will be approximated" (overall median);
-                submits clothing_N + brand_N as text strings
+  ═══════════════════════════════════════════════════════════════
+  SYNC NOTE
+  ─────────
+  This file reflects the latest conflict-resolved reference version.
 
-  Context variables expected:
-    page_title           → 'Create Donation'
-    sidebar_variant      → 'donor'
-    clothing_types       → list of clothing type strings
-    brands               → list of brand strings
-    conditions           → list of condition strings
-    brand_fiber_lookup   → list of {id, clothing, brand, material}
+  PURPOSE
+  ───────
+  Standalone reference for Create Donation page content (for later
+  conversion into Django templates rendered by views.py context).
+
+  DJANGO CONVERSION NOTES (EXPLICIT)
+  ──────────────────────────────────
+  • {% extends 'base.html' %}
+  • {% block content %} ... {% endblock %}
+  • Wrap in form: <form method="post" action="{% url 'create_donation' %}" enctype="multipart/form-data">
+      {% csrf_token %}
+  • Replace sample values with context variables listed below.
+  • Create form should start with no prefilled clothing/brand/material values.
+  • Keep ids/hooks used by JS so combobox/tier/autocomplete/map behavior remains intact.
+
+  BIDIRECTIONAL CASCADING FILTERS (BRAND_FIBER_LOOKUP)
+  ─────────────────────────────────────────────────────
+  • Once a clothing is picked from list, brand list narrows to brands
+    that have records for that clothing type.
+  • Once a brand is picked from list, clothing list narrows to clothing
+    types that have records for that brand.
+
+  MATERIAL TIER RULES
+  ───────────────────
+  • Tier 0: clothing+brand selected from dropdown + combo exists in lookup
+            → material select is shown (user picks specific material record)
+  • Tier 1: clothing+brand both manually typed, combo exists in lookup
+            → approximated using most recent record by scraped_at datetime
+  • Tier 2: clothing typed, brand from dropdown
+            → approximated
+  • Tier 3: clothing from dropdown, brand typed
+            → approximated
+  • Tier 4: fallback approximation (e.g., manual combo not in lookup)
+
+  CONTEXT VARIABLES EXPECTED
+  ──────────────────────────
+  page_title         → 'Create Donation'
+  sidebar_variant    → 'donor'
+  user_latitude      → float (users.latitude)
+  user_longitude     → float (users.longitude)
+  clothing_types     → list of clothing type strings
+  brands             → list of brand strings
+  conditions         → list of condition strings
+  brand_fiber_lookup → list of {id, clothing, brand, material, scraped_at}
+
+  NOTE
+  ────
+  Prototype/reference file only; real validation and final submission
+  behavior should be enforced server-side in Django forms/views.
 -->
 <html lang="en">
 <head>
@@ -44,770 +62,127 @@
   <title>Create Donation — Reference</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
-    :root {
-      --gold:      #e8a020;
-      --gold-dark: #c8881a;
-      --gold-light:#fdf6e8;
-      --bg:        #f5f2eb;
-      --border:    #e0dbd4;
-      --text:      #222222;
-      --muted:     #888888;
-      --green:     #4a7c59;
-      --disabled-bg: #f4f4f4;
-      --disabled-border: #e0e0e0;
-      --disabled-text: #aaaaaa;
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); }
-    .hidden { display: none !important; }
-
-    /* ── Two-column layout ── */
-    .don-layout { display: flex; gap: 24px; align-items: flex-start; }
-    .don-left  { flex: 1; min-width: 0; }
-    .don-right { width: 330px; flex-shrink: 0; }
-
-    /* ── Clothing card ── */
-    .clothing-card { background: #fff; border-radius: 14px; padding: 20px 22px; margin-bottom: 14px; border: 1.5px solid var(--border); }
-    .clothing-num  { width: 28px; height: 28px; border-radius: 50%; background: var(--gold); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 700; flex-shrink: 0; }
-    .trash-btn { background: none; border: none; cursor: pointer; color: var(--gold); }
-
-    /* ── Form fields ── */
-    .form-label-upper { font-family: 'Poppins', sans-serif; font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; display: block; margin-bottom: 5px; }
-    .form-input { width: 100%; border: 1.5px solid #d5d5d5; border-radius: 8px; padding: 11px 16px; font-family: 'Poppins', sans-serif; font-size: 14px; color: var(--text); outline: none; transition: border-color .2s; background: #fff; }
-    .form-input:focus { border-color: var(--gold); }
-    .form-input:disabled { background: var(--disabled-bg); border-color: var(--disabled-border); color: var(--disabled-text); cursor: not-allowed; }
-    .form-select { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 36px 10px 14px; font-family: 'Poppins', sans-serif; font-size: 14px; color: var(--text); background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23e8a020' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E") no-repeat right 12px center; appearance: none; outline: none; cursor: pointer; }
-    .form-select:focus { border-color: var(--gold); }
-    .form-select:disabled { background-color: var(--disabled-bg); border-color: var(--disabled-border); color: var(--disabled-text); cursor: not-allowed; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23cccccc' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E"); }
-    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
-    .field-group { display: flex; flex-direction: column; gap: 4px; }
-    ._subhdr { font-size: 13px; font-weight: 600; color: #333; margin-bottom: 8px; display: block; }
-
-    /* ── Combobox ── */
-    .combobox-wrap { position: relative; }
-    .combobox-input-wrap { position: relative; }
-    .combobox-input { width: 100%; border: 1.5px solid #d5d5d5; border-radius: 8px; padding: 10px 36px 10px 14px; font-family: 'Poppins', sans-serif; font-size: 14px; color: var(--text); outline: none; transition: border-color .2s; background: #fff; cursor: text; }
-    .combobox-input:focus { border-color: var(--gold); }
-    .combobox-arrow { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--gold); padding: 4px; display: flex; align-items: center; pointer-events: all; }
-    .combobox-dropdown { position: absolute; background: #fff; border: 1.5px solid var(--border); border-radius: 8px; width: 100%; top: calc(100% + 4px); left: 0; z-index: 300; box-shadow: 0 8px 24px rgba(0,0,0,.1); max-height: 200px; overflow-y: auto; }
-    .combobox-option { padding: 9px 14px; font-family: 'Poppins', sans-serif; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
-    .combobox-option:last-child { border-bottom: none; }
-    .combobox-option:hover, .combobox-option.highlighted { background: var(--gold-light); }
-    .combobox-empty { padding: 9px 14px; font-family: 'Poppins', sans-serif; font-size: 13px; color: var(--muted); font-style: italic; }
-
-
-
-    /* ── Add clothing button ── */
-    .btn-dashed { background: transparent; color: var(--gold); border: 2px dashed var(--gold); border-radius: 30px; padding: 12px; font-size: 14px; width: 100%; cursor: pointer; font-family: 'Poppins', sans-serif; margin-top: 4px; transition: background .2s; }
-    .btn-dashed:hover { background: #fdf6e8; }
-
-    /* ── Right panel ── */
-    .detail-panel { background: #fff; border-radius: 14px; padding: 22px 24px; }
-    .time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
-    /* ── Address autocomplete ── */
-    .ac-wrap { position: relative; }
-    .address-autocomplete { position: absolute; background: #fff; border: 1.5px solid var(--border); border-radius: 8px; width: 100%; top: calc(100% + 4px); left: 0; z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,.12); max-height: 220px; overflow-y: auto; }
-    .ac-item { padding: 10px 14px; font-family: 'Poppins', sans-serif; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
-    .ac-item:hover { background: #fdf6e8; }
-    .loc-input-wrap { position: relative; }
-    .loc-input-wrap input { padding-right: 36px; }
-    .loc-pin-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--gold); }
-
-    /* ── Submit button ── */
-    .btn-submit { background: var(--gold); color: #fff; border: none; border-radius: 30px; padding: 13px; font-size: 15px; font-weight: 500; font-family: 'Poppins', sans-serif; cursor: pointer; width: 100%; margin-top: 14px; transition: background .2s; }
-    .btn-submit:hover { background: var(--gold-dark); }
-
-    /* ── Upload zone ── */
-    .upload-zone { border: 2px dashed #f0c060; border-radius: 12px; padding: 28px 20px; text-align: center; cursor: pointer; transition: background .2s; }
-    .upload-zone:hover { background: #fdf6e8; }
-
-    /* ── Map modal ── */
-    .map-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 9000; }
-    .map-modal { background: #fff; border-radius: 16px; padding: 24px; width: 620px; max-width: 95vw; position: relative; }
-    .map-close { position: absolute; top: 14px; right: 16px; background: none; border: none; cursor: pointer; font-size: 22px; color: #888; line-height: 1; }
-    #picker-map { width: 100%; height: 300px; border-radius: 8px; z-index: 1; }
-
-    /* ── Mobile ── */
-    @media (max-width: 768px) {
-      .don-layout { flex-direction: column; }
-      .don-left, .don-right { width: 100%; }
-      .field-row { grid-template-columns: 1fr; }
-      .time-row  { grid-template-columns: 1fr; }
-    }
+    :root{--gold:#e8a020;--gold-dark:#c8881a;--bg:#f5f2eb;--border:#e0dbd4;--text:#222;--muted:#888;--light:#fdf6e8;--disabled:#aaa}
+    *{box-sizing:border-box;margin:0;padding:0} body{font-family:Poppins,sans-serif;background:var(--bg);color:var(--text)} .hidden{display:none!important}
+    .layout{display:flex;gap:24px;align-items:flex-start}.left{flex:1}.right{width:330px;flex-shrink:0}
+    .card,.panel{background:#fff;border:1.5px solid var(--border);border-radius:14px}.card{padding:20px 22px;margin-bottom:14px}.panel{padding:22px 24px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}.group{display:flex;flex-direction:column;gap:4px}
+    label.up{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}.sub{font-size:13px;font-weight:600;color:#333;margin-bottom:8px}
+    .in,.sel,.cb-in{width:100%;height:44px;border:1.5px solid #d5d5d5;border-radius:8px;padding:10px 14px;font:14px Poppins,sans-serif;outline:none;background:#fff}
+    .sel{border-color:var(--border);appearance:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23e8a020' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E") no-repeat right 12px center;padding-right:34px}
+    .in:focus,.sel:focus,.cb-in:focus{border-color:var(--gold)} .in:disabled,.sel:disabled{color:var(--disabled);background:#f4f4f4}
+    .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.num{width:28px;height:28px;border-radius:50%;background:var(--gold);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+    .title-wrap{display:flex;align-items:center;gap:10px}.trash{background:none;border:none;color:var(--gold);cursor:pointer}
+    .btn-add{width:100%;padding:12px;border:2px dashed var(--gold);border-radius:30px;color:var(--gold);background:transparent;cursor:pointer}
+    .btn-submit{width:100%;margin-top:14px;padding:13px;border:none;border-radius:30px;background:var(--gold);color:#fff;cursor:pointer}
+    .cb{position:relative}.cb-wrap{position:relative}.cb-in{padding-right:34px}.cb-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--gold);cursor:pointer}
+    .cb-list{position:absolute;z-index:50;top:calc(100% + 4px);left:0;width:100%;max-height:180px;overflow:auto;background:#fff;border:1.5px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.1)}
+    .cb-opt{padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid #f5f5f5}.cb-opt:hover{background:var(--light)} .cb-empty{padding:9px 14px;font-size:13px;color:var(--muted);font-style:italic}
+    .time{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .ac{position:relative}.ac-list{position:absolute;top:calc(100% + 4px);left:0;width:100%;max-height:200px;overflow:auto;background:#fff;border:1.5px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.1);z-index:60}
+    .ac-item{padding:10px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid #f5f5f5}.ac-item:hover{background:var(--light)}
+    .pin-wrap{position:relative}.pin-wrap .in{padding-right:40px}.pin{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--gold);cursor:pointer}
+    .upload{margin-top:16px}.drop{border:2px dashed #f0c060;border-radius:12px;padding:18px;text-align:center;cursor:pointer}.drop:hover{background:var(--light)}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:999}.modal-box{background:#fff;border-radius:16px;padding:20px;position:relative;width:min(620px,95vw)}
+    .x{position:absolute;top:10px;right:12px;border:none;background:none;font-size:22px;cursor:pointer;color:#888} #picker-map{width:100%;height:300px;border-radius:8px}
+    @media (max-width:768px){.layout{flex-direction:column;align-items:stretch}.left,.right{width:100%}.row,.time{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
-
-<!--
-  ════════════════════════════════════════════════════
-  CONTENT BLOCK — this is all that goes inside {% block content %}
-  Django: wrap in <form method="post" action="{% url 'create_donation' %}">
-          {% csrf_token %}
-  ════════════════════════════════════════════════════
--->
-
-<div class="don-layout">
-
-  <!-- LEFT: clothing items -->
-  <div class="don-left">
-    <div id="clothing-sections">
-
-      <!-- ═══ CLOTHING CARD 1 ═══ -->
-      <div class="clothing-card" id="cs-0">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-          <div style="display:flex;align-items:center;gap:10px">
-            <div class="clothing-num">1</div>
-            <span style="font-family:'Poppins',sans-serif;font-weight:600;font-size:15px">Clothing 1</span>
-          </div>
-        </div>
-
-        <!-- Row 1: Clothing (combobox) + Estimated Weight -->
-        <div class="field-row">
-          <div class="field-group">
-            <label class="form-label-upper">Clothing *</label>
-            <!-- Combobox: fixed list + free type override -->
-            <!-- Django: name="clothing_0", data-fromdb="true/false" -->
-            <div class="combobox-wrap" id="cb-clothing-wrap-0">
-              <div class="combobox-input-wrap">
-                <input type="text"
-                  class="combobox-input"
-                  id="cb-clothing-input-0"
-                  name="clothing_0"
-                  value="Pants"
-                  autocomplete="off"
-                  placeholder="Select or type clothing…"
-                  data-fromdb="true"
-                  data-selected-value="Pants"
-                  onfocus="openCombobox('clothing',0)"
-                  oninput="filterCombobox('clothing',0,this.value)"
-                  onblur="blurCombobox('clothing',0)"
-                  onkeydown="comboboxKeydown(event,'clothing',0)"
-                />
-                <button type="button" class="combobox-arrow" tabindex="-1" onmousedown="toggleCombobox(event,'clothing',0)">
-                  <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg>
-                </button>
-              </div>
-              <div class="combobox-dropdown hidden" id="cb-clothing-list-0"></div>
-            </div>
-          </div>
-          <div class="field-group">
-            <label class="form-label-upper">Estimated Weight (kg)</label>
-            <input class="form-input" type="number" step="0.1" name="weight_0" value="0.8"/>
-          </div>
-        </div>
-
-        <!-- Row 2: Condition (full width) -->
-        <div class="field-group" style="margin-bottom:14px">
-          <label class="form-label-upper">Condition</label>
-          <!-- Django: {% for c in conditions %}<option>{{ c }}</option>{% endfor %} -->
-          <select class="form-select" name="condition_0">
-            <option>Good</option><option>Like New</option><option selected>Fair</option><option>Poor</option>
-          </select>
-        </div>
-
-        <!-- Row 3: Brand (combobox) + Material (tier-driven) -->
-        <div class="field-row" style="margin-bottom:0">
-          <!-- BRAND combobox -->
-          <div class="field-group">
-            <label class="form-label-upper">Brand</label>
-            <!-- Django: name="brand_0", data-fromdb tracks if picked from list -->
-            <div class="combobox-wrap" id="cb-brand-wrap-0">
-              <div class="combobox-input-wrap">
-                <input type="text"
-                  class="combobox-input"
-                  id="cb-brand-input-0"
-                  name="brand_0"
-                  value="Levi's"
-                  autocomplete="off"
-                  placeholder="Select or type brand…"
-                  data-fromdb="true"
-                  data-selected-value="Levi's"
-                  onfocus="openCombobox('brand',0)"
-                  oninput="filterCombobox('brand',0,this.value)"
-                  onblur="blurCombobox('brand',0)"
-                  onkeydown="comboboxKeydown(event,'brand',0)"
-                />
-                <button type="button" class="combobox-arrow" tabindex="-1" onmousedown="toggleCombobox(event,'brand',0)">
-                  <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg>
-                </button>
-              </div>
-              <div class="combobox-dropdown hidden" id="cb-brand-list-0"></div>
-            </div>
-          </div>
-
-          <!-- MATERIAL — tier-driven -->
-          <div class="field-group" id="material-group-0">
-            <label class="form-label-upper">Material</label>
-            <!--
-              Django context: name="brand_fiber_lookup_id_0" (Tier 1)
-                              or  name="material_approx_0" (not sent — approximated server-side)
-              JS swaps between <select> (Tier 1) and disabled <input> (Tiers 2-4)
-            -->
-            <!-- Tier 1: material select (shown when both clothing+brand are from DB) -->
-            <select class="form-select" id="material-select-0" name="brand_fiber_lookup_id_0">
-              <option value="">— select material —</option>
-            </select>
-            <!-- Tiers 2-4: approximated (hidden by default, shown when needed) -->
-            <input type="text" class="form-input hidden" id="material-approx-0"
-              value="Will be approximated" disabled
-              style="color:var(--disabled-text);font-style:italic"/>
-            <!-- Hidden: stores current tier for Django/debugging -->
-            <input type="hidden" id="material-tier-0" name="material_tier_0" value="1"/>
-        </div>
-        </div>
-
-      </div><!-- /cs-0 -->
-
-    </div><!-- /clothing-sections -->
-
-    <!-- Django: use Formsets management form for add/delete -->
-    <button type="button" class="btn-dashed" onclick="addClothingSection()">+ Add Another Clothing Group</button>
+<div class="layout">
+  <div class="left">
+    <div id="cards"></div>
+    <button type="button" class="btn-add" onclick="addCard()">+ Add Another Clothing Group</button>
   </div>
 
-  <!-- RIGHT: pickup details + image upload -->
-  <div class="don-right">
-    <div class="detail-panel">
-
-      <div class="field-group" style="margin-bottom:18px">
-        <label class="_subhdr">Preferred Pick-Up Date</label>
-        <!-- Django: name="preferred_date" -->
-        <input class="form-input" type="date" name="preferred_date" value="2026-02-10"/>
-      </div>
-
-      <div style="margin-bottom:18px">
-        <label class="_subhdr">Preferred Time Window</label>
-        <div class="time-row">
-          <!-- Django: name="time_from" / name="time_to" -->
-          <div class="field-group"><label class="form-label-upper">From</label><input class="form-input" type="time" name="time_from" value="04:02"/></div>
-          <div class="field-group"><label class="form-label-upper">To</label><input class="form-input" type="time" name="time_to" value="17:50"/></div>
-        </div>
-      </div>
-
-      <div class="field-group" style="margin-bottom:20px">
-        <label class="_subhdr">Pick-Up Location</label>
-        <div class="ac-wrap">
-          <div class="loc-input-wrap">
-            <!-- Django: name="pickup_address" -->
-            <input class="form-input" id="f-address" name="pickup_address"
-              value="Escoda Street, Barangay 675, Ermita, Manila"
-              oninput="nominatimSearch(this.value,'f-ac','f-lat','f-lng','f-address')"/>
-            <button type="button" class="loc-pin-btn" onclick="openPickerFor('f-address','f-lat','f-lng')">
-              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            </button>
-          </div>
-          <div id="f-ac" class="address-autocomplete hidden"></div>
-          <!-- Django: name="pickup_lat" / name="pickup_lng" -->
-          <input type="hidden" id="f-lat" name="pickup_lat" value="14.5890"/>
-          <input type="hidden" id="f-lng" name="pickup_lng" value="120.9822"/>
-        </div>
-      </div>
-
-      <!-- Django: POST to {% url 'create_donation' %} -->
-      <button type="button" class="btn-submit" onclick="submitDonation()">Submit Donation</button>
+  <div class="right">
+    <div class="panel">
+      <div class="group" style="margin-bottom:18px"><label class="sub">Preferred Pick-Up Date</label><input class="in" type="date" value="2026-01-25"/></div>
+      <div style="margin-bottom:18px"><label class="sub">Preferred Time Window</label><div class="time"><div class="group"><label class="up">From</label><input class="in" type="time" value="09:00"/></div><div class="group"><label class="up">To</label><input class="in" type="time" value="12:00"/></div></div></div>
+      <div class="group"><label class="sub">Pick-Up Location</label><div class="ac"><div class="pin-wrap"><input id="addr" class="in" value="" placeholder="Loading your saved address…" oninput="nominatimSearch(this.value)"/><button type="button" class="pin" onclick="openPickerFor('addr','lat','lng')"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></button></div><div id="ac" class="ac-list hidden"></div><input id="lat" type="hidden" value="14.5645"/><input id="lng" type="hidden" value="120.9930"/></div></div>
+      <button type="button" class="btn-submit" onclick="alert('Donation submitted! (Django: POST to create_donation view)')">Submit Donation</button>
     </div>
-
-    <!-- Image upload -->
-    <div class="detail-panel" style="margin-top:16px">
-      <div style="font-family:'Poppins',sans-serif;font-weight:600;font-size:14px;margin-bottom:4px">Donation Upload</div>
-      <p style="font-size:12px;color:#999;margin-bottom:14px">Add the image of your donation here</p>
-      <!-- Django: name="donation_image" (FileField) -->
-      <div class="upload-zone"
-        ondragover="event.preventDefault();this.style.background='#fdf6e8'"
-        ondragleave="this.style.background=''"
-        ondrop="handleImageDrop(event)"
-        onclick="document.getElementById('donation-img-input').click()">
-        <div id="upload-preview" style="display:none;margin-bottom:10px">
-          <img id="donation-img-preview" style="max-width:100%;max-height:140px;border-radius:8px;object-fit:cover" src="" alt="Preview"/>
-        </div>
-        <div id="upload-placeholder">
-          <div style="width:44px;height:44px;background:var(--gold);border-radius:10px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px">
-            <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17,8 12,3 7,8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          </div>
-          <p style="font-size:13px;color:#999;margin-bottom:6px">Drag your file(s) to start uploading</p>
-          <p style="font-size:12px;color:#bbb;margin-bottom:10px">OR</p>
-          <span style="border:1.5px solid var(--gold);border-radius:20px;padding:5px 14px;font-size:12px;color:var(--gold);cursor:pointer">Browse files</span>
-        </div>
-        <input type="file" id="donation-img-input" name="donation_image" accept="image/*" style="display:none" onchange="handleImageSelect(this)"/>
+    <div class="panel upload"><div style="font-weight:600;font-size:14px;margin-bottom:4px">Donation Upload</div><p style="font-size:12px;color:#999;margin-bottom:12px">Upload an image for your donation</p>
+      <div class="drop" ondragover="event.preventDefault();this.style.background='#fdf6e8'" ondragleave="this.style.background=''" ondrop="handleImageDrop(event)" onclick="document.getElementById('img-in').click()">
+        <div id="img-prev-wrap" class="hidden"><img id="img-prev" style="max-width:100%;max-height:140px;border-radius:8px;object-fit:cover" alt="Preview"/></div>
+        <div id="img-ph" style="font-size:13px;color:#999">Click or drop image</div>
+        <input id="img-in" type="file" accept="image/*" style="display:none" onchange="handleImageSelect(this)"/>
       </div>
     </div>
   </div>
-
 </div>
 
-<!-- ═══ MAP PICKER MODAL ═══ -->
-<div id="map-modal" class="map-modal-overlay hidden">
-  <div class="map-modal">
-    <button type="button" class="map-close" onclick="closeMapPicker()">×</button>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-family:'Poppins',sans-serif;font-weight:600;font-size:16px">
-      <svg width="16" height="16" fill="none" stroke="var(--gold)" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-      Pick on Map
-    </div>
-    <p style="font-family:'Poppins',sans-serif;font-size:13px;color:#888;margin-bottom:12px">Click anywhere or drag the marker to set your pickup location.</p>
-    <div id="picker-map"></div>
-    <button type="button" style="background:var(--gold);color:#fff;border:none;border-radius:30px;padding:13px;font-size:14px;width:100%;margin-top:14px;cursor:pointer;font-family:'Poppins',sans-serif" onclick="confirmMapPicker()">Confirm Location</button>
-  </div>
-</div>
+<div id="map-modal" class="modal hidden"><div class="modal-box"><button type="button" class="x" onclick="closeMapPicker()">×</button><div style="font-weight:600;margin-bottom:8px">Pick on Map</div><div id="picker-map"></div><button type="button" class="btn-submit" onclick="confirmMapPicker()" style="margin-top:12px">Confirm Location</button></div></div>
 
 <script>
-  // ═══════════════════════════════════════════════════════════════
-  //  PRELOADED DATA
-  //  Django: {{ brand_fiber_lookup|json_script:"bfl-data" }}
-  // ═══════════════════════════════════════════════════════════════
-  const CLOTHING_TYPES = [
-    'Shirt','Pants','Shorts','Jacket','Dress','Blouse',
-    'Skirt','Coat','Jeans','T-Shirt','Polo','Hoodie','Sweater'
-  ];
-  const CONDITIONS = ['Good','Like New','Fair','Poor'];
-  const BRANDS = [
-    'Uniqlo',"Levi's",'H&M','Zara','Nike','Adidas','Bench','Gap','Mango','Penshoppe'
-  ];
-  const BRAND_FIBER_LOOKUP = [
-    { id:1,  clothing:'Pants',   brand:"Levi's",  material:'80% Cotton, 20% Polyester' },
-    { id:2,  clothing:'Pants',   brand:"Levi's",  material:'99% Cotton, 1% Elastane' },
-    { id:3,  clothing:'Pants',   brand:'Zara',    material:'60% Cotton, 40% Polyester' },
-    { id:4,  clothing:'Shirt',   brand:'Uniqlo',  material:'100% Cotton' },
-    { id:5,  clothing:'Shirt',   brand:'H&M',     material:'50% Cotton, 50% Polyester' },
-    { id:6,  clothing:'Jacket',  brand:'Nike',    material:'100% Polyester' },
-    { id:7,  clothing:'Jacket',  brand:'Adidas',  material:'95% Polyester, 5% Elastane' },
-    { id:8,  clothing:'Hoodie',  brand:'Nike',    material:'80% Cotton, 20% Polyester' },
-    { id:9,  clothing:'Hoodie',  brand:'Bench',   material:'70% Cotton, 30% Polyester' },
-    { id:10, clothing:'Jeans',   brand:"Levi's",  material:'99% Cotton, 1% Elastane' },
-    { id:11, clothing:'T-Shirt', brand:'Uniqlo',  material:'100% Cotton' },
-    { id:12, clothing:'T-Shirt', brand:'Gap',     material:'100% Cotton' },
-    { id:13, clothing:'Polo',    brand:'Bench',   material:'100% Cotton' },
-    { id:14, clothing:'Dress',   brand:'Mango',   material:'100% Polyester' },
-    { id:15, clothing:'Skirt',   brand:'Zara',    material:'65% Polyester, 35% Viscose' },
-    { id:16, clothing:'Sweater', brand:'H&M',     material:'60% Wool, 40% Acrylic' },
-    { id:17, clothing:'Coat',    brand:'Mango',   material:'60% Wool, 30% Polyester, 10% Other' },
-    { id:18, clothing:'Shorts',  brand:'Nike',    material:'100% Polyester' },
-    { id:19, clothing:'Shorts',  brand:'Adidas',  material:'100% Polyester' },
-    { id:20, clothing:'Blouse',  brand:'Zara',    material:'100% Viscose' },
-  ];
+  const O={
+    c:['Shirt','Pants','Shorts','Jacket','Dress','Blouse','Skirt','Coat','Jeans','T-Shirt','Polo','Hoodie','Sweater'],
+    d:['Good','Like New','Fair','Poor'],
+    b:['Uniqlo',"Levi's",'H&M','Zara','Nike','Adidas','Bench','Gap','Mango','Penshoppe'],
+    l:[
+      {id:1,c:'Pants',b:"Levi's",m:'80% Cotton, 20% Polyester',s:'2026-03-20T08:30:00Z'},{id:2,c:'Pants',b:"Levi's",m:'99% Cotton, 1% Elastane',s:'2026-03-28T14:10:00Z'},
+      {id:3,c:'Shirt',b:'Uniqlo',m:'100% Cotton',s:'2026-03-11T09:00:00Z'},{id:4,c:'Shirt',b:'H&M',m:'50% Cotton, 50% Polyester',s:'2026-03-18T10:00:00Z'},
+      {id:5,c:'Jacket',b:'Nike',m:'100% Polyester',s:'2026-03-05T13:00:00Z'},{id:6,c:'Jeans',b:"Levi's",m:'99% Cotton, 1% Elastane',s:'2026-03-27T06:20:00Z'},
+      {id:7,c:'Jacket',b:'H&M',m:'65% Cotton, 35% Polyester',s:'2026-03-29T16:45:00Z'}
+    ]
+  };
+  const el=id=>document.getElementById(id), uniq=a=>[...new Set(a)];
+  let n=0, acR=[],acT, mp,mk,pf,pl='lat',pg='lng',pv=14.5645,pw=120.9930;
 
-  // ═══════════════════════════════════════════════════════════════
-  //  CASCADING FILTER HELPERS
-  //  When a value is from the DB, narrow the peer list to only
-  //  options that have records paired with it.
-  //  fromdb=true ONLY on explicit dropdown click — never on typing.
-  // ═══════════════════════════════════════════════════════════════
-  function getAvailableBrands(idx) {
-    const clothingInput = document.getElementById(`cb-clothing-input-${idx}`);
-    if (!clothingInput || clothingInput.dataset.fromdb !== 'true') return BRANDS;
-    const cv = clothingInput.dataset.selectedValue;
-    const filtered = [...new Set(BRAND_FIBER_LOOKUP.filter(r => r.clothing === cv).map(r => r.brand))];
-    return filtered.length ? filtered : BRANDS;
+  const src=(t,i)=>t==='c' ? (el(`b-${i}`)?.dataset.db==='1'?uniq(O.l.filter(x=>x.b===el(`b-${i}`).dataset.v).map(x=>x.c)):O.c) : (el(`c-${i}`)?.dataset.db==='1'?uniq(O.l.filter(x=>x.c===el(`c-${i}`).dataset.v).map(x=>x.b)):O.b);
+
+  function card(i,p={c:'',w:'',d:'Good',b:'',id:''}){return `<div class="card" id="card-${i}"><div class="head"><div class="title-wrap"><div class="num">${i+1}</div><span style="font-weight:600;font-size:15px">Clothing ${i+1}</span></div>${i?'<button type="button" class="trash" onclick="this.closest(\'.card\').remove()"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>':''}</div><div class="row"><div class="group"><label class="up">Clothing *</label>${cb('c',i,p.c)}</div><div class="group"><label class="up">Estimated Weight (kg)</label><input class="in" type="number" step="0.1" value="${p.w}"/></div></div><div class="group" style="margin-bottom:14px"><label class="up">Condition</label><select class="sel">${O.d.map(x=>`<option ${x===p.d?'selected':''}>${x}</option>`).join('')}</select></div><div class="row" style="margin-bottom:0"><div class="group"><label class="up">Brand</label>${cb('b',i,p.b)}</div><div class="group"><label class="up">Material</label><select class="sel" id="m-${i}" data-id="${p.id}"><option value="">— select material —</option></select><input class="in hidden" id="a-${i}" value="Will be approximated" disabled style="font-style:italic"/><input type="hidden" id="t-${i}" value="1"/></div></div></div>`}
+  function cb(t,i,v){return `<div class="cb"><div class="cb-wrap"><input id="${t}-${i}" class="cb-in" value="${v}" autocomplete="off" placeholder="Select or type..." data-db="${v?1:0}" data-v="${v}" onfocus="openCb('${t}',${i})" oninput="onType('${t}',${i},this.value)" onblur="setTimeout(()=>closeCb('${t}',${i}),120)"/><button type="button" class="cb-btn" onmousedown="toggleCb(event,'${t}',${i})">⌄</button></div><div id="${t}l-${i}" class="cb-list hidden"></div></div>`}
+  function renderCb(t,i,q=''){const l=el(`${t}l-${i}`),a=(src(t,i).length?src(t,i):(t==='c'?O.c:O.b)).filter(x=>x.toLowerCase().includes(q.toLowerCase())); l.innerHTML=a.length?a.map(x=>`<div class='cb-opt' data-v="${x}" onmousedown="pick(event,'${t}',${i},'${x.replace(/'/g,"\\'")}')">${x}</div>`).join(''):'<div class="cb-empty">No matches — typed value will be used</div>'}
+  function openCb(t,i){renderCb(t,i,el(`${t}-${i}`).value);el(`${t}l-${i}`).classList.remove('hidden')} function closeCb(t,i){el(`${t}l-${i}`).classList.add('hidden');tier(i)}
+  function toggleCb(e,t,i){e.preventDefault();const l=el(`${t}l-${i}`);l.classList.contains('hidden')?openCb(t,i):closeCb(t,i)}
+  function onType(t,i,v){const x=el(`${t}-${i}`);x.dataset.db='0';x.dataset.v='';renderCb(t,i,v);el(`${t}l-${i}`).classList.remove('hidden');tier(i)}
+  function pick(e,t,i,v){e.preventDefault();const x=el(`${t}-${i}`);x.value=v;x.dataset.db='1';x.dataset.v=v;closeCb(t,i);tier(i)}
+  function tier(i){
+    const c=el(`c-${i}`),b=el(`b-${i}`),m=el(`m-${i}`),a=el(`a-${i}`),t=el(`t-${i}`),cdb=c.dataset.db==='1',bdb=b.dataset.db==='1',cv=c.dataset.v||c.value.trim(),bv=b.dataset.v||b.value.trim();
+    const hits=O.l.filter(x=>x.c===cv&&x.b===bv).sort((x,y)=>new Date(y.s||0)-new Date(x.s||0));
+    const lv=(cdb&&bdb&&hits.length)?0:(!cdb&&!bdb&&hits.length)?1:(!cdb&&bdb)?2:(cdb&&!bdb)?3:4;
+    t.value=lv;
+    if(lv===0){
+      m.classList.remove('hidden');a.classList.add('hidden');
+      m.innerHTML='<option value="">— select material —</option>'+hits.map(x=>`<option value="${x.id}">${x.m}</option>`).join('');
+      if(m.dataset.id&&hits.some(x=>String(x.id)===m.dataset.id))m.value=m.dataset.id;
+      a.value='Will be approximated';
+    }else{
+      m.classList.add('hidden');a.classList.remove('hidden');
+      a.value=lv===1&&hits[0]?`Will be approximated (latest: ${hits[0].m})`:'Will be approximated';
+    }
   }
+  function addCard(p){el('cards').insertAdjacentHTML('beforeend',card(n,p));tier(n);n++}
 
-  function getAvailableClothing(idx) {
-    const brandInput = document.getElementById(`cb-brand-input-${idx}`);
-    if (!brandInput || brandInput.dataset.fromdb !== 'true') return CLOTHING_TYPES;
-    const bv = brandInput.dataset.selectedValue;
-    const filtered = [...new Set(BRAND_FIBER_LOOKUP.filter(r => r.brand === bv).map(r => r.clothing))];
-    return filtered.length ? filtered : CLOTHING_TYPES;
-  }
+  function handleImageSelect(i){const f=i.files?.[0];if(!f)return;const r=new FileReader();r.onload=e=>showPreview(e.target.result);r.readAsDataURL(f)}
+  function handleImageDrop(e){e.preventDefault();e.currentTarget.style.background='';const f=e.dataTransfer.files?.[0];if(f&&f.type.startsWith('image/')){const r=new FileReader();r.onload=x=>showPreview(x.target.result);r.readAsDataURL(f)}}
+  function showPreview(src){el('img-prev').src=src;el('img-prev-wrap').classList.remove('hidden');el('img-ph').classList.add('hidden')}
 
-  // ═══════════════════════════════════════════════════════════════
-  //  COMBOBOX STATE
-  // ═══════════════════════════════════════════════════════════════
-  const cbState = {};
-  function getState(type, idx) {
-    const k = `${type}_${idx}`;
-    if (!cbState[k]) cbState[k] = { open: false, hiIdx: -1 };
-    return cbState[k];
-  }
+  function nominatimSearch(v){const a=el('ac');if(!v||v.length<3){a.classList.add('hidden');return;}clearTimeout(acT);acT=setTimeout(async()=>{try{const d=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(v+', Philippines')}&limit=5&countrycodes=ph&addressdetails=1`,{headers:{'Accept-Language':'en-US'}}).then(r=>r.json());acR=d||[];a.innerHTML=acR.length?acR.map((r,i)=>`<div class="ac-item" onmousedown="selectAC(${i})">${r.display_name}</div>`).join(''):'<div class="ac-item">No results</div>';a.classList.remove('hidden')}catch{a.classList.add('hidden')}},350)}
+  function selectAC(i){const r=acR[i];if(!r)return;el('addr').value=r.display_name;el('lat').value=r.lat;el('lng').value=r.lon;el('ac').classList.add('hidden')}
 
-  function getSource(type, idx) {
-    return type === 'clothing' ? getAvailableClothing(idx) : getAvailableBrands(idx);
-  }
+  function openPickerFor(f,lat,lng){pf=f;pl=lat;pg=lng;pv=parseFloat(el(lat)?.value)||14.5645;pw=parseFloat(el(lng)?.value)||120.9930;el('map-modal').classList.remove('hidden');setTimeout(()=>{if(mp)mp.remove();mp=L.map('picker-map').setView([pv,pw],15);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(mp);mk=L.marker([pv,pw],{draggable:true}).addTo(mp);mk.on('dragend',e=>{const ll=e.target.getLatLng();pv=ll.lat;pw=ll.lng});mp.on('click',e=>{pv=e.latlng.lat;pw=e.latlng.lng;mk.setLatLng([pv,pw])});},120)}
+  function closeMapPicker(){el('map-modal').classList.add('hidden');if(mp){mp.remove();mp=null}}
 
-  function buildOptions(type, idx, query) {
-    const list   = document.getElementById(`cb-${type}-list-${idx}`);
-    const source = getSource(type, idx);
-    const q      = query.trim().toLowerCase();
-    const filtered = q ? source.filter(s => s.toLowerCase().includes(q)) : source;
-    list.innerHTML = filtered.length
-      ? filtered.map(item =>
-          `<div class="combobox-option" data-value="${item.replace(/"/g,'&quot;')}"
-            onmousedown="selectComboboxOption(event,'${type}',${idx},this.dataset.value)">
-            ${item}
-          </div>`
-        ).join('')
-      : `<div class="combobox-empty">No matches — typed value will be used</div>`;
-    getState(type, idx).hiIdx = -1;
-  }
-
-  function openCombobox(type, idx) {
-    const input = document.getElementById(`cb-${type}-input-${idx}`);
-    buildOptions(type, idx, input.value);
-    document.getElementById(`cb-${type}-list-${idx}`).classList.remove('hidden');
-    getState(type, idx).open = true;
-  }
-
-  function toggleCombobox(event, type, idx) {
-    event.preventDefault();
-    const list  = document.getElementById(`cb-${type}-list-${idx}`);
-    const input = document.getElementById(`cb-${type}-input-${idx}`);
-    if (!list.classList.contains('hidden')) {
-      list.classList.add('hidden');
-      getState(type, idx).open = false;
-    } else {
-      input.focus();
-      buildOptions(type, idx, '');
-      list.classList.remove('hidden');
-      getState(type, idx).open = true;
+  async function initAddressFromUser(){
+    const lat=parseFloat(el('lat')?.value), lng=parseFloat(el('lng')?.value);
+    if(Number.isFinite(lat)&&Number.isFinite(lng)){
+      try{const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,{headers:{'Accept-Language':'en-US'}}).then(x=>x.json());
+        el('addr').value=r.display_name||`${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+      }catch{el('addr').value=`${lat.toFixed(5)}, ${lng.toFixed(5)}`;}
     }
   }
 
-  function filterCombobox(type, idx, value) {
-    // Typing always clears fromdb — no snapping, no exceptions
-    const input = document.getElementById(`cb-${type}-input-${idx}`);
-    input.dataset.fromdb = 'false';
-    input.dataset.selectedValue = '';
-    buildOptions(type, idx, value);
-    document.getElementById(`cb-${type}-list-${idx}`).classList.remove('hidden');
-    getState(type, idx).open = true;
-    // Cascade: if peer is open, rebuild its list since our fromdb just cleared
-    const other = type === 'clothing' ? 'brand' : 'clothing';
-    const otherList = document.getElementById(`cb-${other}-list-${idx}`);
-    if (otherList && !otherList.classList.contains('hidden')) {
-      const otherInput = document.getElementById(`cb-${other}-input-${idx}`);
-      buildOptions(other, idx, otherInput ? otherInput.value : '');
-    }
-    updateMaterialTier(idx);
-  }
+  async function confirmMapPicker(){let d=`${pv.toFixed(5)}, ${pw.toFixed(5)}`;try{const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pv}&lon=${pw}&addressdetails=1`,{headers:{'Accept-Language':'en-US'}}).then(x=>x.json());if(r.display_name)d=r.display_name}catch{}if(pf)el(pf).value=d;el(pl).value=pv;el(pg).value=pw;closeMapPicker()}
 
-  function blurCombobox(type, idx) {
-    setTimeout(() => {
-      document.getElementById(`cb-${type}-list-${idx}`).classList.add('hidden');
-      getState(type, idx).open = false;
-      // No snap on blur — if they didn't click, it's manual
-      updateMaterialTier(idx);
-    }, 150);
-  }
-
-  function selectComboboxOption(event, type, idx, value) {
-    event.preventDefault();
-    const input = document.getElementById(`cb-${type}-input-${idx}`);
-    input.value = value;
-    input.dataset.fromdb = 'true';          // ← ONLY set here, on explicit click
-    input.dataset.selectedValue = value;
-    document.getElementById(`cb-${type}-list-${idx}`).classList.add('hidden');
-    getState(type, idx).open = false;
-    // Cascade: rebuild peer list to reflect the new selection
-    const other = type === 'clothing' ? 'brand' : 'clothing';
-    const otherList = document.getElementById(`cb-${other}-list-${idx}`);
-    if (otherList && !otherList.classList.contains('hidden')) {
-      const otherInput = document.getElementById(`cb-${other}-input-${idx}`);
-      buildOptions(other, idx, otherInput ? otherInput.value : '');
-    }
-    updateMaterialTier(idx);
-  }
-
-  function comboboxKeydown(event, type, idx) {
-    const list    = document.getElementById(`cb-${type}-list-${idx}`);
-    const state   = getState(type, idx);
-    const options = list.querySelectorAll('.combobox-option');
-    if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      state.hiIdx = Math.min(state.hiIdx + 1, options.length - 1);
-      highlightOption(options, state.hiIdx);
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      state.hiIdx = Math.max(state.hiIdx - 1, 0);
-      highlightOption(options, state.hiIdx);
-    } else if (event.key === 'Enter' && state.hiIdx >= 0 && options[state.hiIdx]) {
-      event.preventDefault();
-      selectComboboxOption(event, type, idx, options[state.hiIdx].dataset.value);
-    } else if (event.key === 'Escape') {
-      list.classList.add('hidden');
-      state.open = false;
-    }
-  }
-
-  function highlightOption(options, idx) {
-    options.forEach((o, i) => o.classList.toggle('highlighted', i === idx));
-    if (options[idx]) options[idx].scrollIntoView({ block: 'nearest' });
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  TIER LOGIC (5 tiers: 0–4)
-  //
-  //  Tier 0 — both from dropdown + combo in BRAND_FIBER_LOOKUP
-  //            → material <select>; submits brand_fiber_lookup_id_N
-  //  Tier 1 — both from dropdown + combo NOT in BRAND_FIBER_LOOKUP
-  //            → "Will be approximated" (most recent archive record)
-  //  Tier 2 — clothing manual, brand from dropdown
-  //            → "Will be approximated" (median by brand)
-  //  Tier 3 — brand manual, clothing from dropdown
-  //            → "Will be approximated" (median by clothing)
-  //  Tier 4 — both manual
-  //            → "Will be approximated" (overall median)
-  // ═══════════════════════════════════════════════════════════════
-  function updateMaterialTier(idx) {
-    const clothingInput = document.getElementById(`cb-clothing-input-${idx}`);
-    const brandInput    = document.getElementById(`cb-brand-input-${idx}`);
-    const matSelect     = document.getElementById(`material-select-${idx}`);
-    const matApprox     = document.getElementById(`material-approx-${idx}`);
-    const tierHidden    = document.getElementById(`material-tier-${idx}`);
-
-    const clothingFromDB = clothingInput.dataset.fromdb === 'true';
-    const brandFromDB    = brandInput.dataset.fromdb    === 'true';
-    const clothingVal    = clothingInput.dataset.selectedValue || clothingInput.value.trim();
-    const brandVal       = brandInput.dataset.selectedValue    || brandInput.value.trim();
-
-    let tier;
-    if (clothingFromDB && brandFromDB) {
-      // Check if the exact combo exists in BRAND_FIBER_LOOKUP
-      const inLookup = BRAND_FIBER_LOOKUP.some(
-        r => r.clothing === clothingVal && r.brand === brandVal
-      );
-      tier = inLookup ? 0 : 1;
-    } else if (!clothingFromDB && brandFromDB) {
-      tier = 2;
-    } else if (clothingFromDB && !brandFromDB) {
-      tier = 3;
-    } else {
-      tier = 4;
-    }
-
-    if (tierHidden) tierHidden.value = tier;
-
-    if (tier === 0) {
-      // Show material select
-      matApprox.classList.add('hidden');
-      matSelect.classList.remove('hidden');
-      matSelect.name = `brand_fiber_lookup_id_${idx}`;
-      populateMaterialSelect(idx, clothingVal, brandVal);
-    } else {
-      // All other tiers: approximated — only clothing_N + brand_N submitted
-      matSelect.classList.add('hidden');
-      matSelect.name = '';
-      matSelect.innerHTML = '<option value="">— approximated —</option>';
-      matApprox.classList.remove('hidden');
-      matApprox.name = '';
-    }
-  }
-
-  function populateMaterialSelect(idx, clothing, brand) {
-    const matSelect = document.getElementById(`material-select-${idx}`);
-    const matches = BRAND_FIBER_LOOKUP.filter(
-      r => r.clothing === clothing && r.brand === brand
-    );
-    matSelect.innerHTML = matches.length
-      ? `<option value="">— select material —</option>` +
-        matches.map(r => `<option value="${r.id}">${r.material}</option>`).join('')
-      : `<option value="">— no records found —</option>`;
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  DYNAMIC CARD CREATION
-  // ═══════════════════════════════════════════════════════════════
-  let clothingCount = 1;
-
-  function cardInnerHTML(i) {
-    const condOpts = CONDITIONS.map(c => `<option>${c}</option>`).join('');
-    return `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
-        <div style="display:flex;align-items:center;gap:10px">
-          <div class="clothing-num">${i+1}</div>
-          <span style="font-family:'Poppins',sans-serif;font-weight:600;font-size:15px">Clothing ${i+1}</span>
-        </div>
-        <button type="button" class="trash-btn" onclick="this.closest('.clothing-card').remove()">
-          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <polyline points="3,6 5,6 21,6"/>
-            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-            <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
-          </svg>
-        </button>
-      </div>
-      <div class="field-row">
-        <div class="field-group">
-          <label class="form-label-upper">Clothing *</label>
-          <div class="combobox-wrap" id="cb-clothing-wrap-${i}">
-            <div class="combobox-input-wrap">
-              <input type="text" class="combobox-input" id="cb-clothing-input-${i}"
-                name="clothing_${i}" value="" autocomplete="off"
-                placeholder="Select or type clothing…"
-                data-fromdb="false" data-selected-value=""
-                onfocus="openCombobox('clothing',${i})"
-                oninput="filterCombobox('clothing',${i},this.value)"
-                onblur="blurCombobox('clothing',${i})"
-                onkeydown="comboboxKeydown(event,'clothing',${i})"/>
-              <button type="button" class="combobox-arrow" tabindex="-1"
-                onmousedown="toggleCombobox(event,'clothing',${i})">
-                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg>
-              </button>
-            </div>
-            <div class="combobox-dropdown hidden" id="cb-clothing-list-${i}"></div>
-          </div>
-        </div>
-        <div class="field-group">
-          <label class="form-label-upper">Estimated Weight (kg)</label>
-          <input class="form-input" type="number" step="0.1" name="weight_${i}" value="0.5"/>
-        </div>
-      </div>
-      <div class="field-group" style="margin-bottom:14px">
-        <label class="form-label-upper">Condition</label>
-        <select class="form-select" name="condition_${i}">${condOpts}</select>
-      </div>
-      <div class="field-row" style="margin-bottom:0">
-        <div class="field-group">
-          <label class="form-label-upper">Brand</label>
-          <div class="combobox-wrap" id="cb-brand-wrap-${i}">
-            <div class="combobox-input-wrap">
-              <input type="text" class="combobox-input" id="cb-brand-input-${i}"
-                name="brand_${i}" value="" autocomplete="off"
-                placeholder="Select or type brand…"
-                data-fromdb="false" data-selected-value=""
-                onfocus="openCombobox('brand',${i})"
-                oninput="filterCombobox('brand',${i},this.value)"
-                onblur="blurCombobox('brand',${i})"
-                onkeydown="comboboxKeydown(event,'brand',${i})"/>
-              <button type="button" class="combobox-arrow" tabindex="-1"
-                onmousedown="toggleCombobox(event,'brand',${i})">
-                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg>
-              </button>
-            </div>
-            <div class="combobox-dropdown hidden" id="cb-brand-list-${i}"></div>
-          </div>
-        </div>
-        <div class="field-group" id="material-group-${i}">
-          <label class="form-label-upper">Material</label>
-          <select class="form-select hidden" id="material-select-${i}" name="brand_fiber_lookup_id_${i}">
-            <option value="">— select material —</option>
-          </select>
-          <input type="text" class="form-input" id="material-approx-${i}"
-            value="Will be approximated" disabled
-            style="color:var(--disabled-text);font-style:italic"/>
-          <input type="hidden" id="material-tier-${i}" name="material_tier_${i}" value="4"/>
-        </div>
-      </div>`;
-  }
-
-  function addClothingSection() {
-    clothingCount++;
-    const i = clothingCount - 1;
-    const card = document.createElement('div');
-    card.className = 'clothing-card';
-    card.id = `cs-${i}`;
-    card.innerHTML = cardInnerHTML(i);
-    document.getElementById('clothing-sections').appendChild(card);
-    updateMaterialTier(i);
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  SUBMIT
-  // ═══════════════════════════════════════════════════════════════
-  function submitDonation() {
-    alert('Donation submitted! (Django: POST to create_donation view)');
-    history.back();
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  IMAGE UPLOAD
-  // ═══════════════════════════════════════════════════════════════
-  function handleImageSelect(input) {
-    const file = input.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => showPreview(e.target.result);
-    reader.readAsDataURL(file);
-  }
-  function handleImageDrop(e) {
-    e.preventDefault(); e.currentTarget.style.background = '';
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) {
-      const r = new FileReader(); r.onload = ev => showPreview(ev.target.result); r.readAsDataURL(file);
-    }
-  }
-  function showPreview(src) {
-    document.getElementById('donation-img-preview').src = src;
-    document.getElementById('upload-preview').style.display = 'block';
-    document.getElementById('upload-placeholder').style.display = 'none';
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  ADDRESS AUTOCOMPLETE (Nominatim)
-  // ═══════════════════════════════════════════════════════════════
-  const nominatimTimers = {};
-  let _acResults = [];
-  async function nominatimSearch(val, acId, latId, lngId, inputId) {
-    const ac = document.getElementById(acId); if (!ac) return;
-    if (!val || val.length < 3) { ac.classList.add('hidden'); return; }
-    clearTimeout(nominatimTimers[acId]);
-    nominatimTimers[acId] = setTimeout(async () => {
-      try {
-        const data = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val+', Philippines')}&limit=5&countrycodes=ph&addressdetails=1`,{headers:{'Accept-Language':'en-US'}}).then(r=>r.json());
-        if (!data.length) { ac.classList.add('hidden'); return; }
-        _acResults = data;
-        ac.innerHTML = data.map((r,i)=>`<div class="ac-item" onclick="selectAC(${i},'${acId}','${latId}','${lngId}','${inputId}')">${r.display_name}</div>`).join('');
-        ac.classList.remove('hidden');
-      } catch(e) { ac.classList.add('hidden'); }
-    }, 400);
-  }
-  function selectAC(i, acId, latId, lngId, inputId) {
-    const r = _acResults[i];
-    document.getElementById(inputId).value = r.display_name;
-    document.getElementById(latId).value   = r.lat;
-    document.getElementById(lngId).value   = r.lon;
-    document.getElementById(acId).classList.add('hidden');
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  MAP PICKER
-  // ═══════════════════════════════════════════════════════════════
-  let pickerMap=null, pickerMarker=null, pickerField=null, pickerLatId=null, pickerLngId=null;
-  let pickerLat=14.5890, pickerLng=120.9822;
-  function openPickerFor(addrId,latId,lngId) {
-    pickerField=addrId; pickerLatId=latId; pickerLngId=lngId;
-    pickerLat=parseFloat(document.getElementById(latId)?.value)||14.5890;
-    pickerLng=parseFloat(document.getElementById(lngId)?.value)||120.9822;
-    document.getElementById('map-modal').classList.remove('hidden');
-    setTimeout(()=>{
-      if(pickerMap){pickerMap.remove();pickerMap=null;}
-      pickerMap=L.map('picker-map').setView([pickerLat,pickerLng],15);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(pickerMap);
-      pickerMarker=L.marker([pickerLat,pickerLng],{draggable:true}).addTo(pickerMap);
-      pickerMarker.on('dragend',e=>{const ll=e.target.getLatLng();pickerLat=ll.lat;pickerLng=ll.lng;});
-      pickerMap.on('click',e=>{pickerLat=e.latlng.lat;pickerLng=e.latlng.lng;pickerMarker.setLatLng([pickerLat,pickerLng]);});
-    },120);
-  }
-  function closeMapPicker() {
-    document.getElementById('map-modal').classList.add('hidden');
-    if(pickerMap){pickerMap.remove();pickerMap=null;}
-  }
-  async function confirmMapPicker() {
-    let display=`${pickerLat.toFixed(5)}, ${pickerLng.toFixed(5)}`;
-    try{
-      const data=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pickerLat}&lon=${pickerLng}&addressdetails=1`,{headers:{'Accept-Language':'en-US'}}).then(r=>r.json());
-      if(data.display_name) display=data.display_name;
-    }catch(e){}
-    if(pickerField) document.getElementById(pickerField).value=display;
-    if(pickerLatId) document.getElementById(pickerLatId).value=pickerLat;
-    if(pickerLngId) document.getElementById(pickerLngId).value=pickerLng;
-    closeMapPicker();
-  }
-
-  // ═══════════════════════════════════════════════════════════════
-  //  GLOBAL CLICK
-  // ═══════════════════════════════════════════════════════════════
-  document.addEventListener('click', e => {
-    document.querySelectorAll('.address-autocomplete').forEach(ac=>{
-      if(!ac.closest('.ac-wrap')?.contains(e.target)) ac.classList.add('hidden');
-    });
-    if(e.target===document.getElementById('map-modal')) closeMapPicker();
-  });
-
-  // ═══════════════════════════════════════════════════════════════
-  //  INIT
-  // ═══════════════════════════════════════════════════════════════
-  document.addEventListener('DOMContentLoaded', () => {
-    updateMaterialTier(0);
-  });
+  addCard();
+  initAddressFromUser();
+  document.addEventListener('click',e=>{['c','b'].forEach(t=>document.querySelectorAll(`[id^='${t}l-']`).forEach(l=>{if(!l.closest('.cb')?.contains(e.target))l.classList.add('hidden')}));if(!el('ac')?.closest('.ac')?.contains(e.target))el('ac')?.classList.add('hidden');if(e.target===el('map-modal'))closeMapPicker()});
 </script>
 </body>
 </html>
