@@ -1,4 +1,40 @@
 <!DOCTYPE html>
+<!--
+  WeaveForward — Edit Donation  (donor_edit_donation.html)
+  ═══════════════════════════════════════════════════════════════
+  PURPOSE
+  ───────
+  Standalone reference for Edit Donation content (what goes inside
+  Django {% block content %}). This file is a frontend prototype and
+  demonstrates the intended behavior before backend wiring.
+
+  DJANGO CONVERSION NOTES
+  ───────────────────────
+  • {% extends 'base.html' %}
+  • {% block content %} ... {% endblock %}
+  • Wrap in form: <form method="post" action="{% url 'edit_donation' pk=donation.id %}">
+      {% csrf_token %}
+  • Replace hardcoded values with donation/item fields from context.
+  • Preserve element ids/names where possible for JS hooks.
+
+  PAGE BEHAVIOR NOTES
+  ───────────────────
+  • Clothing groups are dynamic cards; first two are prefilled samples.
+  • Clothing + Brand are comboboxes (type or pick from suggestion list).
+  • Material uses tier logic:
+      Tier 0: clothing+brand match lookup → show material select
+      Tier 1: both from list but combo not in lookup → approximated
+      Tier 2: clothing typed + brand from list → approximated
+      Tier 3: clothing from list + brand typed → approximated
+      Tier 4: both typed → approximated
+  • Pick-up location supports Nominatim autocomplete + Leaflet map picker.
+  • Upload panel supports click-to-upload and drag-drop preview.
+
+  NOTE
+  ────
+  This is reference/prototype code; server validation and final payload
+  decisions belong in Django forms/views/models.
+-->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -38,12 +74,15 @@
   </style>
 </head>
 <body>
+<!-- CONTENT BLOCK START -->
 <div class="don-layout">
+  <!-- LEFT: clothing item groups -->
   <div class="don-left">
     <div id="clothing-sections"></div>
     <button type="button" class="btn-add" onclick="addCard()">+ Add Another Clothing Group</button>
   </div>
 
+  <!-- RIGHT: pickup details + upload -->
   <div class="don-right">
     <div class="panel">
       <div class="group" style="margin-bottom:18px"><label class="sub">Preferred Pick-Up Date</label><input class="in" type="date" value="2026-01-25" /></div>
@@ -69,7 +108,10 @@
 
 <div id="map-modal" class="modal hidden"><div class="modal-box"><button type="button" class="x" onclick="closeMapPicker()">×</button><div style="font-weight:600;margin-bottom:8px">Pick on Map</div><div id="picker-map"></div><button type="button" class="btn-submit" onclick="confirmMapPicker()" style="margin-top:12px">Confirm Location</button></div></div>
 
+<!-- MAP PICKER MODAL -->
+
 <script>
+  // ===== PRELOADED REFERENCE DATA =====
   const O = {
     c:['Shirt','Pants','Shorts','Jacket','Dress','Blouse','Skirt','Coat','Jeans','T-Shirt','Polo','Hoodie','Sweater'],
     d:['Good','Like New','Fair','Poor'],
@@ -93,6 +135,7 @@
     ? (el(`b-${i}`)?.dataset.db==='1' ? uniq(O.l.filter(x=>x.b===el(`b-${i}`).dataset.v).map(x=>x.c)) : O.c)
     : (el(`c-${i}`)?.dataset.db==='1' ? uniq(O.l.filter(x=>x.c===el(`c-${i}`).dataset.v).map(x=>x.b)) : O.b);
 
+  // ===== CARD RENDERING =====
   function card(i,p={c:'',w:'0.5',d:'Good',b:'',id:''}) {
     return `<div class="card" id="card-${i}">
       <div class="head"><div class="title-wrap"><div class="num">${i+1}</div><span style="font-weight:600;font-size:15px">Clothing ${i+1}</span></div>${i?'<button type="button" class="trash" onclick="this.closest(\'.card\').remove()"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>':''}</div>
@@ -112,6 +155,8 @@
     </div>`;
   }
 
+
+  // ===== COMBOBOX HELPERS =====
   function cb(t,i,v){
     return `<div class="cb"><div class="cb-wrap"><input id="${t}-${i}" class="cb-in" value="${v}" autocomplete="off" placeholder="Select or type..." data-db="${v?1:0}" data-v="${v}" onfocus="openCb('${t}',${i})" oninput="onType('${t}',${i},this.value)" onblur="setTimeout(()=>closeCb('${t}',${i}),120)"/><button type="button" class="cb-btn" onmousedown="toggleCb(event,'${t}',${i})">⌄</button></div><div id="${t}l-${i}" class="cb-list hidden"></div></div>`;
   }
@@ -122,6 +167,8 @@
   function toggleCb(e,t,i){ e.preventDefault(); const l=el(`${t}l-${i}`); l.classList.contains('hidden')?openCb(t,i):closeCb(t,i); }
   function onType(t,i,v){ const x=el(`${t}-${i}`); x.dataset.db='0'; x.dataset.v=''; renderCb(t,i,v); el(`${t}l-${i}`).classList.remove('hidden'); tier(i); }
   function pick(e,t,i,v){ e.preventDefault(); const x=el(`${t}-${i}`); x.value=v; x.dataset.db='1'; x.dataset.v=v; closeCb(t,i); tier(i); }
+
+  // ===== MATERIAL TIER RESOLUTION =====
   function tier(i){
     const c=el(`c-${i}`), b=el(`b-${i}`), m=el(`m-${i}`), a=el(`a-${i}`), t=el(`t-${i}`);
     const cdb=c.dataset.db==='1', bdb=b.dataset.db==='1', cv=c.dataset.v||c.value.trim(), bv=b.dataset.v||b.value.trim();
@@ -134,14 +181,20 @@
   function addCard(p){ el('clothing-sections').insertAdjacentHTML('beforeend',card(n,p)); tier(n); n++; }
   prefill.forEach(addCard);
 
+
+  // ===== IMAGE UPLOAD HELPERS =====
   function handleImageSelect(i){const f=i.files?.[0];if(!f)return;const r=new FileReader();r.onload=e=>showPreview(e.target.result);r.readAsDataURL(f)}
   function handleImageDrop(e){e.preventDefault();e.currentTarget.style.background='';const f=e.dataTransfer.files?.[0];if(f&&f.type.startsWith('image/')){const r=new FileReader();r.onload=x=>showPreview(x.target.result);r.readAsDataURL(f)}}
   function showPreview(src){el('img-prev').src=src;el('img-prev-wrap').classList.remove('hidden');el('img-ph').classList.add('hidden')}
 
+
+  // ===== ADDRESS AUTOCOMPLETE (NOMINATIM) =====
   let acR=[],acT;
   function nominatimSearch(v){const a=el('ac'); if(!v||v.length<3){a.classList.add('hidden');return;} clearTimeout(acT); acT=setTimeout(async()=>{try{const d=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(v+', Philippines')}&limit=5&countrycodes=ph&addressdetails=1`,{headers:{'Accept-Language':'en-US'}}).then(r=>r.json()); acR=d||[]; a.innerHTML=acR.length?acR.map((r,i)=>`<div class="ac-item" onmousedown="selectAC(${i})">${r.display_name}</div>`).join(''):'<div class="ac-item">No results</div>'; a.classList.remove('hidden');}catch{a.classList.add('hidden')}},350)}
   function selectAC(i){const r=acR[i]; if(!r)return; el('addr').value=r.display_name; el('lat').value=r.lat; el('lng').value=r.lon; el('ac').classList.add('hidden')}
 
+
+  // ===== MAP PICKER (LEAFLET) =====
   let mp,mk,pf,pl='lat',pg='lng',pv=14.5645,pw=120.9930;
   function openPickerFor(f,lat,lng){pf=f;pl=lat;pg=lng;pv=parseFloat(el(lat)?.value)||14.5645;pw=parseFloat(el(lng)?.value)||120.9930;el('map-modal').classList.remove('hidden');setTimeout(()=>{if(mp){mp.remove()} mp=L.map('picker-map').setView([pv,pw],15);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(mp);mk=L.marker([pv,pw],{draggable:true}).addTo(mp);mk.on('dragend',e=>{const ll=e.target.getLatLng();pv=ll.lat;pw=ll.lng});mp.on('click',e=>{pv=e.latlng.lat;pw=e.latlng.lng;mk.setLatLng([pv,pw])});},120)}
   function closeMapPicker(){el('map-modal').classList.add('hidden'); if(mp){mp.remove(); mp=null}}
