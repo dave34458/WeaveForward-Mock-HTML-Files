@@ -1,264 +1,68 @@
 <!DOCTYPE html>
 <!--
-  WeaveForward TUAB — Update Donation  (tuab_update_donation.html)
-  ════════════════════════════════════════════════════════════════
-  PURPOSE
-  ───────
-  Standalone reference for the Update Donation (claimed, post-claim) page content.
-  Shows only what goes inside {% block content %} of base.html.
+  WeaveForward TUAB — Update Donation (tuab_update_donation.html)
+  Editable donation items with same separated brand/material + tier logic
+  as donor edit donation, plus right-side TUAB actions (Received/Rejected).
 
-  When converting to a Django template:
-    • {% extends 'base.html' %}
-    • {% block content %} ... {% endblock %}
-    • Set context: page_title = 'Update Donation', sidebar_variant = 'tuab'
-    • Clothing items: {% for item in donation.items.all %} ... {% endfor %}
-    • Save edits: POST to {% url 'tuab_update_donation' pk=donation.id %}
-    • Mark Received: POST to {% url 'tuab_mark_received' pk=donation.id %}
-    • Reject: POST to {% url 'tuab_reject_donation' pk=donation.id %} with reason
-    • "Add Another Clothing Group" button: JS-only in reference; in Django,
-      this can be Django Formsets or a JS-dynamic form that POSTs new items
-
-  Context variables expected:
-    page_title      → 'Update Donation'
-    sidebar_variant → 'tuab'
-    donation        → donation object with fields:
-                        donor_name, status, is_flagged, flag_reason,
-                        submitted_at, updated_at, auto_archive_at,
-                        pickup_address, preferred_date, time_window
-    clothing_types  → list of type strings for dropdowns
-    conditions      → list of condition strings
-    brand_materials → list of brand+material strings
-
-  Mobile:
-    Two-column layout stacks to single column.
+  Django notes:
+  • {% extends 'base.html' %} / {% block content %}
+  • sidebar_variant = 'tuab'
+  • Save edits: POST tuab_update_donation
+  • Received/Rejected actions are POST endpoints
 -->
-<html lang="en">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Update Donation — Reference</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<html lang="en"><head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TUAB Update Donation — Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
-    :root {
-      --gold:      #e8a020;
-      --tuab:      #c0410e;
-      --tuab-dark: #a0360c;
-      --bg:        #f5f2eb;
-      --border:    #e0dbd4;
-      --text:      #222222;
-      --muted:     #888888;
-      --green:     #4a7c59;
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); }
-    .hidden { display: none !important; }
-
-    /* ── Two-column layout ── */
-    .don-layout { display: flex; gap: 24px; align-items: flex-start; }
-    .don-left  { flex: 1; min-width: 0; }
-    .don-right { width: 320px; flex-shrink: 0; }
-
-    /* ── Clothing card ── */
-    .clothing-card { background: #fff; border-radius: 14px; padding: 20px 22px; margin-bottom: 14px; border: 1.5px solid #f0ede8; }
-    .clothing-num  { width: 28px; height: 28px; border-radius: 50%; background: var(--tuab); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 700; flex-shrink: 0; }
-
-    /* ── Form fields ── */
-    .form-label-upper { font-family: 'Poppins', sans-serif; font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; display: block; margin-bottom: 5px; }
-    .form-input { width: 100%; border: 1.5px solid #d5d5d5; border-radius: 8px; padding: 11px 16px; font-family: 'Poppins', sans-serif; font-size: 14px; color: var(--text); outline: none; transition: border-color .2s; }
-    .form-input:focus { border-color: var(--gold); }
-    .form-select { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 36px 10px 14px; font-family: 'Poppins', sans-serif; font-size: 14px; color: var(--text); background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23e8a020' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E") no-repeat right 12px center; appearance: none; outline: none; cursor: pointer; }
-    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
-    .field-group { display: flex; flex-direction: column; gap: 4px; }
-
-    /* ── Add clothing button ── */
-    .btn-dashed { background: transparent; color: var(--gold); border: 2px dashed var(--gold); border-radius: 30px; padding: 12px; font-size: 14px; width: 100%; cursor: pointer; font-family: 'Poppins', sans-serif; margin-top: 4px; transition: background .2s; }
-    .btn-dashed:hover { background: #fdf6e8; }
-
-    /* ── Detail panel ── */
-    .detail-panel { background: #fff; border-radius: 14px; padding: 22px 24px; }
-    .detail-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #f5f0ea; font-family: 'Poppins', sans-serif; font-size: 13px; }
-    .detail-row:last-child { border-bottom: none; }
-    .detail-label { color: #aaa; }
-    .detail-val   { color: #1a1a1a; font-weight: 500; text-align: right; max-width: 55%; }
-    .sep { border-top: 1px solid #f0ede8; margin-top: 14px; padding-top: 14px; }
-
-    /* ── Action buttons ── */
-    .btn-received { background: var(--green); color: #fff; border: none; border-radius: 30px; padding: 12px; font-size: 14px; font-weight: 500; font-family: 'Poppins', sans-serif; cursor: pointer; width: 100%; margin-bottom: 8px; transition: background .2s; }
-    .btn-received:hover { background: #3d6849; }
-    .btn-rejected { background: #e05050; color: #fff; border: none; border-radius: 30px; padding: 12px; font-size: 14px; font-weight: 500; font-family: 'Poppins', sans-serif; cursor: pointer; width: 100%; transition: background .2s; }
-    .btn-rejected:hover { background: #c04040; }
-
-    /* ── Reject modal ── */
-    .modal-overlay { position: fixed; inset: 0; z-index: 9500; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.45); }
-    .modal-box { background: #fff; border-radius: 16px; padding: 28px 32px; width: 420px; max-width: 95vw; box-shadow: 0 24px 80px rgba(0,0,0,.25); }
-    .modal-input { width: 100%; border: 1.5px solid #e0dbd4; border-radius: 8px; padding: 10px 14px; font-family: 'Poppins', sans-serif; font-size: 14px; outline: none; margin-bottom: 16px; }
-    .modal-input:focus { border-color: #e05050; }
-
-    /* ══════════════════════
-       MOBILE  (≤ 768px)
-    ══════════════════════ */
-    @media (max-width: 768px) {
-      .don-layout { flex-direction: column; }
-      .don-left   { width: 100%; }
-      .don-right  { width: 100%; }
-      .field-row  { grid-template-columns: 1fr; }
-    }
+    :root{--tuab:#c0410e;--tuab-dark:#a0360c;--bg:#f5f2eb;--border:#e0dbd4;--text:#222;--muted:#888;--light:#fdf6e8;--green:#4a7c59;--red:#e05050;--disabled:#aaa}
+    *{box-sizing:border-box;margin:0;padding:0} body{font-family:Poppins,sans-serif;background:var(--bg);color:var(--text)} .hidden{display:none!important}
+    .layout{display:flex;gap:24px;align-items:flex-start}.left{flex:1;min-width:0}.right{width:320px;flex-shrink:0}
+    .card,.panel{background:#fff;border:1.5px solid var(--border);border-radius:14px}.card{width:100%;padding:20px 22px;margin-bottom:14px}.panel{padding:22px 24px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}.group{display:flex;flex-direction:column;gap:4px}
+    .up{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}.in,.sel,.cb-in{width:100%;height:44px;border:1.5px solid #d5d5d5;border-radius:8px;padding:10px 14px;font:14px Poppins,sans-serif;outline:none;background:#fff}
+    .sel{border-color:var(--border);appearance:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23e8a020' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E") no-repeat right 12px center;padding-right:34px}
+    .in:focus,.sel:focus,.cb-in:focus{border-color:var(--tuab)} .in:disabled,.sel:disabled{background:#f4f4f4;color:var(--disabled)}
+    .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.num{width:28px;height:28px;border-radius:50%;background:var(--tuab);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center}
+    .trash{background:none;border:none;color:var(--tuab);cursor:pointer}.btn-add{width:100%;padding:12px;border:2px dashed var(--tuab);border-radius:30px;background:transparent;color:var(--tuab);cursor:pointer}
+    .cb{position:relative}.cb-wrap{position:relative}.cb-in{padding-right:34px}.cb-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--tuab);cursor:pointer}
+    .cb-list{position:absolute;z-index:50;top:calc(100% + 4px);left:0;width:100%;max-height:180px;overflow:auto;background:#fff;border:1.5px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.1)}
+    .cb-opt{padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid #f5f5f5}.cb-opt:hover{background:var(--light)} .cb-empty{padding:9px 14px;font-size:13px;color:var(--muted);font-style:italic}
+    .drow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f5f0ea;font-size:13px}.drow:last-child{border-bottom:none}.lbl{color:#aaa}.val{font-weight:500;text-align:right;max-width:58%}
+    .sep{border-top:1px solid #f0ede8;margin-top:14px;padding-top:14px}.btn{width:100%;border:none;border-radius:30px;padding:12px;color:#fff;font:500 14px Poppins,sans-serif;cursor:pointer}
+    .btn-ok{background:var(--green);margin-bottom:8px}.btn-bad{background:var(--red)}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9500}.box{background:#fff;border-radius:16px;padding:28px 32px;width:min(420px,95vw)}
+    @media (max-width:768px){.layout{flex-direction:column;align-items:stretch}.left,.right{width:100%}.row{grid-template-columns:1fr}}
   </style>
-</head>
-<body>
-
-<!--
-  ═══════════════════════════════════════════════════════════════
-  CONTENT BLOCK — this is all that goes inside {% block content %}
-  Django: wrap in <form method="post" action="{% url 'tuab_update_donation' pk=donation.id %}">
-          {% csrf_token %}
-  ═══════════════════════════════════════════════════════════════
--->
-<div class="don-layout">
-
-  <!-- LEFT: editable clothing items
-       Django: {% for item in donation.items.all %} render a clothing card {% endfor %}
-               Use Django Formsets for dynamic add/delete -->
-  <div class="don-left">
-    <div id="tuab-update-clothing">
-
-      <div class="clothing-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-          <div style="display:flex;align-items:center;gap:10px">
-            <div class="clothing-num">1</div>
-            <span style="font-family:'Poppins',sans-serif;font-weight:600;font-size:15px">Clothing 1</span>
-          </div>
-        </div>
-        <div class="field-row">
-          <div class="field-group"><label class="form-label-upper">Clothing *</label>
-            <select class="form-select" name="type_1"><option selected>Pants</option><option>Shirt</option><option>Jacket</option><option>Dress</option><option>Jeans</option><option>T-Shirt</option><option>Polo</option><option>Hoodie</option></select>
-          </div>
-          <div class="field-group"><label class="form-label-upper">Estimated Weight (kg)</label><input class="form-input" type="number" name="weight_1" value="0.8"/></div>
-        </div>
-        <div class="field-group" style="margin-bottom:12px"><label class="form-label-upper">Condition</label>
-          <select class="form-select" name="condition_1"><option>Good</option><option>Like New</option><option selected>Fair</option><option>Poor</option></select>
-        </div>
-        <div class="field-group"><label class="form-label-upper">Brand &amp; Material</label>
-          <select class="form-select" name="brand_1"><option selected>Levi's Denim</option><option>Uniqlo Cotton</option><option>H&M Cotton</option><option>Zara Polyester</option><option>Nike Cotton</option></select>
-        </div>
-      </div>
-
-      <div class="clothing-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-          <div style="display:flex;align-items:center;gap:10px">
-            <div class="clothing-num">2</div>
-            <span style="font-family:'Poppins',sans-serif;font-weight:600;font-size:15px">Clothing 2</span>
-          </div>
-          <button type="button" onclick="this.closest('.clothing-card').remove()" style="background:none;border:none;cursor:pointer;color:var(--tuab)">
-            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/><path d="M10,11v6M14,11v6"/><path d="M9,6V4h6v2"/></svg>
-          </button>
-        </div>
-        <div class="field-row">
-          <div class="field-group"><label class="form-label-upper">Clothing *</label>
-            <select class="form-select" name="type_2"><option selected>Shirt</option><option>Pants</option><option>Jacket</option></select>
-          </div>
-          <div class="field-group"><label class="form-label-upper">Estimated Weight (kg)</label><input class="form-input" type="number" name="weight_2" value="2.0"/></div>
-        </div>
-        <div class="field-group" style="margin-bottom:12px"><label class="form-label-upper">Condition</label>
-          <select class="form-select" name="condition_2"><option selected>Good</option><option>Like New</option><option>Fair</option><option>Poor</option></select>
-        </div>
-        <div class="field-group"><label class="form-label-upper">Brand &amp; Material</label>
-          <select class="form-select" name="brand_2"><option selected>Uniqlo Cotton</option><option>Levi's Denim</option><option>Zara Polyester</option></select>
-        </div>
-      </div>
-
-    </div>
-    <!-- Django: use Django Formsets management form for dynamic add/delete -->
-    <button type="button" class="btn-dashed" onclick="addClothingItem()">+ Add Another Clothing Group</button>
-  </div>
-
-  <!-- RIGHT: details + received/rejected actions
-       Django: {{ donation.donor_name }}, {{ donation.status }}, etc. -->
-  <div class="don-right">
-    <div class="detail-panel">
-      <div class="detail-row"><span class="detail-label">Donor</span><span class="detail-val">Ramon Garcia</span></div>
-      <div class="detail-row"><span class="detail-label">Status</span><span class="detail-val" style="color:var(--green);font-weight:600">Claimed</span></div>
-      <div class="detail-row"><span class="detail-label">Is Flagged</span><span class="detail-val">False</span></div>
-      <div class="detail-row"><span class="detail-label">Flag Reason</span><span class="detail-val">–</span></div>
-      <div class="detail-row"><span class="detail-label">Submitted At</span><span class="detail-val">02-01-2026</span></div>
-      <div class="detail-row"><span class="detail-label">Updated At</span><span class="detail-val">–</span></div>
-      <div class="detail-row"><span class="detail-label">Auto Archive At</span><span class="detail-val">04-01-2026</span></div>
-      <div class="detail-row"><span class="detail-label">Pickup Address</span><span class="detail-val">V. Luna Road, Pinyahan…</span></div>
-      <div class="detail-row"><span class="detail-label">Preferred Date</span><span class="detail-val">02-15-2026</span></div>
-      <div class="detail-row"><span class="detail-label">Time Window</span><span class="detail-val">10:00 AM – 2:00 PM</span></div>
-
-      <!-- Action buttons
-           Django: each is a separate form with method="post" -->
-      <div class="sep">
-        <button type="button" class="btn-received" onclick="alert('Marked as Received! (Django: POST to mark-received view)')">Received</button>
-        <button type="button" class="btn-rejected" onclick="openRejectModal()">Rejected</button>
-      </div>
-    </div>
-  </div>
-
+</head><body>
+<div class="layout"><div class="left"><div id="cards"></div><button class="btn-add" onclick="addCard()">+ Add Another Clothing Group</button></div>
+  <div class="right"><div class="panel">
+    <div class="drow"><span class="lbl">Donor</span><span class="val">Ramon Garcia</span></div><div class="drow"><span class="lbl">Status</span><span class="val" style="color:var(--green)">Claimed</span></div>
+    <div class="drow"><span class="lbl">Preferred Date</span><span class="val">02-15-2026</span></div><div class="drow"><span class="lbl">Time Window</span><span class="val">10:00 AM – 2:00 PM</span></div>
+    <div class="sep"><button class="btn btn-ok" onclick="alert('Marked as Received!')">Received</button><button class="btn btn-bad" onclick="openReject()">Rejected</button></div>
+  </div></div>
 </div>
-
-
-<!-- ═══ REJECT MODAL ═══
-     Django: replace JS with a form POST to /tuab/donations/<id>/reject/ -->
-<div id="reject-modal" class="modal-overlay hidden">
-  <div class="modal-box">
-    <div style="font-family:'Poppins',sans-serif;font-weight:600;font-size:15px;margin-bottom:4px;color:#1a1a1a">Enter reason for rejection</div>
-    <div style="font-family:'Poppins',sans-serif;font-size:13px;color:#aaa;margin-bottom:14px">This donation will be removed from your claimed list.</div>
-    <input id="reject-reason" class="modal-input" placeholder="Reason for rejection..." name="reject_reason"/>
-    <div style="display:flex;gap:10px;justify-content:flex-end">
-      <button type="button" onclick="closeRejectModal()" style="border-radius:30px;padding:9px 24px;font-size:14px;background:#fef7ea;border:1.5px solid #f5d898;color:#888;font-family:'Poppins',sans-serif;cursor:pointer">Cancel</button>
-      <button type="button" onclick="submitReject()" style="border-radius:30px;padding:9px 24px;font-size:14px;background:#e05050;border:none;color:#fff;font-family:'Poppins',sans-serif;cursor:pointer;font-weight:500">Reject</button>
-    </div>
-  </div>
-</div>
-
+<div id="reject-modal" class="modal hidden"><div class="box"><div style="font-weight:600;font-size:15px;margin-bottom:6px">Enter reason for rejection</div><input id="reject-reason" class="in" placeholder="Reason for rejection..." style="margin-bottom:14px"/><div style="display:flex;justify-content:flex-end;gap:10px"><button onclick="closeReject()" style="border-radius:30px;padding:9px 24px;border:1.5px solid #f5d898;background:#fef7ea;color:#888;cursor:pointer">Cancel</button><button onclick="submitReject()" style="border-radius:30px;padding:9px 24px;border:none;background:var(--red);color:#fff;cursor:pointer">Reject</button></div></div></div>
 <script>
-  const CLOTHING_TYPES = ['Shirt','Pants','Shorts','Jacket','Dress','Blouse','Skirt','Jeans','T-Shirt','Polo','Hoodie','Sweater'];
-  const CONDITIONS     = ['Good','Like New','Fair','Poor'];
-  const BRANDS         = ['Uniqlo','Levis','H&M','Zara','Nike','Adidas','Bench','Gap'];
-  const MATERIALS      = ['Cotton','Denim','Polyester','Linen','Silk','Wool'];
-  let clothingCount = 2;
-
-  function addClothingItem() {
-    clothingCount++;
-    const ctOpts   = CLOTHING_TYPES.map(t => `<option>${t}</option>`).join('');
-    const condOpts = CONDITIONS.map(c => `<option>${c}</option>`).join('');
-    const bmOpts   = BRANDS.flatMap(b => MATERIALS.map(m => `${b} ${m}`)).map(o => `<option>${o}</option>`).join('');
-    const card = document.createElement('div');
-    card.className = 'clothing-card';
-    card.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <div style="display:flex;align-items:center;gap:10px">
-          <div class="clothing-num">${clothingCount}</div>
-          <span style="font-family:'Poppins',sans-serif;font-weight:600;font-size:15px">Clothing ${clothingCount}</span>
-        </div>
-        <button type="button" onclick="this.closest('.clothing-card').remove()" style="background:none;border:none;cursor:pointer;color:var(--tuab)">
-          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/><path d="M10,11v6M14,11v6"/><path d="M9,6V4h6v2"/></svg>
-        </button>
-      </div>
-      <div class="field-row">
-        <div class="field-group"><label class="form-label-upper">Clothing *</label><select class="form-select">${ctOpts}</select></div>
-        <div class="field-group"><label class="form-label-upper">Estimated Weight (kg)</label><input class="form-input" type="number" value="0.5"/></div>
-      </div>
-      <div class="field-group" style="margin-bottom:12px"><label class="form-label-upper">Condition</label><select class="form-select">${condOpts}</select></div>
-      <div class="field-group"><label class="form-label-upper">Brand &amp; Material</label><select class="form-select">${bmOpts}</select></div>`;
-    document.getElementById('tuab-update-clothing').appendChild(card);
-  }
-
-  function openRejectModal()  { document.getElementById('reject-modal').classList.remove('hidden'); }
-  function closeRejectModal() { document.getElementById('reject-modal').classList.add('hidden'); }
-  function submitReject() {
-    /* Django: POST { reason: input.value } to reject view */
-    closeRejectModal();
-    alert('Donation rejected! (Django: POST to reject view)');
-    history.back();
-  }
-  document.addEventListener('click', e => {
-    if (e.target === document.getElementById('reject-modal')) closeRejectModal();
-  });
+const O={c:['Shirt','Pants','Shorts','Jacket','Dress','Blouse','Skirt','Coat','Jeans','T-Shirt','Polo','Hoodie','Sweater'],d:['Good','Like New','Fair','Poor'],b:['Uniqlo',"Levi's",'H&M','Zara','Nike','Adidas','Bench','Gap','Mango','Penshoppe'],l:[{id:1,c:'Pants',b:"Levi's",m:'80% Cotton, 20% Polyester',s:'2026-03-20T08:30:00Z'},{id:2,c:'Shirt',b:'Uniqlo',m:'100% Cotton',s:'2026-03-11T09:00:00Z'},{id:3,c:'Jacket',b:'Nike',m:'100% Polyester',s:'2026-03-05T13:00:00Z'},{id:21,c:'Jacket',b:'H&M',m:'65% Cotton, 35% Polyester',s:'2026-03-29T16:45:00Z'},{id:22,c:'Jeans',b:'Zara',m:'98% Cotton, 2% Elastane',s:'2026-03-30T07:15:00Z'}]};
+let n=0;const prefill=[{c:'Pants',w:'0.8',d:'Fair',b:"Levi's",id:'1'},{c:'Shirt',w:'2.0',d:'Good',b:'Uniqlo',id:'2'}];
+const el=id=>document.getElementById(id), uniq=a=>[...new Set(a)], src=(t,i)=>t==='c'?(el(`b-${i}`)?.dataset.db==='1'?uniq(O.l.filter(x=>x.b===el(`b-${i}`).dataset.v).map(x=>x.c)):O.c):(el(`c-${i}`)?.dataset.db==='1'?uniq(O.l.filter(x=>x.c===el(`c-${i}`).dataset.v).map(x=>x.b)):O.b);
+function card(i,p={c:'',cdb:'1',cv:'',w:'',d:'Good',b:'',bdb:'1',bv:'',id:''}){return `<div class="card" id="card-${i}"><div class="head"><div style="display:flex;align-items:center;gap:10px"><div class="num">${i+1}</div><span style="font-weight:600;font-size:15px">Clothing ${i+1}</span></div>${i?`<button class="trash" onclick="removeCard(${i})"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/><path d="M10,11v6M14,11v6"/><path d="M9,6V4h6v2"/></svg></button>`:''}</div><div class="row"><div class="group"><label class="up">Clothing *</label>${cb('c',i,{v:p.c,db:p.cdb,dv:p.cv||p.c})}</div><div class="group"><label class="up">Estimated Weight (kg)</label><input id="w-${i}" class="in" type="number" step="0.1" value="${p.w}"/></div></div><div class="group" style="margin-bottom:12px"><label class="up">Condition</label><select class="sel" id="d-${i}">${O.d.map(x=>`<option ${x===p.d?'selected':''}>${x}</option>`).join('')}</select></div><div class="row" style="margin-bottom:0"><div class="group"><label class="up">Brand</label>${cb('b',i,{v:p.b,db:p.bdb,dv:p.bv||p.b})}</div><div class="group"><label class="up">Material</label><select class="sel" id="m-${i}" data-id="${p.id}"><option value="">— select material —</option></select><input class="in hidden" id="a-${i}" value="Will be approximated" disabled style="font-style:italic"/><input type="hidden" id="t-${i}" value="1"/></div></div></div>`}
+function cb(t,i,s={}){const v=s.v||'',db=s.db??(v?'1':'0'),dv=s.dv??v;return `<div class="cb"><div class="cb-wrap"><input id="${t}-${i}" class="cb-in" value="${v}" autocomplete="off" placeholder="Select or type..." data-db="${db}" data-v="${dv}" onfocus="openCb('${t}',${i})" oninput="onType('${t}',${i},this.value)" onblur="setTimeout(()=>closeCb('${t}',${i}),120)"/><button class="cb-btn" onmousedown="toggleCb(event,'${t}',${i})">⌄</button></div><div id="${t}l-${i}" class="cb-list hidden"></div></div>`}
+function renderCb(t,i,q=''){const l=el(`${t}l-${i}`),a=(src(t,i).length?src(t,i):(t==='c'?O.c:O.b)).filter(x=>x.toLowerCase().includes(q.toLowerCase()));l.innerHTML=a.length?a.map(x=>`<div class='cb-opt' data-v="${x}" onmousedown="pick(event,'${t}',${i},'${x.replace(/'/g,"\\'")}')">${x}</div>`).join(''):'<div class="cb-empty">No matches — typed value will be used</div>'}
+function openCb(t,i){renderCb(t,i,el(`${t}-${i}`).value);el(`${t}l-${i}`).classList.remove('hidden')} function closeCb(t,i){el(`${t}l-${i}`).classList.add('hidden');tier(i)}
+function toggleCb(e,t,i){e.preventDefault();const l=el(`${t}l-${i}`);l.classList.contains('hidden')?openCb(t,i):closeCb(t,i)}
+function onType(t,i,v){const x=el(`${t}-${i}`);x.dataset.db='0';x.dataset.v='';renderCb(t,i,v);el(`${t}l-${i}`).classList.remove('hidden');tier(i)}
+function pick(e,t,i,v){e.preventDefault();const x=el(`${t}-${i}`);x.value=v;x.dataset.db='1';x.dataset.v=v;closeCb(t,i);tier(i)}
+function tier(i){const c=el(`c-${i}`),b=el(`b-${i}`),m=el(`m-${i}`),a=el(`a-${i}`),t=el(`t-${i}`),cdb=c.dataset.db==='1',bdb=b.dataset.db==='1',cv=c.dataset.v||c.value.trim(),bv=b.dataset.v||b.value.trim();const hits=O.l.filter(x=>x.c===cv&&x.b===bv).sort((x,y)=>new Date(y.s||0)-new Date(x.s||0));const lv=(cdb&&bdb&&hits.length)?0:(!cdb&&!bdb&&hits.length)?1:(!cdb&&bdb)?2:(cdb&&!bdb)?3:4;t.value=lv;if(lv===0){m.classList.remove('hidden');a.classList.add('hidden');m.innerHTML='<option value="">— select material —</option>'+hits.map(x=>`<option value="${x.id}">${x.m}</option>`).join('');if(m.dataset.id&&hits.some(x=>String(x.id)===m.dataset.id))m.value=m.dataset.id;a.value='Will be approximated';}else{m.classList.add('hidden');a.classList.remove('hidden');a.value=lv===1&&hits[0]?`Will be approximated (latest: ${hits[0].m})`:'Will be approximated';}}
+function snapshot(i){const c=el(`c-${i}`),b=el(`b-${i}`),m=el(`m-${i}`);return c&&b?{c:c.value,cdb:c.dataset.db||'0',cv:c.dataset.v||'',w:el(`w-${i}`)?.value||'',d:el(`d-${i}`)?.value||'Good',b:b.value,bdb:b.dataset.db||'0',bv:b.dataset.v||'',id:m?.value||m?.dataset.id||''}:null}
+function snapAll(){return Array.from({length:n},(_,i)=>snapshot(i)).filter(Boolean)}
+function normalizeCards(list){const rows=list.length?list:[{c:'',w:'',d:'Good',b:'',id:''}];el('cards').innerHTML='';rows.forEach((p,i)=>{el('cards').insertAdjacentHTML('beforeend',card(i,p));tier(i)});n=rows.length}
+function addCard(p){const rows=snapAll();rows.push(p||{c:'',w:'',d:'Good',b:'',id:''});normalizeCards(rows)}
+function removeCard(i){normalizeCards(snapAll().filter((_,x)=>x!==i))}
+normalizeCards(prefill);
+function openReject(){el('reject-modal').classList.remove('hidden')} function closeReject(){el('reject-modal').classList.add('hidden')} function submitReject(){closeReject();alert('Donation rejected!')}
+document.addEventListener('click',e=>{['c','b'].forEach(t=>document.querySelectorAll(`[id^='${t}l-']`).forEach(l=>{if(!l.closest('.cb')?.contains(e.target))l.classList.add('hidden')}));if(e.target===el('reject-modal'))closeReject()});
 </script>
-</body>
-</html>
+</body></html>
