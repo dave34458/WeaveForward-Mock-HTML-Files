@@ -60,12 +60,123 @@
 </div>
 <div id="map-modal" class="modal hidden"><div class="box"><button onclick="closeMapPicker()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:22px;cursor:pointer">×</button><div style="font-weight:600;margin-bottom:8px">Pick on Map</div><div id="picker-map"></div><button class="btn" style="background:var(--gold);margin-top:14px" onclick="confirmMapPicker()">Confirm Location</button></div></div>
 <script>
-const timers={},acR=[]; let mp,mk,pf,plat,plng,la=14.5890,lo=120.9822;
-async function nominatimSearch(v,ac,lat,lng,input){const A=document.getElementById(ac);if(!v||v.length<3){A.classList.add('hidden');return;}clearTimeout(timers[ac]);timers[ac]=setTimeout(async()=>{try{const d=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(v+', Philippines')}&limit=5&countrycodes=ph`,{headers:{'Accept-Language':'en-US'}}).then(r=>r.json());acR[ac]=d||[];A.innerHTML=(acR[ac].length?acR[ac].map((r,i)=>`<div class='ac-item' onmousedown="selectAC('${ac}',${i},'${lat}','${lng}','${input}')">${r.display_name}</div>`).join(''):'<div class="ac-item">No results</div>');A.classList.remove('hidden')}catch{A.classList.add('hidden')}},350)}
-function selectAC(ac,i,lat,lng,input){const r=(acR[ac]||[])[i];if(!r)return;document.getElementById(input).value=r.display_name;document.getElementById(lat).value=r.lat;document.getElementById(lng).value=r.lon;document.getElementById(ac).classList.add('hidden')}
-function openPickerFor(f,lat,lng){pf=f;plat=lat;plng=lng;la=parseFloat(document.getElementById(lat)?.value)||14.5890;lo=parseFloat(document.getElementById(lng)?.value)||120.9822;document.getElementById('map-modal').classList.remove('hidden');setTimeout(()=>{if(mp)mp.remove();mp=L.map('picker-map').setView([la,lo],15);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(mp);mk=L.marker([la,lo],{draggable:true}).addTo(mp);mk.on('dragend',e=>{const ll=e.target.getLatLng();la=ll.lat;lo=ll.lng});mp.on('click',e=>{la=e.latlng.lat;lo=e.latlng.lng;mk.setLatLng([la,lo])});},120)}
-function closeMapPicker(){document.getElementById('map-modal').classList.add('hidden');if(mp){mp.remove();mp=null}}
-async function confirmMapPicker(){let d=`${la.toFixed(5)}, ${lo.toFixed(5)}`;try{const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${la}&lon=${lo}&addressdetails=1`,{headers:{'Accept-Language':'en-US'}}).then(x=>x.json());if(r.display_name)d=r.display_name}catch{};document.getElementById(pf).value=d;document.getElementById(plat).value=la;document.getElementById(plng).value=lo;closeMapPicker()}
-document.addEventListener('click',e=>{document.querySelectorAll('.ac-list').forEach(a=>{if(!a.closest('.ac')?.contains(e.target))a.classList.add('hidden')});if(e.target===document.getElementById('map-modal'))closeMapPicker()});
+const autocompleteTimers = {};
+const autocompleteCache = {};
+let mapInstance;
+let markerInstance;
+let targetInputId;
+let targetLatId;
+let targetLngId;
+let selectedLat = 14.5890;
+let selectedLng = 120.9822;
+
+function getById(id) {
+  return document.getElementById(id);
+}
+
+function selectAutocompleteResult(listId, resultIndex, latFieldId, lngFieldId, inputFieldId) {
+  const selected = (autocompleteCache[listId] || [])[resultIndex];
+  if (!selected) return;
+
+  getById(inputFieldId).value = selected.display_name;
+  getById(latFieldId).value = selected.lat;
+  getById(lngFieldId).value = selected.lon;
+  getById(listId).classList.add('hidden');
+}
+
+function nominatimSearch(value, listId, latFieldId, lngFieldId, inputFieldId) {
+  const listElement = getById(listId);
+  if (!value || value.length < 3) {
+    listElement.classList.add('hidden');
+    return;
+  }
+
+  clearTimeout(autocompleteTimers[listId]);
+  autocompleteTimers[listId] = setTimeout(async () => {
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value + ', Philippines')}&limit=5&countrycodes=ph`,
+        { headers: { 'Accept-Language': 'en-US' } }
+      );
+      autocompleteCache[listId] = await response.json() || [];
+
+      listElement.innerHTML = autocompleteCache[listId].length
+        ? autocompleteCache[listId].map((row, index) =>
+            `<div class='ac-item' onmousedown="selectAutocompleteResult('${listId}', ${index}, '${latFieldId}', '${lngFieldId}', '${inputFieldId}')">${row.display_name}</div>`
+          ).join('')
+        : '<div class="ac-item">No results</div>';
+
+      listElement.classList.remove('hidden');
+    } catch {
+      listElement.classList.add('hidden');
+    }
+  }, 350);
+}
+
+function openPickerFor(inputFieldId, latFieldId, lngFieldId) {
+  targetInputId = inputFieldId;
+  targetLatId = latFieldId;
+  targetLngId = lngFieldId;
+
+  selectedLat = parseFloat(getById(latFieldId)?.value) || 14.5890;
+  selectedLng = parseFloat(getById(lngFieldId)?.value) || 120.9822;
+  getById('map-modal').classList.remove('hidden');
+
+  setTimeout(() => {
+    if (mapInstance) mapInstance.remove();
+    mapInstance = L.map('picker-map').setView([selectedLat, selectedLng], 15);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(mapInstance);
+
+    markerInstance = L.marker([selectedLat, selectedLng], { draggable: true }).addTo(mapInstance);
+    markerInstance.on('dragend', (event) => {
+      const position = event.target.getLatLng();
+      selectedLat = position.lat;
+      selectedLng = position.lng;
+    });
+
+    mapInstance.on('click', (event) => {
+      selectedLat = event.latlng.lat;
+      selectedLng = event.latlng.lng;
+      markerInstance.setLatLng([selectedLat, selectedLng]);
+    });
+  }, 120);
+}
+
+function closeMapPicker() {
+  getById('map-modal').classList.add('hidden');
+  if (mapInstance) {
+    mapInstance.remove();
+    mapInstance = null;
+  }
+}
+
+async function confirmMapPicker() {
+  let displayAddress = `${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}`;
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${selectedLat}&lon=${selectedLng}&addressdetails=1`,
+      { headers: { 'Accept-Language': 'en-US' } }
+    );
+    const data = await response.json();
+    if (data.display_name) displayAddress = data.display_name;
+  } catch {
+    // keep fallback coordinates
+  }
+
+  getById(targetInputId).value = displayAddress;
+  getById(targetLatId).value = selectedLat;
+  getById(targetLngId).value = selectedLng;
+  closeMapPicker();
+}
+
+document.addEventListener('click', (event) => {
+  document.querySelectorAll('.ac-list').forEach((listElement) => {
+    if (!listElement.closest('.ac')?.contains(event.target)) listElement.classList.add('hidden');
+  });
+  if (event.target === getById('map-modal')) closeMapPicker();
+});
 </script>
 </body></html>

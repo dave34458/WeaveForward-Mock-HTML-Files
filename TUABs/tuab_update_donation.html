@@ -48,24 +48,117 @@
 </div>
 <div id="reject-modal" class="modal hidden"><div class="box"><div style="font-weight:600;font-size:15px;margin-bottom:6px">Enter reason for rejection</div><input id="reject-reason" class="in" placeholder="Reason for rejection..." style="margin-bottom:14px"/><div style="display:flex;justify-content:flex-end;gap:10px"><button onclick="closeReject()" style="border-radius:30px;padding:9px 24px;border:1.5px solid #f5d898;background:#fef7ea;color:#888;cursor:pointer">Cancel</button><button onclick="submitReject()" style="border-radius:30px;padding:9px 24px;border:none;background:var(--red);color:#fff;cursor:pointer">Reject</button></div></div></div>
 <script>
-const O={d:['Good','Like New','Fair','Poor'],l:[{id:1,c:'Pants',b:"Levi's",m:'80% Cotton, 20% Polyester',s:'2026-03-20T08:30:00Z'},{id:2,c:'Shirt',b:'Uniqlo',m:'100% Cotton',s:'2026-03-11T09:00:00Z'},{id:3,c:'Jacket',b:'Nike',m:'100% Polyester',s:'2026-03-05T13:00:00Z'},{id:21,c:'Jacket',b:'H&M',m:'65% Cotton, 35% Polyester',s:'2026-03-29T16:45:00Z'},{id:22,c:'Jeans',b:'Zara',m:'98% Cotton, 2% Elastane',s:'2026-03-30T07:15:00Z'}]};
-let n=0;const prefill=[{c:'Pants',w:'0.8',d:'Fair',b:"Levi's",id:'1'},{c:'Shirt',w:'2.0',d:'Good',b:'Uniqlo',id:'2'}];
-const el=id=>document.getElementById(id), uniq=a=>[...new Set(a)], cs=()=>uniq(O.l.map(x=>x.c)), bs=()=>uniq(O.l.map(x=>x.b)), src=(t,i)=>t==='c'?(el(`b-${i}`)?.dataset.db==='1'?uniq(O.l.filter(x=>x.b===el(`b-${i}`).dataset.v).map(x=>x.c)):cs()):(el(`c-${i}`)?.dataset.db==='1'?uniq(O.l.filter(x=>x.c===el(`c-${i}`).dataset.v).map(x=>x.b)):bs());
-function card(i,p={c:'',cdb:'1',cv:'',w:'',d:'Good',b:'',bdb:'1',bv:'',id:''}){return `<div class="card" id="card-${i}"><div class="head"><div style="display:flex;align-items:center;gap:10px"><div class="num">${i+1}</div><span style="font-weight:600;font-size:15px">Clothing ${i+1}</span></div>${i?`<button class="trash" onclick="removeCard(${i})"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/><path d="M10,11v6M14,11v6"/><path d="M9,6V4h6v2"/></svg></button>`:''}</div><div class="row"><div class="group"><label class="up">Clothing *</label>${cb('c',i,{v:p.c,db:p.cdb,dv:p.cv||p.c})}</div><div class="group"><label class="up">Estimated Weight (kg)</label><input id="w-${i}" class="in" type="number" step="0.1" value="${p.w}"/></div></div><div class="group" style="margin-bottom:12px"><label class="up">Condition</label><select class="sel" id="d-${i}">${O.d.map(x=>`<option ${x===p.d?'selected':''}>${x}</option>`).join('')}</select></div><div class="row" style="margin-bottom:0"><div class="group"><label class="up">Brand</label>${cb('b',i,{v:p.b,db:p.bdb,dv:p.bv||p.b})}</div><div class="group"><label class="up">Material</label><select class="sel" id="m-${i}" data-id="${p.id}"><option value="">— select material —</option></select><input class="in hidden" id="a-${i}" value="Will be approximated" disabled style="font-style:italic"/><input type="hidden" id="t-${i}" value="1"/></div></div></div>`}
-function cb(t,i,s={}){const v=s.v||'',db=s.db??(v?'1':'0'),dv=s.dv??v;return `<div class="cb"><div class="cb-wrap"><input id="${t}-${i}" class="cb-in" value="${v}" autocomplete="off" placeholder="Select or type..." data-db="${db}" data-v="${dv}" onfocus="openCb('${t}',${i})" oninput="onType('${t}',${i},this.value)" onblur="setTimeout(()=>closeCb('${t}',${i}),120)"/><button class="cb-btn" onmousedown="toggleCb(event,'${t}',${i})">⌄</button></div><div id="${t}l-${i}" class="cb-list hidden"></div></div>`}
-function renderCb(t,i,q=''){const l=el(`${t}l-${i}`),a=(src(t,i).length?src(t,i):(t==='c'?cs():bs())).filter(x=>x.toLowerCase().includes(q.toLowerCase()));l.innerHTML=a.length?a.map(x=>`<div class='cb-opt' data-v="${x}" onmousedown="pick(event,'${t}',${i},'${x.replace(/'/g,"\\'")}')">${x}</div>`).join(''):'<div class="cb-empty">No matches — typed value will be used</div>'}
-function openCb(t,i){renderCb(t,i,el(`${t}-${i}`).value);el(`${t}l-${i}`).classList.remove('hidden')} function closeCb(t,i){el(`${t}l-${i}`).classList.add('hidden');tier(i)}
-function toggleCb(e,t,i){e.preventDefault();const l=el(`${t}l-${i}`);l.classList.contains('hidden')?openCb(t,i):closeCb(t,i)}
-function onType(t,i,v){const x=el(`${t}-${i}`);x.dataset.db='0';x.dataset.v='';renderCb(t,i,v);el(`${t}l-${i}`).classList.remove('hidden');tier(i)}
-function pick(e,t,i,v){e.preventDefault();const x=el(`${t}-${i}`);x.value=v;x.dataset.db='1';x.dataset.v=v;closeCb(t,i);tier(i)}
-function tier(i){const c=el(`c-${i}`),b=el(`b-${i}`),m=el(`m-${i}`),a=el(`a-${i}`),t=el(`t-${i}`),cdb=c.dataset.db==='1',bdb=b.dataset.db==='1',cv=c.dataset.v||c.value.trim(),bv=b.dataset.v||b.value.trim();const hits=O.l.filter(x=>x.c===cv&&x.b===bv).sort((x,y)=>new Date(y.s||0)-new Date(x.s||0));const lv=(cdb&&bdb)?0:(!cdb&&!bdb&&hits.length)?1:(!cdb&&bdb)?2:(cdb&&!bdb)?3:4;t.value=lv;if(lv===0){m.classList.remove('hidden');a.classList.add('hidden');m.innerHTML='<option value="">— select material —</option>'+hits.map(x=>`<option value="${x.id}">${x.m}</option>`).join('');if(m.dataset.id&&hits.some(x=>String(x.id)===m.dataset.id))m.value=m.dataset.id;a.value='Will be approximated';}else{m.classList.add('hidden');a.classList.remove('hidden');a.value=lv===1&&hits[0]?`Will be approximated (latest: ${hits[0].m})`:'Will be approximated';}}
-function snapshot(i){const c=el(`c-${i}`),b=el(`b-${i}`),m=el(`m-${i}`);return c&&b?{c:c.value,cdb:c.dataset.db||'0',cv:c.dataset.v||'',w:el(`w-${i}`)?.value||'',d:el(`d-${i}`)?.value||'Good',b:b.value,bdb:b.dataset.db||'0',bv:b.dataset.v||'',id:m?.value||m?.dataset.id||''}:null}
-function snapAll(){return Array.from({length:n},(_,i)=>snapshot(i)).filter(Boolean)}
-function normalizeCards(list){const rows=list.length?list:[{c:'',w:'',d:'Good',b:'',id:''}];el('cards').innerHTML='';rows.forEach((p,i)=>{el('cards').insertAdjacentHTML('beforeend',card(i,p));tier(i)});n=rows.length}
-function addCard(p){const rows=snapAll();rows.push(p||{c:'',w:'',d:'Good',b:'',id:''});normalizeCards(rows)}
-function removeCard(i){normalizeCards(snapAll().filter((_,x)=>x!==i))}
-normalizeCards(prefill);
-function openReject(){el('reject-modal').classList.remove('hidden')} function closeReject(){el('reject-modal').classList.add('hidden')} function submitReject(){closeReject();alert('Donation rejected!')}
-document.addEventListener('click',e=>{['c','b'].forEach(t=>document.querySelectorAll(`[id^='${t}l-']`).forEach(l=>{if(!l.closest('.cb')?.contains(e.target))l.classList.add('hidden')}));if(e.target===el('reject-modal'))closeReject()});
+const donationData = {
+  conditions: ['Good', 'Like New', 'Fair', 'Poor'],
+  brandFiberLookup: [
+    { id: 1, clothing: 'Pants', brand: "Levi's", material: '80% Cotton, 20% Polyester', scrapedAt: '2026-03-20T08:30:00Z' },
+    { id: 2, clothing: 'Shirt', brand: 'Uniqlo', material: '100% Cotton', scrapedAt: '2026-03-11T09:00:00Z' },
+    { id: 3, clothing: 'Jacket', brand: 'Nike', material: '100% Polyester', scrapedAt: '2026-03-05T13:00:00Z' },
+    { id: 21, clothing: 'Jacket', brand: 'H&M', material: '65% Cotton, 35% Polyester', scrapedAt: '2026-03-29T16:45:00Z' },
+    { id: 22, clothing: 'Jeans', brand: 'Zara', material: '98% Cotton, 2% Elastane', scrapedAt: '2026-03-30T07:15:00Z' }
+  ]
+};
+const initialCards = [
+  { c: 'Pants', w: '0.8', d: 'Fair', b: "Levi's", id: '1' },
+  { c: 'Shirt', w: '2.0', d: 'Good', b: 'Uniqlo', id: '2' }
+];
+function getById(id) { return document.getElementById(id); }
+function unique(values) { return [...new Set(values)]; }
+function getAllClothingTypes() { return unique(donationData.brandFiberLookup.map((row) => row.clothing)); }
+function getAllBrands() { return unique(donationData.brandFiberLookup.map((row) => row.brand)); }
+let cardCount = 0;
+function getOptionsForCombobox(type, index) {
+  if (type === 'c') {
+    const brandInput = getById(`b-${index}`);
+    if (brandInput?.dataset.db === '1') return unique(donationData.brandFiberLookup.filter((row) => row.brand === brandInput.dataset.v).map((row) => row.clothing));
+    return getAllClothingTypes();
+  }
+  const clothingInput = getById(`c-${index}`);
+  if (clothingInput?.dataset.db === '1') return unique(donationData.brandFiberLookup.filter((row) => row.clothing === clothingInput.dataset.v).map((row) => row.brand));
+  return getAllBrands();
+}
+function comboboxHtml(type, index, state = {}) {
+  const value = state.v || '';
+  const selectedFromList = state.db ?? (value ? '1' : '0');
+  const selectedValue = state.dv ?? value;
+  return `<div class="cb"><div class="cb-wrap"><input id="${type}-${index}" class="cb-in" value="${value}" autocomplete="off" placeholder="Select or type..." data-db="${selectedFromList}" data-v="${selectedValue}" onfocus="openCombobox('${type}', ${index})" oninput="onComboboxType('${type}', ${index}, this.value)" onblur="setTimeout(() => closeCombobox('${type}', ${index}), 120)"/><button class="cb-btn" onmousedown="toggleCombobox(event, '${type}', ${index})">⌄</button></div><div id="${type}l-${index}" class="cb-list hidden"></div></div>`;
+}
+function donationCardHtml(index, values = {}) {
+  const data = { c: values.c || '', cdb: values.cdb || '1', cv: values.cv || '', w: values.w || '', d: values.d || 'Good', b: values.b || '', bdb: values.bdb || '1', bv: values.bv || '', id: values.id || '' };
+  const deleteButton = index ? `<button class="trash" onclick="removeCard(${index})"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/><path d="M10,11v6M14,11v6"/><path d="M9,6V4h6v2"/></svg></button>` : '';
+  const conditionOptions = donationData.conditions.map((condition) => `<option ${condition === data.d ? 'selected' : ''}>${condition}</option>`).join('');
+  return `<div class="card" id="card-${index}"><div class="head"><div style="display:flex;align-items:center;gap:10px"><div class="num">${index + 1}</div><span style="font-weight:600;font-size:15px">Clothing ${index + 1}</span></div>${deleteButton}</div><div class="row"><div class="group"><label class="up">Clothing *</label>${comboboxHtml('c', index, { v: data.c, db: data.cdb, dv: data.cv || data.c })}</div><div class="group"><label class="up">Estimated Weight (kg)</label><input id="w-${index}" class="in" type="number" step="0.1" value="${data.w}"/></div></div><div class="group" style="margin-bottom:12px"><label class="up">Condition</label><select class="sel" id="d-${index}">${conditionOptions}</select></div><div class="row" style="margin-bottom:0"><div class="group"><label class="up">Brand</label>${comboboxHtml('b', index, { v: data.b, db: data.bdb, dv: data.bv || data.b })}</div><div class="group"><label class="up">Material</label><select class="sel" id="m-${index}" data-id="${data.id}"><option value="">— select material —</option></select><input class="in hidden" id="a-${index}" value="Will be approximated" disabled style="font-style:italic"/><input type="hidden" id="t-${index}" value="1"/></div></div></div>`;
+}
+function renderCombobox(type, index, query = '') {
+  const listEl = getById(`${type}l-${index}`);
+  const options = getOptionsForCombobox(type, index);
+  const fallback = type === 'c' ? getAllClothingTypes() : getAllBrands();
+  const filteredOptions = (options.length ? options : fallback).filter((item) => item.toLowerCase().includes(query.toLowerCase()));
+  if (!filteredOptions.length) { listEl.innerHTML = '<div class="cb-empty">No matches — typed value will be used</div>'; return; }
+  listEl.innerHTML = filteredOptions.map((item) => `<div class='cb-opt' data-v="${item}" onmousedown="pickComboboxOption(event, '${type}', ${index}, '${item.replace(/'/g, "\\'")}')">${item}</div>`).join('');
+}
+function openCombobox(type, index) { renderCombobox(type, index, getById(`${type}-${index}`).value); getById(`${type}l-${index}`).classList.remove('hidden'); }
+function closeCombobox(type, index) { getById(`${type}l-${index}`).classList.add('hidden'); applyMaterialTier(index); }
+function toggleCombobox(event, type, index) { event.preventDefault(); getById(`${type}l-${index}`).classList.contains('hidden') ? openCombobox(type, index) : closeCombobox(type, index); }
+function onComboboxType(type, index, value) { const input = getById(`${type}-${index}`); input.dataset.db = '0'; input.dataset.v = ''; renderCombobox(type, index, value); getById(`${type}l-${index}`).classList.remove('hidden'); applyMaterialTier(index); }
+function pickComboboxOption(event, type, index, value) { event.preventDefault(); const input = getById(`${type}-${index}`); input.value = value; input.dataset.db = '1'; input.dataset.v = value; closeCombobox(type, index); applyMaterialTier(index); }
+function applyMaterialTier(index) {
+  const clothingInput = getById(`c-${index}`);
+  const brandInput = getById(`b-${index}`);
+  const materialSelect = getById(`m-${index}`);
+  const approximationInput = getById(`a-${index}`);
+  const tierInput = getById(`t-${index}`);
+  const clothingFromList = clothingInput.dataset.db === '1';
+  const brandFromList = brandInput.dataset.db === '1';
+  const clothingValue = clothingInput.dataset.v || clothingInput.value.trim();
+  const brandValue = brandInput.dataset.v || brandInput.value.trim();
+  const matches = donationData.brandFiberLookup.filter((row) => row.clothing === clothingValue && row.brand === brandValue).sort((a, b) => new Date(b.scrapedAt || 0) - new Date(a.scrapedAt || 0));
+  let tier = 4;
+  if (clothingFromList && brandFromList) tier = 0;
+  else if (!clothingFromList && !brandFromList && matches.length) tier = 1;
+  else if (!clothingFromList && brandFromList) tier = 2;
+  else if (clothingFromList && !brandFromList) tier = 3;
+  tierInput.value = tier;
+  if (tier === 0) {
+    materialSelect.classList.remove('hidden');
+    approximationInput.classList.add('hidden');
+    materialSelect.innerHTML = '<option value="">— select material —</option>' + matches.map((row) => `<option value="${row.id}">${row.material}</option>`).join('');
+    if (materialSelect.dataset.id && matches.some((row) => String(row.id) === materialSelect.dataset.id)) materialSelect.value = materialSelect.dataset.id;
+    approximationInput.value = 'Will be approximated';
+    return;
+  }
+  materialSelect.classList.add('hidden');
+  approximationInput.classList.remove('hidden');
+  approximationInput.value = tier === 1 && matches[0] ? `Will be approximated (latest: ${matches[0].material})` : 'Will be approximated';
+}
+function getCardSnapshot(index) {
+  const clothingInput = getById(`c-${index}`);
+  const brandInput = getById(`b-${index}`);
+  const materialSelect = getById(`m-${index}`);
+  if (!clothingInput || !brandInput) return null;
+  return { c: clothingInput.value, cdb: clothingInput.dataset.db || '0', cv: clothingInput.dataset.v || '', w: getById(`w-${index}`)?.value || '', d: getById(`d-${index}`)?.value || 'Good', b: brandInput.value, bdb: brandInput.dataset.db || '0', bv: brandInput.dataset.v || '', id: materialSelect?.value || materialSelect?.dataset.id || '' };
+}
+function getAllCardSnapshots() { return Array.from({ length: cardCount }, (_, index) => getCardSnapshot(index)).filter(Boolean); }
+function renderAllCards(cards) {
+  const rows = cards.length ? cards : [{ c: '', w: '', d: 'Good', b: '', id: '' }];
+  const cardsContainer = getById('cards');
+  cardsContainer.innerHTML = '';
+  rows.forEach((row, index) => { cardsContainer.insertAdjacentHTML('beforeend', donationCardHtml(index, row)); applyMaterialTier(index); });
+  cardCount = rows.length;
+}
+function addCard(cardData) { const rows = getAllCardSnapshots(); rows.push(cardData || { c: '', w: '', d: 'Good', b: '', id: '' }); renderAllCards(rows); }
+function removeCard(indexToRemove) { renderAllCards(getAllCardSnapshots().filter((_, index) => index !== indexToRemove)); }
+function openReject() { getById('reject-modal').classList.remove('hidden'); }
+function closeReject() { getById('reject-modal').classList.add('hidden'); }
+function submitReject() { closeReject(); alert('Donation rejected!'); }
+renderAllCards(initialCards);
+document.addEventListener('click', (event) => {
+  ['c', 'b'].forEach((type) => {
+    document.querySelectorAll(`[id^='${type}l-']`).forEach((listEl) => {
+      if (!listEl.closest('.cb')?.contains(event.target)) listEl.classList.add('hidden');
+    });
+  });
+  if (event.target === getById('reject-modal')) closeReject();
+});
 </script>
 </body></html>
