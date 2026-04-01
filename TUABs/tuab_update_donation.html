@@ -1,267 +1,544 @@
 <!DOCTYPE html>
 <!--
-  WeaveForward TUAB — Update Donation (tuab_update_donation.html)
-  Editable donation items with same separated brand/material + tier logic
-  as donor edit donation, plus right-side TUAB actions (Received/Rejected).
+  WeaveForward TUAB - Update Donation (tuab_update_donation.html)
+  Same editable item logic as donor edit/create, plus TUAB action submit:
+  - Received submit
+  - Rejected submit with reason
 
   Django notes:
-  • {% extends 'base.html' %} / {% block content %}
-  • sidebar_variant = 'tuab'
-  • Save edits: POST tuab_update_donation
-  • Received/Rejected actions are POST endpoints
+  - {% extends 'base.html' %} / {% block content %}
+  - sidebar_variant = 'tuab'
+  - POST tuab_update_donation (or separate endpoints if desired)
 -->
-<html lang="en"><head>
-  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>TUAB Update Donation — Reference</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TUAB Update Donation - Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
     :root{--tuab:#c0410e;--tuab-dark:#a0360c;--bg:#f5f2eb;--border:#e0dbd4;--text:#222;--muted:#888;--light:#fdf6e8;--green:#4a7c59;--red:#e05050;--disabled:#aaa}
-    *{box-sizing:border-box;margin:0;padding:0} html{scrollbar-gutter:stable} body{font-family:Poppins,sans-serif;background:var(--bg);color:var(--text)} .hidden{display:none!important}
-    .layout{display:flex;gap:24px;align-items:flex-start}.left{flex:1;min-width:0}.right{width:320px;flex-shrink:0}
-    .card,.panel{background:#fff;border:1.5px solid var(--border);border-radius:14px}.card{width:100%;padding:20px 22px;margin-bottom:14px}.panel{padding:22px 24px}
-    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}.group{display:flex;flex-direction:column;gap:4px}
-    .up{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}.in,.sel,.cb-in{width:100%;height:44px;border:1.5px solid #d5d5d5;border-radius:8px;padding:10px 14px;font:14px Poppins,sans-serif;outline:none;background:#fff}
+    *{box-sizing:border-box;margin:0;padding:0}
+    html{scrollbar-gutter:stable}
+    body{font-family:Poppins,sans-serif;background:var(--bg);color:var(--text)}
+    .hidden{display:none!important}
+    .layout{display:flex;gap:24px;align-items:flex-start}
+    .left{flex:1;min-width:0}
+    .right{width:320px;flex-shrink:0}
+    .card,.panel{background:#fff;border:1.5px solid var(--border);border-radius:14px}
+    .card{width:100%;padding:20px 22px;margin-bottom:14px}
+    .panel{padding:22px 24px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+    .group{display:flex;flex-direction:column;gap:4px}
+    .up{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+    .in,.sel,.cb-in{width:100%;height:44px;border:1.5px solid #d5d5d5;border-radius:8px;padding:10px 14px;font:14px Poppins,sans-serif;outline:none;background:#fff}
     .sel{border-color:var(--border);appearance:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23e8a020' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E") no-repeat right 12px center;padding-right:34px}
-    .in:focus,.sel:focus,.cb-in:focus{border-color:var(--tuab)} .in:disabled,.sel:disabled{background:#f4f4f4;color:var(--disabled)}
-    .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.num{width:28px;height:28px;border-radius:50%;background:var(--tuab);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center}
-    .trash{background:none;border:none;color:var(--tuab);cursor:pointer}.btn-add{width:100%;padding:12px;border:2px dashed var(--tuab);border-radius:30px;background:transparent;color:var(--tuab);cursor:pointer}
-    .cb{position:relative}.cb-wrap{position:relative}.cb-in{padding-right:34px}.cb-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--tuab);cursor:pointer}
+    .in:focus,.sel:focus,.cb-in:focus{border-color:var(--tuab)}
+    .in:disabled,.sel:disabled{background:#f4f4f4;color:var(--disabled)}
+    .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+    .num{width:28px;height:28px;border-radius:50%;background:var(--tuab);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center}
+    .trash{background:none;border:none;color:var(--tuab);cursor:pointer}
+    .btn-add{width:100%;padding:12px;border:2px dashed var(--tuab);border-radius:30px;background:transparent;color:var(--tuab);cursor:pointer}
+    .cb{position:relative}
+    .cb-wrap{position:relative}
+    .cb-in{padding-right:34px}
+    .cb-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--tuab);cursor:pointer}
     .cb-list{position:absolute;z-index:50;top:calc(100% + 4px);left:0;width:100%;max-height:180px;overflow:auto;background:#fff;border:1.5px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.1)}
-    .cb-opt{padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid #f5f5f5}.cb-opt:hover{background:var(--light)} .cb-empty{padding:9px 14px;font-size:13px;color:var(--muted);font-style:italic}
-    .drow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f5f0ea;font-size:13px}.drow:last-child{border-bottom:none}.lbl{color:#aaa}.val{font-weight:500;text-align:right;max-width:58%}
-    .sep{border-top:1px solid #f0ede8;margin-top:14px;padding-top:14px}.btn{width:100%;border:none;border-radius:30px;padding:12px;color:#fff;font:500 14px Poppins,sans-serif;cursor:pointer}
-    .btn-ok{background:var(--green);margin-bottom:8px}.btn-bad{background:var(--red)}
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9500}.box{background:#fff;border-radius:16px;padding:28px 32px;width:min(420px,95vw)}
-    @media (max-width:768px){.layout{flex-direction:column;align-items:stretch}.left,.right{width:100%}.row{grid-template-columns:1fr}}
+    .cb-opt{padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid #f5f5f5}
+    .cb-opt:hover{background:var(--light)}
+    .cb-empty{padding:9px 14px;font-size:13px;color:var(--muted);font-style:italic}
+    .drow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f5f0ea;font-size:13px}
+    .drow:last-child{border-bottom:none}
+    .lbl{color:#aaa}
+    .val{font-weight:500;text-align:right;max-width:58%}
+    .upload-wrap{margin-top:10px}
+    .upload-photo{display:block;width:100%;height:150px;object-fit:cover;border-radius:10px;border:1.5px solid #ece6df;background:#f6f3ee}
+    .sep{border-top:1px solid #f0ede8;margin-top:14px;padding-top:14px}
+    .btn{width:100%;border:none;border-radius:30px;padding:12px;color:#fff;font:500 14px Poppins,sans-serif;cursor:pointer}
+    .btn-ok{background:var(--green);margin-bottom:8px}
+    .btn-bad{background:var(--red)}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9500}
+    .box{background:#fff;border-radius:16px;padding:28px 32px;width:min(420px,95vw)}
+    @media (max-width:768px){
+      .layout{flex-direction:column;align-items:stretch}
+      .left,.right{width:100%}
+      .row{grid-template-columns:1fr}
+    }
   </style>
-</head><body>
-<div class="layout"><div class="left"><div id="cards"></div><button class="btn-add" onclick="addCard()">+ Add Another Clothing Group</button></div>
-  <div class="right"><div class="panel">
-    <div class="drow"><span class="lbl">Donor</span><span class="val">Juan Dela Cruz</span></div><div class="drow"><span class="lbl">Status</span><span class="val" style="color:var(--green)">Claimed</span></div>
-    <div class="drow"><span class="lbl">Is Flagged</span><span class="val">False</span></div><div class="drow"><span class="lbl">Flag Reason</span><span class="val">–</span></div>
-    <div class="drow"><span class="lbl">Submitted At</span><span class="val">1-25-2026 4:00 AM</span></div><div class="drow"><span class="lbl">Updated At</span><span class="val">–</span></div>
-    <div class="drow"><span class="lbl">Auto Archive At</span><span class="val">2-24-2026 4:00 AM</span></div><div class="drow"><span class="lbl">Pickup Address</span><span class="val">Escoda Street, Barangay 675, Manila</span></div>
-    <div class="drow"><span class="lbl">Pickup Preferred Date</span><span class="val">3-1-2026</span></div><div class="drow"><span class="lbl">Pickup Preferred Pickup Window</span><span class="val">4:02 AM – 5:50 PM</span></div>
-    <div class="sep"><button class="btn btn-ok" onclick="alert('Marked as Received!')">Received</button><button class="btn btn-bad" onclick="openReject()">Rejected</button></div>
-  </div></div>
-</div>
-<div id="reject-modal" class="modal hidden"><div class="box"><div style="font-weight:600;font-size:15px;margin-bottom:6px">Enter reason for rejection</div><input id="reject-reason" class="in" placeholder="Reason for rejection..." style="margin-bottom:14px"/><div style="display:flex;justify-content:flex-end;gap:10px"><button onclick="closeReject()" style="border-radius:30px;padding:9px 24px;border:1.5px solid #f5d898;background:#fef7ea;color:#888;cursor:pointer">Cancel</button><button onclick="submitReject()" style="border-radius:30px;padding:9px 24px;border:none;background:var(--red);color:#fff;cursor:pointer">Reject</button></div></div></div>
-<script>
-  const donationData = {
-    conditions: ['Good', 'Like New', 'Fair', 'Poor'],
-    brandFiberLookup: [
-      { id: 1, clothing: 'Pants', brand: "Levi's", material: '80% Cotton, 20% Polyester', scrapedAt: '2026-03-20T08:30:00Z' },
-      { id: 2, clothing: 'Shirt', brand: 'Uniqlo', material: '100% Cotton', scrapedAt: '2026-03-11T09:00:00Z' },
-      { id: 3, clothing: 'Jacket', brand: 'Nike', material: '100% Polyester', scrapedAt: '2026-03-05T13:00:00Z' },
-      { id: 21, clothing: 'Jacket', brand: 'H&M', material: '65% Cotton, 35% Polyester', scrapedAt: '2026-03-29T16:45:00Z' },
-      { id: 22, clothing: 'Jeans', brand: 'Zara', material: '98% Cotton, 2% Elastane', scrapedAt: '2026-03-30T07:15:00Z' }
-    ]
-  };
-  const initialCards = [
-    { c: 'Pants', w: '0.8', d: 'Fair', b: "Levi's", id: '1' },
-    { c: 'Shirt', w: '2.0', d: 'Good', b: 'Uniqlo', id: '2' }
-  ];
+</head>
+<body>
+  <form id="tuab-form" method="post" action="/tuab_update_donation/">
+    <input type="hidden" id="action-status" name="action_status" value="">
+    <input type="hidden" id="action-reason" name="action_reason" value="">
+    <input type="hidden" id="donation-upload-id" name="upload_id" value="{{ donation.upload_id|default:'' }}">
+    <input type="hidden" id="donation-upload-path" name="file_path" value="{{ donation.upload.file_path|default:'' }}">
 
-  let cardCount = 0;
+    <div class="layout">
+      <div class="left">
+        <div id="cards"></div>
+        <button type="button" class="btn-add" onclick="addCard()">+ Add Another Clothing Group</button>
+      </div>
 
-  function getById(id) { return document.getElementById(id); }
-  function unique(values) { return [...new Set(values)]; }
-  function getAllClothingTypes() { return unique(donationData.brandFiberLookup.map((row) => row.clothing)); }
-  function getAllBrands() { return unique(donationData.brandFiberLookup.map((row) => row.brand)); }
+      <div class="right">
+        <div class="panel">
+          <div class="drow"><span class="lbl">Donor</span><span class="val">Juan Dela Cruz</span></div>
+          <div class="drow"><span class="lbl">Status</span><span class="val" style="color:var(--green)">Claimed</span></div>
+          <div class="drow"><span class="lbl">Is Flagged</span><span class="val">False</span></div>
+          <div class="drow"><span class="lbl">Flag Reason</span><span class="val">-</span></div>
+          <div class="drow"><span class="lbl">Submitted At</span><span class="val">1-25-2026 4:00 AM</span></div>
+          <div class="drow"><span class="lbl">Updated At</span><span class="val">-</span></div>
+          <div class="drow"><span class="lbl">Auto Archive At</span><span class="val">2-24-2026 4:00 AM</span></div>
+          <div class="drow"><span class="lbl">Pickup Address</span><span class="val">Escoda Street, Barangay 675, Manila</span></div>
+          <div class="drow"><span class="lbl">Pickup Preferred Date</span><span class="val">3-1-2026</span></div>
+          <div class="drow"><span class="lbl">Pickup Preferred Window</span><span class="val">4:02 AM - 5:50 PM</span></div>
+          <div class="upload-wrap">
+            <img
+              id="upload-photo"
+              class="upload-photo{% if not donation.upload.file_path %} hidden{% endif %}"
+              src="{{ donation.upload.file_path|default:'' }}"
+              alt="Donation upload photo"
+            >
+          </div>
 
-  function getComboboxOptions(type, index) {
-    if (type === 'c') {
-      const brandInput = getById(`b-${index}`);
-      if (brandInput?.dataset.db === '1') {
-        return unique(donationData.brandFiberLookup.filter((row) => row.brand === brandInput.dataset.v).map((row) => row.clothing));
-      }
-      return getAllClothingTypes();
-    }
+          <div class="sep">
+            <button type="button" class="btn btn-ok" onclick="submitReceived()">Received</button>
+            <button type="button" class="btn btn-bad" onclick="openReject()">Rejected</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
 
-    const clothingInput = getById(`c-${index}`);
-    if (clothingInput?.dataset.db === '1') {
-      return unique(donationData.brandFiberLookup.filter((row) => row.clothing === clothingInput.dataset.v).map((row) => row.brand));
-    }
-    return getAllBrands();
-  }
+  <div id="reject-modal" class="modal hidden">
+    <div class="box">
+      <div style="font-weight:600;font-size:15px;margin-bottom:6px">Enter reason for rejection</div>
+      <input id="reject-reason" class="in" placeholder="Reason for rejection..." style="margin-bottom:14px"/>
+      <div style="display:flex;justify-content:flex-end;gap:10px">
+        <button type="button" onclick="closeReject()" style="border-radius:30px;padding:9px 24px;border:1.5px solid #f5d898;background:#fef7ea;color:#888;cursor:pointer">Cancel</button>
+        <button type="button" onclick="submitRejected()" style="border-radius:30px;padding:9px 24px;border:none;background:var(--red);color:#fff;cursor:pointer">Reject</button>
+      </div>
+    </div>
+  </div>
 
-  function buildCombobox(type, index, state = {}) {
-    const value = state.v || '';
-    const selectedFromList = state.db ?? (value ? '1' : '0');
-    const selectedValue = state.dv ?? value;
-    return `<div class="cb"><div class="cb-wrap"><input id="${type}-${index}" class="cb-in" value="${value}" autocomplete="off" placeholder="Select or type..." data-db="${selectedFromList}" data-v="${selectedValue}" onfocus="openCombobox('${type}', ${index})" oninput="onComboboxType('${type}', ${index}, this.value)" onblur="setTimeout(() => closeCombobox('${type}', ${index}), 120)"/><button class="cb-btn" onmousedown="toggleCombobox(event, '${type}', ${index})">⌄</button></div><div id="${type}l-${index}" class="cb-list hidden"></div></div>`;
-  }
-
-  function buildCard(index, values = {}) {
-    const data = {
-      c: values.c || '',
-      cdb: values.cdb || '1',
-      cv: values.cv || '',
-      w: values.w || '',
-      d: values.d || 'Good',
-      b: values.b || '',
-      bdb: values.bdb || '1',
-      bv: values.bv || '',
-      id: values.id || ''
+  <script>
+    const donationData = {
+      conditions: ['Good', 'Like New', 'Fair', 'Poor'],
+      brandFiberLookup: [
+        { id: 1, clothing: 'Pants', brand: "Levi's", material: '80% Cotton, 20% Polyester', scrapedAt: '2026-03-20T08:30:00Z' },
+        { id: 2, clothing: 'Shirt', brand: 'Uniqlo', material: '100% Cotton', scrapedAt: '2026-03-11T09:00:00Z' },
+        { id: 3, clothing: 'Jacket', brand: 'Nike', material: '100% Polyester', scrapedAt: '2026-03-05T13:00:00Z' },
+        { id: 21, clothing: 'Jacket', brand: 'H&M', material: '65% Cotton, 35% Polyester', scrapedAt: '2026-03-29T16:45:00Z' },
+        { id: 22, clothing: 'Jeans', brand: 'Zara', material: '98% Cotton, 2% Elastane', scrapedAt: '2026-03-30T07:15:00Z' }
+      ]
     };
 
-    const deleteButton = index
-      ? `<button class="trash" onclick="removeCard(${index})"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/><path d="M10,11v6M14,11v6"/><path d="M9,6V4h6v2"/></svg></button>`
-      : '';
-    const conditionOptions = donationData.conditions.map((condition) => `<option ${condition === data.d ? 'selected' : ''}>${condition}</option>`).join('');
+    const initialCards = [
+      { c: 'Pants', w: '0.8', d: 'Fair', b: "Levi's", id: '1' },
+      { c: 'Shirt', w: '2.0', d: 'Good', b: 'Uniqlo', id: '2' }
+    ];
 
-    return `<div class="card" id="card-${index}"><div class="head"><div style="display:flex;align-items:center;gap:10px"><div class="num">${index + 1}</div><span style="font-weight:600;font-size:15px">Clothing ${index + 1}</span></div>${deleteButton}</div><div class="row"><div class="group"><label class="up">Clothing *</label>${buildCombobox('c', index, { v: data.c, db: data.cdb, dv: data.cv || data.c })}</div><div class="group"><label class="up">Estimated Weight (kg)</label><input id="w-${index}" class="in" type="number" step="0.1" value="${data.w}"/></div></div><div class="group" style="margin-bottom:12px"><label class="up">Condition</label><select class="sel" id="d-${index}">${conditionOptions}</select></div><div class="row" style="margin-bottom:0"><div class="group"><label class="up">Brand</label>${buildCombobox('b', index, { v: data.b, db: data.bdb, dv: data.bv || data.b })}</div><div class="group"><label class="up">Material</label><select class="sel" id="m-${index}" data-id="${data.id}"><option value="">— select material —</option></select><input class="in hidden" id="a-${index}" value="Will be approximated" disabled style="font-style:italic"/><input type="hidden" id="t-${index}" value="1"/></div></div></div>`;
-  }
-
-  function renderCombobox(type, index, query = '') {
-    const listEl = getById(`${type}l-${index}`);
-    const options = getComboboxOptions(type, index);
-    const fallback = type === 'c' ? getAllClothingTypes() : getAllBrands();
-    const filteredOptions = (options.length ? options : fallback).filter((item) => item.toLowerCase().includes(query.toLowerCase()));
-
-    if (!filteredOptions.length) {
-      listEl.innerHTML = '<div class="cb-empty">No matches — typed value will be used</div>';
-      return;
+    // ---------- Utilities ----------
+    // Returns a DOM element by id to avoid repeating document.getElementById.
+    function getById(id) {
+      return document.getElementById(id);
     }
 
-    listEl.innerHTML = filteredOptions.map((item) => `<div class='cb-opt' data-v="${item}" onmousedown="pickComboboxOption(event, '${type}', ${index}, '${item.replace(/'/g, "\\'")}')">${item}</div>`).join('');
-  }
+    // Converts number-like input to Number; returns null for empty/invalid values.
+    function toNumberOrNull(value) {
+      if (value === '' || value == null) return null;
+      const parsed = Number(value);
+      return Number.isNaN(parsed) ? null : parsed;
+    }
 
-  function openCombobox(type, index) {
-    renderCombobox(type, index, getById(`${type}-${index}`).value);
-    getById(`${type}l-${index}`).classList.remove('hidden');
-  }
+    const ALL_CLOTHING_TYPES = [...new Set(donationData.brandFiberLookup.map((row) => row.clothing))];
+    const ALL_BRANDS = [...new Set(donationData.brandFiberLookup.map((row) => row.brand))];
+    let cardCount = 0;
 
-  function closeCombobox(type, index) {
-    getById(`${type}l-${index}`).classList.add('hidden');
-    applyMaterialTier(index);
-  }
+    // ---------- Django Conversion Map (Keep vs Remove) ----------
+    // Keep after Django template conversion:
+    // - getById, toNumberOrNull
+    // - buildCombobox, renderCombobox, openCombobox, closeCombobox, toggleCombobox
+    // - onComboboxType, pickComboboxOption
+    // - buildCard, applyMaterialTier, readCardStates, renderCards, addCard, removeCard
+    // - openReject, closeReject, submitReceived, submitRejected
+    // - buildPayload
+    // Remove/disable for production submit flow:
+    // - handleTuabSubmit (payload popup preview only). Keep only if you still want preview mode.
 
-  function toggleCombobox(event, type, index) {
-    event.preventDefault();
-    const listEl = getById(`${type}l-${index}`);
-    if (listEl.classList.contains('hidden')) openCombobox(type, index);
-    else closeCombobox(type, index);
-  }
+    // ---------- Combobox ----------
+    // Builds a clothing/brand combobox HTML block for a specific card index.
+    function buildCombobox(type, index, state = {}) {
+      const value = state.v || '';
+      const selectedFromList = state.db ?? (value ? '1' : '0');
+      const selectedValue = state.dv ?? value;
+      const inputName = type === 'c' ? 'clothing' : 'brand';
 
-  function onComboboxType(type, index, value) {
-    const input = getById(`${type}-${index}`);
-    input.dataset.db = '0';
-    input.dataset.v = '';
-    renderCombobox(type, index, value);
-    getById(`${type}l-${index}`).classList.remove('hidden');
-    applyMaterialTier(index);
-  }
+      return `
+        <div class="cb">
+          <div class="cb-wrap">
+            <input
+              id="${type}-${index}"
+              name="${inputName}"
+              class="cb-in"
+              value="${value}"
+              autocomplete="off"
+              placeholder="Select or type..."
+              data-db="${selectedFromList}"
+              data-v="${selectedValue}"
+              onfocus="openCombobox('${type}', ${index})"
+              oninput="onComboboxType('${type}', ${index}, this.value)"
+              onblur="setTimeout(() => closeCombobox('${type}', ${index}), 120)"
+            />
+            <button type="button" class="cb-btn" onmousedown="toggleCombobox(event, '${type}', ${index})" aria-label="Toggle options">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg>
+            </button>
+          </div>
+          <div id="${type}l-${index}" class="cb-list hidden"></div>
+        </div>
+      `;
+    }
 
-  function pickComboboxOption(event, type, index, value) {
-    event.preventDefault();
-    const input = getById(`${type}-${index}`);
-    input.value = value;
-    input.dataset.db = '1';
-    input.dataset.v = value;
-    closeCombobox(type, index);
-  }
+    // Shows combobox suggestions for typed query.
+    function renderCombobox(type, index, query = '') {
+      const listEl = getById(`${type}l-${index}`);
+      const options = type === 'c' ? ALL_CLOTHING_TYPES : ALL_BRANDS;
+      const filteredOptions = options.filter((item) => item.toLowerCase().includes(query.toLowerCase()));
 
-  function applyMaterialTier(index) {
-    const clothingInput = getById(`c-${index}`);
-    const brandInput = getById(`b-${index}`);
-    const materialSelect = getById(`m-${index}`);
-    const approximationInput = getById(`a-${index}`);
-    const tierInput = getById(`t-${index}`);
-
-    const clothingFromList = clothingInput.dataset.db === '1';
-    const brandFromList = brandInput.dataset.db === '1';
-    const clothingValue = clothingInput.dataset.v || clothingInput.value.trim();
-    const brandValue = brandInput.dataset.v || brandInput.value.trim();
-
-    const matches = donationData.brandFiberLookup
-      .filter((row) => row.clothing === clothingValue && row.brand === brandValue)
-      .sort((a, b) => new Date(b.scrapedAt || 0) - new Date(a.scrapedAt || 0));
-
-    let tier = 4;
-    if (clothingFromList && brandFromList) tier = 0;
-    else if (!clothingFromList && !brandFromList && matches.length) tier = 1;
-    else if (!clothingFromList && brandFromList) tier = 2;
-    else if (clothingFromList && !brandFromList) tier = 3;
-
-    tierInput.value = tier;
-
-    if (tier === 0) {
-      materialSelect.classList.remove('hidden');
-      approximationInput.classList.add('hidden');
-      materialSelect.innerHTML = '<option value="">— select material —</option>' + matches.map((row) => `<option value="${row.id}">${row.material}</option>`).join('');
-      if (materialSelect.dataset.id && matches.some((row) => String(row.id) === materialSelect.dataset.id)) {
-        materialSelect.value = materialSelect.dataset.id;
+      if (!filteredOptions.length) {
+        listEl.innerHTML = '<div class="cb-empty">No matches - typed value will be used</div>';
+        return;
       }
-      approximationInput.value = 'Will be approximated';
-      return;
+
+      listEl.innerHTML = filteredOptions
+        .map((item) => {
+          const safeItem = item.replace(/'/g, "\\'");
+          return `<div class="cb-opt" onmousedown="pickComboboxOption(event, '${type}', ${index}, '${safeItem}')">${item}</div>`;
+        })
+        .join('');
     }
 
-    materialSelect.classList.add('hidden');
-    approximationInput.classList.remove('hidden');
-    approximationInput.value = tier === 1 && matches[0] ? `Will be approximated (latest: ${matches[0].material})` : 'Will be approximated';
-  }
+    // Opens one combobox list.
+    function openCombobox(type, index) {
+      const input = getById(`${type}-${index}`);
+      const list = getById(`${type}l-${index}`);
+      if (!input || !list) return;
+      renderCombobox(type, index, input.value);
+      list.classList.remove('hidden');
+    }
 
-  function getCardState(index) {
-    const clothingInput = getById(`c-${index}`);
-    const brandInput = getById(`b-${index}`);
-    const materialSelect = getById(`m-${index}`);
-    if (!clothingInput || !brandInput) return null;
-
-    return {
-      c: clothingInput.value,
-      cdb: clothingInput.dataset.db || '0',
-      cv: clothingInput.dataset.v || '',
-      w: getById(`w-${index}`)?.value || '',
-      d: getById(`d-${index}`)?.value || 'Good',
-      b: brandInput.value,
-      bdb: brandInput.dataset.db || '0',
-      bv: brandInput.dataset.v || '',
-      id: materialSelect?.value || materialSelect?.dataset.id || ''
-    };
-  }
-
-  function getAllCardStates() {
-    return Array.from({ length: cardCount }, (_, index) => getCardState(index)).filter(Boolean);
-  }
-
-  function renderCards(cardStates) {
-    const rows = cardStates.length ? cardStates : [{ c: '', w: '', d: 'Good', b: '', id: '' }];
-    const container = getById('cards');
-    container.innerHTML = '';
-
-    rows.forEach((row, index) => {
-      container.insertAdjacentHTML('beforeend', buildCard(index, row));
+    // Closes one combobox list and updates material mode.
+    function closeCombobox(type, index) {
+      const list = getById(`${type}l-${index}`);
+      if (!list) return;
+      list.classList.add('hidden');
       applyMaterialTier(index);
-    });
+    }
 
-    cardCount = rows.length;
-  }
+    // Toggles open/close for combobox list.
+    function toggleCombobox(event, type, index) {
+      event.preventDefault();
+      const list = getById(`${type}l-${index}`);
+      if (!list) return;
+      if (list.classList.contains('hidden')) openCombobox(type, index);
+      else closeCombobox(type, index);
+    }
 
-  function addCard(cardData) {
-    const rows = getAllCardStates();
-    rows.push(cardData || { c: '', w: '', d: 'Good', b: '', id: '' });
-    renderCards(rows);
-  }
+    // Handles manual typing in combobox and marks source as typed.
+    function onComboboxType(type, index, value) {
+      const input = getById(`${type}-${index}`);
+      const list = getById(`${type}l-${index}`);
+      if (!input || !list) return;
+      input.dataset.db = '0';
+      input.dataset.v = '';
+      renderCombobox(type, index, value);
+      list.classList.remove('hidden');
+      applyMaterialTier(index);
+    }
 
-  function removeCard(indexToRemove) {
-    renderCards(getAllCardStates().filter((_, index) => index !== indexToRemove));
-  }
+    // Handles picking a combobox option and marks source as lookup-selected.
+    function pickComboboxOption(event, type, index, value) {
+      event.preventDefault();
+      const input = getById(`${type}-${index}`);
+      const list = getById(`${type}l-${index}`);
+      if (!input || !list) return;
+      input.value = value;
+      input.dataset.db = '1';
+      input.dataset.v = value;
+      list.classList.add('hidden');
+      applyMaterialTier(index);
+    }
 
-  function openReject() { getById('reject-modal').classList.remove('hidden'); }
-  function closeReject() { getById('reject-modal').classList.add('hidden'); }
-  function submitReject() { closeReject(); alert('Donation rejected!'); }
+    // ---------- Cards ----------
+    // Builds one editable donation item card.
+    function buildCard(index, values = {}) {
+      const data = {
+        c: values.c || '',
+        cdb: values.cdb || (values.c ? '1' : '0'),
+        cv: values.cv || values.c || '',
+        w: values.w || '',
+        d: values.d || 'Good',
+        b: values.b || '',
+        bdb: values.bdb || (values.b ? '1' : '0'),
+        bv: values.bv || values.b || '',
+        id: values.id || ''
+      };
 
-  renderCards(initialCards);
+      const deleteButton = index
+        ? `<button type="button" class="trash" onclick="removeCard(${index})"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19,6l-1,14a2,2,0,0,1-2,2H8a2,2,0,0,1-2-2L5,6"/><path d="M10,11v6M14,11v6"/><path d="M9,6V4h6v2"/></svg></button>`
+        : '';
 
-  document.addEventListener('click', (event) => {
-    ['c', 'b'].forEach((type) => {
-      document.querySelectorAll(`[id^='${type}l-']`).forEach((listEl) => {
-        if (!listEl.closest('.cb')?.contains(event.target)) listEl.classList.add('hidden');
+      const conditionOptions = donationData.conditions
+        .map((condition) => `<option ${condition === data.d ? 'selected' : ''}>${condition}</option>`)
+        .join('');
+
+      return `
+        <div class="card" id="card-${index}">
+          <div class="head">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="num">${index + 1}</div>
+              <span style="font-weight:600;font-size:15px">Clothing ${index + 1}</span>
+            </div>
+            ${deleteButton}
+          </div>
+
+          <div class="row">
+            <div class="group">
+              <label class="up">Clothing *</label>
+              ${buildCombobox('c', index, { v: data.c, db: data.cdb, dv: data.cv })}
+            </div>
+            <div class="group">
+              <label class="up">Estimated Weight (kg)</label>
+              <input id="w-${index}" name="estimated_weight_kg" class="in" type="number" step="0.1" value="${data.w}"/>
+            </div>
+          </div>
+
+          <div class="group" style="margin-bottom:12px">
+            <label class="up">Condition</label>
+            <select class="sel" id="d-${index}" name="condition">${conditionOptions}</select>
+          </div>
+
+          <div class="row" style="margin-bottom:0">
+            <div class="group">
+              <label class="up">Brand</label>
+              ${buildCombobox('b', index, { v: data.b, db: data.bdb, dv: data.bv })}
+            </div>
+            <div class="group">
+              <label class="up">Material</label>
+              <select class="sel" id="m-${index}" name="material_id" data-id="${data.id}">
+                <option value="">- select material -</option>
+              </select>
+              <input class="in hidden" id="a-${index}" value="Will be approximated" disabled style="font-style:italic"/>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // Uses clothing+brand selection to determine material mode:
+    // - lookup mode: show material dropdown with matching lookup records
+    // - non-lookup mode: show approximation message
+    function applyMaterialTier(index) {
+      const clothingInput = getById(`c-${index}`);
+      const brandInput = getById(`b-${index}`);
+      const materialSelect = getById(`m-${index}`);
+      const approximationInput = getById(`a-${index}`);
+      if (!clothingInput || !brandInput || !materialSelect || !approximationInput) return;
+
+      const clothingFromList = clothingInput.dataset.db === '1';
+      const brandFromList = brandInput.dataset.db === '1';
+      const clothingValue = clothingInput.dataset.v || clothingInput.value.trim();
+      const brandValue = brandInput.dataset.v || brandInput.value.trim();
+
+      const matches = donationData.brandFiberLookup
+        .filter((row) => row.clothing === clothingValue && row.brand === brandValue);
+
+      const isLookupMode = clothingFromList && brandFromList && matches.length > 0;
+
+      if (isLookupMode) {
+        materialSelect.classList.remove('hidden');
+        approximationInput.classList.add('hidden');
+        materialSelect.innerHTML =
+          '<option value="">- select material -</option>' +
+          matches.map((row) => `<option value="${row.id}">${row.material}</option>`).join('');
+        if (materialSelect.dataset.id && matches.some((row) => String(row.id) === materialSelect.dataset.id)) {
+          materialSelect.value = materialSelect.dataset.id;
+        }
+        approximationInput.value = 'Will be approximated';
+        return;
+      }
+
+      materialSelect.classList.add('hidden');
+      materialSelect.value = '';
+      approximationInput.classList.remove('hidden');
+      approximationInput.value = 'Will be approximated';
+    }
+
+    // Reads all card values from DOM into plain objects.
+    function readCardStates() {
+      const rows = [];
+      for (let index = 0; index < cardCount; index += 1) {
+        const clothingInput = getById(`c-${index}`);
+        const brandInput = getById(`b-${index}`);
+        const materialSelect = getById(`m-${index}`);
+        const weightInput = getById(`w-${index}`);
+        const conditionInput = getById(`d-${index}`);
+        if (!clothingInput || !brandInput) continue;
+
+        rows.push({
+          c: clothingInput.value,
+          cdb: clothingInput.dataset.db || '0',
+          cv: clothingInput.dataset.v || '',
+          w: weightInput?.value || '',
+          d: conditionInput?.value || 'Good',
+          b: brandInput.value,
+          bdb: brandInput.dataset.db || '0',
+          bv: brandInput.dataset.v || '',
+          id: materialSelect?.value || materialSelect?.dataset.id || ''
+        });
+      }
+      return rows;
+    }
+
+    // Re-renders all cards and re-applies material logic.
+    function renderCards(cardStates) {
+      const rows = cardStates.length ? cardStates : [{ c: '', w: '', d: 'Good', b: '', id: '' }];
+      const container = getById('cards');
+      container.innerHTML = '';
+
+      rows.forEach((row, index) => {
+        container.insertAdjacentHTML('beforeend', buildCard(index, row));
+        applyMaterialTier(index);
       });
+
+      cardCount = rows.length;
+    }
+
+    // Adds one new card.
+    function addCard(cardData) {
+      const rows = readCardStates();
+      rows.push(cardData || { c: '', w: '', d: 'Good', b: '', id: '' });
+      renderCards(rows);
+    }
+
+    // Removes one card by index.
+    function removeCard(indexToRemove) {
+      renderCards(readCardStates().filter((_, index) => index !== indexToRemove));
+    }
+
+    // ---------- TUAB Action Modal ----------
+    // Opens rejection modal for reason input.
+    function openReject() {
+      getById('reject-modal').classList.remove('hidden');
+    }
+
+    // Closes rejection modal.
+    function closeReject() {
+      getById('reject-modal').classList.add('hidden');
+    }
+
+    // Submits form as RECEIVED action.
+    function submitReceived() {
+      getById('action-status').value = 'received';
+      getById('action-reason').value = '';
+      getById('tuab-form').requestSubmit();
+    }
+
+    // Submits form as REJECTED action with required reason.
+    function submitRejected() {
+      const reason = (getById('reject-reason').value || '').trim();
+      if (!reason) {
+        alert('Please enter a rejection reason.');
+        return;
+      }
+      getById('action-status').value = 'rejected';
+      getById('action-reason').value = reason;
+      closeReject();
+      getById('tuab-form').requestSubmit();
+    }
+
+    // ---------- Payload Preview ----------
+    // Builds the submit payload shown in popup.
+    function buildPayload(formElement) {
+      const items = [];
+
+      for (let index = 0; index < cardCount; index += 1) {
+        const clothingInput = getById(`c-${index}`);
+        const brandInput = getById(`b-${index}`);
+        const materialSelect = getById(`m-${index}`);
+        const weightInput = getById(`w-${index}`);
+        const conditionInput = getById(`d-${index}`);
+        const weightRaw = weightInput?.value ?? '';
+        const condition = conditionInput?.value ?? '';
+        const clothingValue = clothingInput?.dataset.v || clothingInput?.value?.trim() || '';
+        const brandValue = brandInput?.dataset.v || brandInput?.value?.trim() || '';
+
+        const isLookupMode =
+          clothingInput?.dataset.db === '1' &&
+          brandInput?.dataset.db === '1' &&
+          donationData.brandFiberLookup.some((row) => row.clothing === clothingValue && row.brand === brandValue);
+
+        const item = {
+          weight: toNumberOrNull(weightRaw),
+          condition
+        };
+
+        if (isLookupMode) {
+          item.lookup_id = toNumberOrNull(materialSelect?.value ?? '');
+        } else {
+          item.clothing = (clothingInput?.value ?? '').trim();
+          item.brand = (brandInput?.value ?? '').trim();
+        }
+
+        items.push(item);
+      }
+
+      return {
+        action_status: formElement.elements.action_status?.value ?? '',
+        action_reason: formElement.elements.action_reason?.value ?? '',
+        upload_id: toNumberOrNull(formElement.elements.upload_id?.value ?? ''),
+        file_path: formElement.elements.file_path?.value ?? '',
+        donation_items: items
+      };
+    }
+
+    // Intercepts submit and shows payload in a large popup.
+    function handleTuabSubmit(event) {
+      event.preventDefault();
+      const payload = buildPayload(event.currentTarget);
+      const payloadText = JSON.stringify(payload, null, 2);
+      const popup = window.open('', 'tuabPayloadPreview', 'width=980,height=760,resizable=yes,scrollbars=yes');
+
+      if (!popup) {
+        alert(payloadText);
+        return;
+      }
+
+      popup.document.title = 'TUAB POST Payload Preview';
+      popup.document.body.innerHTML = '<div style="font-family:Consolas,monospace;padding:16px;"><h3 style="margin:0 0 12px;">TUAB payload preview</h3><pre id="payload" style="margin:0;white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.45;"></pre></div>';
+      popup.document.getElementById('payload').textContent = payloadText;
+      popup.focus();
+    }
+
+    // ---------- Init ----------
+    // Initial render + global click handlers for closing dropdown/modal.
+    renderCards(initialCards);
+    getById('tuab-form').addEventListener('submit', handleTuabSubmit);
+
+    document.addEventListener('click', (event) => {
+      ['c', 'b'].forEach((type) => {
+        document.querySelectorAll(`[id^='${type}l-']`).forEach((listEl) => {
+          if (!listEl.closest('.cb')?.contains(event.target)) {
+            listEl.classList.add('hidden');
+          }
+        });
+      });
+
+      if (event.target === getById('reject-modal')) {
+        closeReject();
+      }
     });
-    if (event.target === getById('reject-modal')) closeReject();
-  });
-</script>
-</body></html>
+  </script>
+</body>
+</html>

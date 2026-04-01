@@ -99,7 +99,8 @@
 
     <div class="panel img-panel">
       <div style="font-weight:600;font-size:14px;margin-bottom:12px">Donation Pile Image</div>
-      <img src="https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=300&q=70" style="width:100%;max-height:180px;object-fit:cover;border-radius:10px" alt="Donation"/>
+      <img src="{{ donation.upload.file_path|default:'' }}" class="{% if not donation.upload.file_path %}hidden{% endif %}" style="width:100%;max-height:180px;object-fit:cover;border-radius:10px" alt="Donation"/>
+      <div class="{% if donation.upload.file_path %}hidden{% endif %}" style="font-size:12px;color:#999">No donation image uploaded.</div>
     </div>
   </div>
 </div>
