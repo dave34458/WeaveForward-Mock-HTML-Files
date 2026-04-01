@@ -56,7 +56,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
     :root { --gold:#e8a020; --gold-dark:#c8881a; --bg:#f5f2eb; --border:#e0dbd4; --text:#222; --muted:#888; --light:#fdf6e8; --disabled:#aaa; }
-    *{box-sizing:border-box;margin:0;padding:0} body{font-family:Poppins,sans-serif;background:var(--bg);color:var(--text)} .hidden{display:none!important}
+    *{box-sizing:border-box;margin:0;padding:0} html{scrollbar-gutter:stable} body{font-family:Poppins,sans-serif;background:var(--bg);color:var(--text)} .hidden{display:none!important}
     .don-layout{display:flex;gap:24px;align-items:flex-start}.don-left{flex:1;min-width:0}.don-right{width:330px;flex-shrink:0}
     .card,.panel{background:#fff;border:1.5px solid var(--border);border-radius:14px}.card{width:100%;padding:20px 22px;margin-bottom:14px}.panel{padding:22px 24px}
     .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}.group{display:flex;flex-direction:column;gap:4px}
@@ -145,16 +145,16 @@
     : (el(`c-${i}`)?.dataset.db==='1' ? uniq(O.l.filter(x=>x.c===el(`c-${i}`).dataset.v).map(x=>x.b)) : O.b);
 
   // ===== CARD RENDERING =====
-  function card(i,p={c:'',w:'0.5',d:'Good',b:'',id:''}) {
+  function card(i,p={c:'',cdb:'1',cv:'',w:'0.5',d:'Good',b:'',bdb:'1',bv:'',id:''}) {
     return `<div class="card" id="card-${i}">
-      <div class="head"><div class="title-wrap"><div class="num">${i+1}</div><span style="font-weight:600;font-size:15px">Clothing ${i+1}</span></div>${i?'<button type="button" class="trash" onclick="this.closest(\'.card\').remove()"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>':''}</div>
+      <div class="head"><div class="title-wrap"><div class="num">${i+1}</div><span style="font-weight:600;font-size:15px">Clothing ${i+1}</span></div>${i?`<button type="button" class="trash" onclick="removeCard(${i})"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`:''}</div>
       <div class="row">
-        <div class="group"><label class="up">Clothing *</label>${cb('c',i,p.c)}</div>
-        <div class="group"><label class="up">Estimated Weight (kg)</label><input class="in" type="number" step="0.1" value="${p.w}" /></div>
+        <div class="group"><label class="up">Clothing *</label>${cb('c',i,{v:p.c,db:p.cdb,dv:p.cv||p.c})}</div>
+        <div class="group"><label class="up">Estimated Weight (kg)</label><input class="in" id="w-${i}" type="number" step="0.1" value="${p.w}" /></div>
       </div>
-      <div class="group" style="margin-bottom:14px"><label class="up">Condition</label><select class="sel">${O.d.map(x=>`<option ${x===p.d?'selected':''}>${x}</option>`).join('')}</select></div>
+      <div class="group" style="margin-bottom:14px"><label class="up">Condition</label><select class="sel" id="d-${i}">${O.d.map(x=>`<option ${x===p.d?'selected':''}>${x}</option>`).join('')}</select></div>
       <div class="row" style="margin-bottom:0">
-        <div class="group"><label class="up">Brand</label>${cb('b',i,p.b)}</div>
+        <div class="group"><label class="up">Brand</label>${cb('b',i,{v:p.b,db:p.bdb,dv:p.bv||p.b})}</div>
         <div class="group"><label class="up">Material</label>
           <select class="sel" id="m-${i}" data-id="${p.id}"><option value="">— select material —</option></select>
           <input class="in hidden" id="a-${i}" value="Will be approximated" disabled style="font-style:italic"/>
@@ -166,8 +166,9 @@
 
 
   // ===== COMBOBOX HELPERS =====
-  function cb(t,i,v){
-    return `<div class="cb"><div class="cb-wrap"><input id="${t}-${i}" class="cb-in" value="${v}" autocomplete="off" placeholder="Select or type..." data-db="${v?1:0}" data-v="${v}" onfocus="openCb('${t}',${i})" oninput="onType('${t}',${i},this.value)" onblur="setTimeout(()=>closeCb('${t}',${i}),120)"/><button type="button" class="cb-btn" onmousedown="toggleCb(event,'${t}',${i})">⌄</button></div><div id="${t}l-${i}" class="cb-list hidden"></div></div>`;
+  function cb(t,i,s={}){
+    const v=s.v||'', db=s.db??(v?'1':'0'), dv=s.dv??v;
+    return `<div class="cb"><div class="cb-wrap"><input id="${t}-${i}" class="cb-in" value="${v}" autocomplete="off" placeholder="Select or type..." data-db="${db}" data-v="${dv}" onfocus="openCb('${t}',${i})" oninput="onType('${t}',${i},this.value)" onblur="setTimeout(()=>closeCb('${t}',${i}),120)"/><button type="button" class="cb-btn" onmousedown="toggleCb(event,'${t}',${i})">⌄</button></div><div id="${t}l-${i}" class="cb-list hidden"></div></div>`;
   }
 
   function renderCb(t,i,q=''){ const l=el(`${t}l-${i}`),a=(src(t,i).length?src(t,i):(t==='c'?O.c:O.b)).filter(x=>x.toLowerCase().includes(q.toLowerCase())); l.innerHTML=a.length?a.map(x=>`<div class='cb-opt' data-v="${x}" onmousedown="pick(event,'${t}',${i},'${x.replace(/'/g,"\\'")}')">${x}</div>`).join(''):'<div class="cb-empty">No matches — typed value will be used</div>'; }
@@ -195,8 +196,20 @@
     }
   }
 
-  function addCard(p){ el('clothing-sections').insertAdjacentHTML('beforeend',card(n,p)); tier(n); n++; }
-  prefill.forEach(addCard);
+  function snapshot(i){
+    const c=el(`c-${i}`),b=el(`b-${i}`),m=el(`m-${i}`);
+    return c&&b?{c:c.value,cdb:c.dataset.db||'0',cv:c.dataset.v||'',w:el(`w-${i}`)?.value||'',d:el(`d-${i}`)?.value||'Good',b:b.value,bdb:b.dataset.db||'0',bv:b.dataset.v||'',id:m?.value||m?.dataset.id||''}:null;
+  }
+  function snapAll(){ return Array.from({length:n},(_,i)=>snapshot(i)).filter(Boolean); }
+  function normalizeCards(list){
+    const rows=list.length?list:[{c:'',w:'0.5',d:'Good',b:'',id:''}];
+    el('clothing-sections').innerHTML='';
+    rows.forEach((p,i)=>{el('clothing-sections').insertAdjacentHTML('beforeend',card(i,p));tier(i);});
+    n=rows.length;
+  }
+  function addCard(p){ const rows=snapAll(); rows.push(p||{c:'',w:'0.5',d:'Good',b:'',id:''}); normalizeCards(rows); }
+  function removeCard(i){ normalizeCards(snapAll().filter((_,x)=>x!==i)); }
+  normalizeCards(prefill);
 
 
   // ===== IMAGE UPLOAD HELPERS =====
