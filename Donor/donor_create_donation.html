@@ -1,34 +1,52 @@
-<!DOCTYPE html>
 <!--
   WeaveForward — Create Donation  (donor_create_donation.html)
   ═══════════════════════════════════════════════════════════════
   PURPOSE
   ───────
-  Standalone reference for Create Donation content (for Django
-  {% block content %} integration later). This is prototype code
-  intended to guide real template + form wiring.
+  Standalone reference for Create Donation page content (for later
+  conversion into Django templates rendered by views.py context).
 
-  DJANGO CONVERSION NOTES
-  ───────────────────────
+  DJANGO CONVERSION NOTES (EXPLICIT)
+  ──────────────────────────────────
   • {% extends 'base.html' %}
   • {% block content %} ... {% endblock %}
   • Wrap in form: <form method="post" action="{% url 'create_donation' %}" enctype="multipart/form-data">
       {% csrf_token %}
-  • Replace hardcoded sample values with context-driven values from views.py.
-  • Keep ids/hooks used by JS so combobox/tier/autocomplete features continue to work.
+  • Replace sample values with context variables listed below.
+  • Keep ids/hooks used by JS so combobox/tier/autocomplete/map behavior remains intact.
 
-  BEHAVIOR NOTES
-  ──────────────
-  • Clothing groups are dynamic cards (starts with one card, can add/remove).
-  • Clothing + Brand are comboboxes (typed vs selected-from-list is tracked).
-  • Material tier logic:
-      Tier 0: clothing+brand found in lookup → material select
-      Tier 1: both typed/manual, combo exists in lookup → approximated (latest scraped_at)
-      Tier 2: clothing typed + brand from list → approximated
-      Tier 3: clothing from list + brand typed → approximated
-      Tier 4: fallback approximation (e.g., manual combo not in lookup)
-  • Pick-up location supports Nominatim autocomplete + Leaflet map picker.
-  • Upload supports click and drag/drop preview.
+  BIDIRECTIONAL CASCADING FILTERS (BRAND_FIBER_LOOKUP)
+  ─────────────────────────────────────────────────────
+  • Once a clothing is picked from list, brand list narrows to brands
+    that have records for that clothing type.
+  • Once a brand is picked from list, clothing list narrows to clothing
+    types that have records for that brand.
+
+  MATERIAL TIER RULES
+  ───────────────────
+  • Tier 0: clothing+brand selected from dropdown + combo exists in lookup
+            → material select is shown (user picks specific material record)
+  • Tier 1: clothing+brand both manually typed, combo exists in lookup
+            → approximated using most recent record by scraped_at datetime
+  • Tier 2: clothing typed, brand from dropdown
+            → approximated
+  • Tier 3: clothing from dropdown, brand typed
+            → approximated
+  • Tier 4: fallback approximation (e.g., manual combo not in lookup)
+
+  CONTEXT VARIABLES EXPECTED
+  ──────────────────────────
+  page_title         → 'Create Donation'
+  sidebar_variant    → 'donor'
+  clothing_types     → list of clothing type strings
+  brands             → list of brand strings
+  conditions         → list of condition strings
+  brand_fiber_lookup → list of {id, clothing, brand, material, scraped_at}
+
+  NOTE
+  ────
+  Prototype/reference file only; real validation and final submission
+  behavior should be enforced server-side in Django forms/views.
 -->
 <html lang="en">
 <head>
@@ -60,7 +78,7 @@
     .time{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     .ac{position:relative}.ac-list{position:absolute;top:calc(100% + 4px);left:0;width:100%;max-height:200px;overflow:auto;background:#fff;border:1.5px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.1);z-index:60}
     .ac-item{padding:10px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid #f5f5f5}.ac-item:hover{background:var(--light)}
-    .pin-wrap{position:relative}.pin{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--gold);cursor:pointer}
+    .pin-wrap{position:relative}.pin-wrap .in{padding-right:40px}.pin{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--gold);cursor:pointer}
     .upload{margin-top:16px}.drop{border:2px dashed #f0c060;border-radius:12px;padding:18px;text-align:center;cursor:pointer}.drop:hover{background:var(--light)}
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:999}.modal-box{background:#fff;border-radius:16px;padding:20px;position:relative;width:min(620px,95vw)}
     .x{position:absolute;top:10px;right:12px;border:none;background:none;font-size:22px;cursor:pointer;color:#888} #picker-map{width:100%;height:300px;border-radius:8px}
