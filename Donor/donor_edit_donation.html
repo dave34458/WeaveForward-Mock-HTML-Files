@@ -55,6 +55,10 @@
       --text:      #222222;
       --muted:     #888888;
       --green:     #4a7c59;
+      --gold-light:#fdf6e8;
+      --disabled-bg: #f4f4f4;
+      --disabled-border: #e0e0e0;
+      --disabled-text: #aaaaaa;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); }
@@ -74,11 +78,26 @@
     .form-label-upper { font-family: 'Poppins', sans-serif; font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; display: block; margin-bottom: 5px; }
     .form-input { width: 100%; border: 1.5px solid #d5d5d5; border-radius: 8px; padding: 11px 16px; font-family: 'Poppins', sans-serif; font-size: 14px; color: var(--text); outline: none; transition: border-color .2s; }
     .form-input:focus { border-color: var(--gold); }
+    .form-input:disabled { background: var(--disabled-bg); border-color: var(--disabled-border); color: var(--disabled-text); cursor: not-allowed; }
     .form-select { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 36px 10px 14px; font-family: 'Poppins', sans-serif; font-size: 14px; color: var(--text); background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23e8a020' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E") no-repeat right 12px center; appearance: none; outline: none; cursor: pointer; }
     .form-select:focus { border-color: var(--gold); }
+    .form-select:disabled { background-color: var(--disabled-bg); border-color: var(--disabled-border); color: var(--disabled-text); cursor: not-allowed; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23cccccc' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E"); }
     .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
     .field-group { display: flex; flex-direction: column; gap: 4px; }
     ._subhdr { font-size: 13px; font-weight: 600; color: #333; margin-bottom: 8px; display: block; }
+
+
+    /* ── Combobox ── */
+    .combobox-wrap { position: relative; }
+    .combobox-input-wrap { position: relative; }
+    .combobox-input { width: 100%; border: 1.5px solid #d5d5d5; border-radius: 8px; padding: 10px 36px 10px 14px; font-family: 'Poppins', sans-serif; font-size: 14px; color: var(--text); outline: none; transition: border-color .2s; background: #fff; cursor: text; }
+    .combobox-input:focus { border-color: var(--gold); }
+    .combobox-arrow { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--gold); padding: 4px; display: flex; align-items: center; pointer-events: all; }
+    .combobox-dropdown { position: absolute; background: #fff; border: 1.5px solid var(--border); border-radius: 8px; width: 100%; top: calc(100% + 4px); left: 0; z-index: 300; box-shadow: 0 8px 24px rgba(0,0,0,.1); max-height: 200px; overflow-y: auto; }
+    .combobox-option { padding: 9px 14px; font-family: 'Poppins', sans-serif; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
+    .combobox-option:last-child { border-bottom: none; }
+    .combobox-option:hover, .combobox-option.highlighted { background: var(--gold-light); }
+    .combobox-empty { padding: 9px 14px; font-family: 'Poppins', sans-serif; font-size: 13px; color: var(--muted); font-style: italic; }
 
     /* ── Add clothing button ── */
     .btn-dashed { background: transparent; color: var(--gold); border: 2px dashed var(--gold); border-radius: 30px; padding: 12px; font-size: 14px; width: 100%; cursor: pointer; font-family: 'Poppins', sans-serif; margin-top: 4px; transition: background .2s; }
@@ -147,32 +166,50 @@
           </div>
         </div>
         <div class="field-row">
-          <!-- Django: <select name="items-0-type"> {% for t in clothing_types %}<option {% if item.type == t %}selected{% endif %}>{{ t }}</option>{% endfor %} </select> -->
-          <div class="field-group"><label class="form-label-upper">Clothing *</label>
-            <select class="form-select" name="items-0-type">
-              <option>Shirt</option><option>Pants</option><option>Shorts</option>
-              <option selected>Jacket</option><option>Dress</option><option>Blouse</option>
-              <option>Skirt</option><option>Coat</option><option>Jeans</option>
-              <option>T-Shirt</option><option>Polo</option><option>Hoodie</option><option>Sweater</option>
-            </select>
+          <div class="field-group">
+            <label class="form-label-upper">Clothing *</label>
+            <div class="combobox-wrap" id="cb-clothing-wrap-0">
+              <div class="combobox-input-wrap">
+                <input type="text" class="combobox-input" id="cb-clothing-input-0" name="items-0-type" value="Jacket"
+                  autocomplete="off" placeholder="Select or type clothing…" data-fromdb="true" data-selected-value="Jacket"
+                  onfocus="openCombobox('clothing',0)" oninput="filterCombobox('clothing',0,this.value)"
+                  onblur="blurCombobox('clothing',0)" onkeydown="comboboxKeydown(event,'clothing',0)"/>
+                <button type="button" class="combobox-arrow" tabindex="-1" onmousedown="toggleCombobox(event,'clothing',0)">
+                  <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg>
+                </button>
+              </div>
+              <div class="combobox-dropdown hidden" id="cb-clothing-list-0"></div>
+            </div>
           </div>
-          <!-- Django: name="items-0-weight" value="{{ item.weight }}" -->
           <div class="field-group"><label class="form-label-upper">Estimated Weight (kg)</label>
             <input class="form-input" type="number" step="0.1" name="items-0-weight" value="1.2"/>
           </div>
         </div>
-        <!-- Django: <select name="items-0-condition"> preselect {{ item.condition }} </select> -->
         <div class="field-group" style="margin-bottom:14px"><label class="form-label-upper">Condition</label>
-          <select class="form-select" name="items-0-condition">
-            <option selected>Good</option><option>Like New</option><option>Fair</option><option>Poor</option>
-          </select>
+          <select class="form-select" name="items-0-condition"><option selected>Good</option><option>Like New</option><option>Fair</option><option>Poor</option></select>
         </div>
-        <!-- Django: <select name="items-0-brand"> preselect {{ item.brand_material }} </select> -->
-        <div class="field-group"><label class="form-label-upper">Brand &amp; Material</label>
-          <select class="form-select" name="items-0-brand">
-            <option>Levi's Denim</option><option>Uniqlo Cotton</option>
-            <option selected>H&M Cotton</option><option>Zara Polyester</option><option>Nike Cotton</option>
-          </select>
+        <div class="field-row" style="margin-bottom:0">
+          <div class="field-group">
+            <label class="form-label-upper">Brand</label>
+            <div class="combobox-wrap" id="cb-brand-wrap-0">
+              <div class="combobox-input-wrap">
+                <input type="text" class="combobox-input" id="cb-brand-input-0" name="items-0-brand" value="H&M"
+                  autocomplete="off" placeholder="Select or type brand…" data-fromdb="true" data-selected-value="H&M"
+                  onfocus="openCombobox('brand',0)" oninput="filterCombobox('brand',0,this.value)"
+                  onblur="blurCombobox('brand',0)" onkeydown="comboboxKeydown(event,'brand',0)"/>
+                <button type="button" class="combobox-arrow" tabindex="-1" onmousedown="toggleCombobox(event,'brand',0)">
+                  <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg>
+                </button>
+              </div>
+              <div class="combobox-dropdown hidden" id="cb-brand-list-0"></div>
+            </div>
+          </div>
+          <div class="field-group" id="material-group-0">
+            <label class="form-label-upper">Material</label>
+            <select class="form-select" id="material-select-0" name="brand_fiber_lookup_id_0"><option value="">— select material —</option></select>
+            <input type="text" class="form-input hidden" id="material-approx-0" value="Will be approximated" disabled style="color:var(--disabled-text);font-style:italic"/>
+            <input type="hidden" id="material-tier-0" name="material_tier_0" value="1"/>
+          </div>
         </div>
       </div>
 
@@ -188,28 +225,36 @@
           </button>
         </div>
         <div class="field-row">
-          <div class="field-group"><label class="form-label-upper">Clothing *</label>
-            <select class="form-select" name="items-1-type">
-              <option>Shirt</option><option>Pants</option><option>Shorts</option>
-              <option>Jacket</option><option>Dress</option><option>Blouse</option>
-              <option>Skirt</option><option>Coat</option><option selected>Jeans</option>
-              <option>T-Shirt</option><option>Polo</option><option>Hoodie</option><option>Sweater</option>
-            </select>
+          <div class="field-group">
+            <label class="form-label-upper">Clothing *</label>
+            <div class="combobox-wrap" id="cb-clothing-wrap-1"><div class="combobox-input-wrap">
+                <input type="text" class="combobox-input" id="cb-clothing-input-1" name="items-1-type" value="Jeans" autocomplete="off"
+                  placeholder="Select or type clothing…" data-fromdb="true" data-selected-value="Jeans"
+                  onfocus="openCombobox('clothing',1)" oninput="filterCombobox('clothing',1,this.value)"
+                  onblur="blurCombobox('clothing',1)" onkeydown="comboboxKeydown(event,'clothing',1)"/>
+                <button type="button" class="combobox-arrow" tabindex="-1" onmousedown="toggleCombobox(event,'clothing',1)"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg></button>
+              </div><div class="combobox-dropdown hidden" id="cb-clothing-list-1"></div></div>
           </div>
-          <div class="field-group"><label class="form-label-upper">Estimated Weight (kg)</label>
-            <input class="form-input" type="number" step="0.1" name="items-1-weight" value="0.9"/>
+          <div class="field-group"><label class="form-label-upper">Estimated Weight (kg)</label><input class="form-input" type="number" step="0.1" name="items-1-weight" value="0.9"/></div>
+        </div>
+        <div class="field-group" style="margin-bottom:14px"><label class="form-label-upper">Condition</label><select class="form-select" name="items-1-condition"><option>Good</option><option>Like New</option><option selected>Fair</option><option>Poor</option></select></div>
+        <div class="field-row" style="margin-bottom:0">
+          <div class="field-group">
+            <label class="form-label-upper">Brand</label>
+            <div class="combobox-wrap" id="cb-brand-wrap-1"><div class="combobox-input-wrap">
+                <input type="text" class="combobox-input" id="cb-brand-input-1" name="items-1-brand" value="Zara" autocomplete="off"
+                  placeholder="Select or type brand…" data-fromdb="true" data-selected-value="Zara"
+                  onfocus="openCombobox('brand',1)" oninput="filterCombobox('brand',1,this.value)"
+                  onblur="blurCombobox('brand',1)" onkeydown="comboboxKeydown(event,'brand',1)"/>
+                <button type="button" class="combobox-arrow" tabindex="-1" onmousedown="toggleCombobox(event,'brand',1)"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg></button>
+              </div><div class="combobox-dropdown hidden" id="cb-brand-list-1"></div></div>
           </div>
-        </div>
-        <div class="field-group" style="margin-bottom:14px"><label class="form-label-upper">Condition</label>
-          <select class="form-select" name="items-1-condition">
-            <option>Good</option><option>Like New</option><option selected>Fair</option><option>Poor</option>
-          </select>
-        </div>
-        <div class="field-group"><label class="form-label-upper">Brand &amp; Material</label>
-          <select class="form-select" name="items-1-brand">
-            <option>Levi's Denim</option><option>Uniqlo Cotton</option>
-            <option>H&M Cotton</option><option selected>Zara Polyester</option><option>Nike Cotton</option>
-          </select>
+          <div class="field-group" id="material-group-1">
+            <label class="form-label-upper">Material</label>
+            <select class="form-select" id="material-select-1" name="brand_fiber_lookup_id_1"><option value="">— select material —</option></select>
+            <input type="text" class="form-input hidden" id="material-approx-1" value="Will be approximated" disabled style="color:var(--disabled-text);font-style:italic"/>
+            <input type="hidden" id="material-tier-1" name="material_tier_1" value="1"/>
+          </div>
         </div>
       </div>
 
@@ -307,45 +352,363 @@
 </div>
 
 <script>
-  const CLOTHING_TYPES = ['Shirt','Pants','Shorts','Jacket','Dress','Blouse','Skirt','Coat','Jeans','T-Shirt','Polo','Hoodie','Sweater'];
-  const CONDITIONS     = ['Good','Like New','Fair','Poor'];
-  const BRANDS         = ['Uniqlo','Levis','H&M','Zara','Nike','Adidas','Bench','Gap','Mango','Penshoppe'];
-  const MATERIALS      = ['Cotton','Denim','Polyester','Linen','Silk','Wool','Nylon','Rayon'];
-  let clothingCount = 2; // starts at 2 since existing items are prefilled
+  // ═══════════════════════════════════════════════════════════════
+  //  PRELOADED DATA
+  //  Django: {{ brand_fiber_lookup|json_script:"bfl-data" }}
+  // ═══════════════════════════════════════════════════════════════
+  const CLOTHING_TYPES = [
+    'Shirt','Pants','Shorts','Jacket','Dress','Blouse',
+    'Skirt','Coat','Jeans','T-Shirt','Polo','Hoodie','Sweater'
+  ];
+  const CONDITIONS = ['Good','Like New','Fair','Poor'];
+  const BRANDS = [
+    'Uniqlo',"Levi's",'H&M','Zara','Nike','Adidas','Bench','Gap','Mango','Penshoppe'
+  ];
+  const BRAND_FIBER_LOOKUP = [
+    { id:1,  clothing:'Pants',   brand:"Levi's",  material:'80% Cotton, 20% Polyester' },
+    { id:2,  clothing:'Pants',   brand:"Levi's",  material:'99% Cotton, 1% Elastane' },
+    { id:3,  clothing:'Pants',   brand:'Zara',    material:'60% Cotton, 40% Polyester' },
+    { id:4,  clothing:'Shirt',   brand:'Uniqlo',  material:'100% Cotton' },
+    { id:5,  clothing:'Shirt',   brand:'H&M',     material:'50% Cotton, 50% Polyester' },
+    { id:6,  clothing:'Jacket',  brand:'Nike',    material:'100% Polyester' },
+    { id:7,  clothing:'Jacket',  brand:'Adidas',  material:'95% Polyester, 5% Elastane' },
+    { id:8,  clothing:'Hoodie',  brand:'Nike',    material:'80% Cotton, 20% Polyester' },
+    { id:9,  clothing:'Hoodie',  brand:'Bench',   material:'70% Cotton, 30% Polyester' },
+    { id:10, clothing:'Jeans',   brand:"Levi's",  material:'99% Cotton, 1% Elastane' },
+    { id:11, clothing:'T-Shirt', brand:'Uniqlo',  material:'100% Cotton' },
+    { id:12, clothing:'T-Shirt', brand:'Gap',     material:'100% Cotton' },
+    { id:13, clothing:'Polo',    brand:'Bench',   material:'100% Cotton' },
+    { id:14, clothing:'Dress',   brand:'Mango',   material:'100% Polyester' },
+    { id:15, clothing:'Skirt',   brand:'Zara',    material:'65% Polyester, 35% Viscose' },
+    { id:16, clothing:'Sweater', brand:'H&M',     material:'60% Wool, 40% Acrylic' },
+    { id:17, clothing:'Coat',    brand:'Mango',   material:'60% Wool, 30% Polyester, 10% Other' },
+    { id:18, clothing:'Shorts',  brand:'Nike',    material:'100% Polyester' },
+    { id:19, clothing:'Shorts',  brand:'Adidas',  material:'100% Polyester' },
+    { id:20, clothing:'Blouse',  brand:'Zara',    material:'100% Viscose' },
+  ];
 
-  function addClothingSection() {
-    clothingCount++;
-    const i = clothingCount - 1;
-    const ctOpts   = CLOTHING_TYPES.map(t => `<option>${t}</option>`).join('');
+  // ═══════════════════════════════════════════════════════════════
+  //  CASCADING FILTER HELPERS
+  //  When a value is from the DB, narrow the peer list to only
+  //  options that have records paired with it.
+  //  fromdb=true ONLY on explicit dropdown click — never on typing.
+  // ═══════════════════════════════════════════════════════════════
+  function getAvailableBrands(idx) {
+    const clothingInput = document.getElementById(`cb-clothing-input-${idx}`);
+    if (!clothingInput || clothingInput.dataset.fromdb !== 'true') return BRANDS;
+    const cv = clothingInput.dataset.selectedValue;
+    const filtered = [...new Set(BRAND_FIBER_LOOKUP.filter(r => r.clothing === cv).map(r => r.brand))];
+    return filtered.length ? filtered : BRANDS;
+  }
+
+  function getAvailableClothing(idx) {
+    const brandInput = document.getElementById(`cb-brand-input-${idx}`);
+    if (!brandInput || brandInput.dataset.fromdb !== 'true') return CLOTHING_TYPES;
+    const bv = brandInput.dataset.selectedValue;
+    const filtered = [...new Set(BRAND_FIBER_LOOKUP.filter(r => r.brand === bv).map(r => r.clothing))];
+    return filtered.length ? filtered : CLOTHING_TYPES;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  COMBOBOX STATE
+  // ═══════════════════════════════════════════════════════════════
+  const cbState = {};
+  function getState(type, idx) {
+    const k = `${type}_${idx}`;
+    if (!cbState[k]) cbState[k] = { open: false, hiIdx: -1 };
+    return cbState[k];
+  }
+
+  function getSource(type, idx) {
+    return type === 'clothing' ? getAvailableClothing(idx) : getAvailableBrands(idx);
+  }
+
+  function buildOptions(type, idx, query) {
+    const list   = document.getElementById(`cb-${type}-list-${idx}`);
+    const source = getSource(type, idx);
+    const q      = query.trim().toLowerCase();
+    const filtered = q ? source.filter(s => s.toLowerCase().includes(q)) : source;
+    list.innerHTML = filtered.length
+      ? filtered.map(item =>
+          `<div class="combobox-option" data-value="${item.replace(/"/g,'&quot;')}"
+            onmousedown="selectComboboxOption(event,'${type}',${idx},this.dataset.value)">
+            ${item}
+          </div>`
+        ).join('')
+      : `<div class="combobox-empty">No matches — typed value will be used</div>`;
+    getState(type, idx).hiIdx = -1;
+  }
+
+  function openCombobox(type, idx) {
+    const input = document.getElementById(`cb-${type}-input-${idx}`);
+    buildOptions(type, idx, input.value);
+    document.getElementById(`cb-${type}-list-${idx}`).classList.remove('hidden');
+    getState(type, idx).open = true;
+  }
+
+  function toggleCombobox(event, type, idx) {
+    event.preventDefault();
+    const list  = document.getElementById(`cb-${type}-list-${idx}`);
+    const input = document.getElementById(`cb-${type}-input-${idx}`);
+    if (!list.classList.contains('hidden')) {
+      list.classList.add('hidden');
+      getState(type, idx).open = false;
+    } else {
+      input.focus();
+      buildOptions(type, idx, '');
+      list.classList.remove('hidden');
+      getState(type, idx).open = true;
+    }
+  }
+
+  function filterCombobox(type, idx, value) {
+    // Typing always clears fromdb — no snapping, no exceptions
+    const input = document.getElementById(`cb-${type}-input-${idx}`);
+    input.dataset.fromdb = 'false';
+    input.dataset.selectedValue = '';
+    buildOptions(type, idx, value);
+    document.getElementById(`cb-${type}-list-${idx}`).classList.remove('hidden');
+    getState(type, idx).open = true;
+    // Cascade: if peer is open, rebuild its list since our fromdb just cleared
+    const other = type === 'clothing' ? 'brand' : 'clothing';
+    const otherList = document.getElementById(`cb-${other}-list-${idx}`);
+    if (otherList && !otherList.classList.contains('hidden')) {
+      const otherInput = document.getElementById(`cb-${other}-input-${idx}`);
+      buildOptions(other, idx, otherInput ? otherInput.value : '');
+    }
+    updateMaterialTier(idx);
+  }
+
+  function blurCombobox(type, idx) {
+    setTimeout(() => {
+      document.getElementById(`cb-${type}-list-${idx}`).classList.add('hidden');
+      getState(type, idx).open = false;
+      // No snap on blur — if they didn't click, it's manual
+      updateMaterialTier(idx);
+    }, 150);
+  }
+
+  function selectComboboxOption(event, type, idx, value) {
+    event.preventDefault();
+    const input = document.getElementById(`cb-${type}-input-${idx}`);
+    input.value = value;
+    input.dataset.fromdb = 'true';          // ← ONLY set here, on explicit click
+    input.dataset.selectedValue = value;
+    document.getElementById(`cb-${type}-list-${idx}`).classList.add('hidden');
+    getState(type, idx).open = false;
+    // Cascade: rebuild peer list to reflect the new selection
+    const other = type === 'clothing' ? 'brand' : 'clothing';
+    const otherList = document.getElementById(`cb-${other}-list-${idx}`);
+    if (otherList && !otherList.classList.contains('hidden')) {
+      const otherInput = document.getElementById(`cb-${other}-input-${idx}`);
+      buildOptions(other, idx, otherInput ? otherInput.value : '');
+    }
+    updateMaterialTier(idx);
+  }
+
+  function comboboxKeydown(event, type, idx) {
+    const list    = document.getElementById(`cb-${type}-list-${idx}`);
+    const state   = getState(type, idx);
+    const options = list.querySelectorAll('.combobox-option');
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      state.hiIdx = Math.min(state.hiIdx + 1, options.length - 1);
+      highlightOption(options, state.hiIdx);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      state.hiIdx = Math.max(state.hiIdx - 1, 0);
+      highlightOption(options, state.hiIdx);
+    } else if (event.key === 'Enter' && state.hiIdx >= 0 && options[state.hiIdx]) {
+      event.preventDefault();
+      selectComboboxOption(event, type, idx, options[state.hiIdx].dataset.value);
+    } else if (event.key === 'Escape') {
+      list.classList.add('hidden');
+      state.open = false;
+    }
+  }
+
+  function highlightOption(options, idx) {
+    options.forEach((o, i) => o.classList.toggle('highlighted', i === idx));
+    if (options[idx]) options[idx].scrollIntoView({ block: 'nearest' });
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  TIER LOGIC (5 tiers: 0–4)
+  //
+  //  Tier 0 — both from dropdown + combo in BRAND_FIBER_LOOKUP
+  //            → material <select>; submits brand_fiber_lookup_id_N
+  //  Tier 1 — both from dropdown + combo NOT in BRAND_FIBER_LOOKUP
+  //            → "Will be approximated" (most recent archive record)
+  //  Tier 2 — clothing manual, brand from dropdown
+  //            → "Will be approximated" (median by brand)
+  //  Tier 3 — brand manual, clothing from dropdown
+  //            → "Will be approximated" (median by clothing)
+  //  Tier 4 — both manual
+  //            → "Will be approximated" (overall median)
+  // ═══════════════════════════════════════════════════════════════
+  function updateMaterialTier(idx) {
+    const clothingInput = document.getElementById(`cb-clothing-input-${idx}`);
+    const brandInput    = document.getElementById(`cb-brand-input-${idx}`);
+    const matSelect     = document.getElementById(`material-select-${idx}`);
+    const matApprox     = document.getElementById(`material-approx-${idx}`);
+    const tierHidden    = document.getElementById(`material-tier-${idx}`);
+
+    const clothingFromDB = clothingInput.dataset.fromdb === 'true';
+    const brandFromDB    = brandInput.dataset.fromdb    === 'true';
+    const clothingVal    = clothingInput.dataset.selectedValue || clothingInput.value.trim();
+    const brandVal       = brandInput.dataset.selectedValue    || brandInput.value.trim();
+
+    let tier;
+    if (clothingFromDB && brandFromDB) {
+      // Check if the exact combo exists in BRAND_FIBER_LOOKUP
+      const inLookup = BRAND_FIBER_LOOKUP.some(
+        r => r.clothing === clothingVal && r.brand === brandVal
+      );
+      tier = inLookup ? 0 : 1;
+    } else if (!clothingFromDB && brandFromDB) {
+      tier = 2;
+    } else if (clothingFromDB && !brandFromDB) {
+      tier = 3;
+    } else {
+      tier = 4;
+    }
+
+    if (tierHidden) tierHidden.value = tier;
+
+    if (tier === 0) {
+      // Show material select
+      matApprox.classList.add('hidden');
+      matSelect.classList.remove('hidden');
+      matSelect.name = `brand_fiber_lookup_id_${idx}`;
+      populateMaterialSelect(idx, clothingVal, brandVal);
+    } else {
+      // All other tiers: approximated — only clothing_N + brand_N submitted
+      matSelect.classList.add('hidden');
+      matSelect.name = '';
+      matSelect.innerHTML = '<option value="">— approximated —</option>';
+      matApprox.classList.remove('hidden');
+      matApprox.name = '';
+    }
+  }
+
+  function populateMaterialSelect(idx, clothing, brand) {
+    const matSelect = document.getElementById(`material-select-${idx}`);
+    const matches = BRAND_FIBER_LOOKUP.filter(
+      r => r.clothing === clothing && r.brand === brand
+    );
+    matSelect.innerHTML = matches.length
+      ? `<option value="">— select material —</option>` +
+        matches.map(r => `<option value="${r.id}">${r.material}</option>`).join('')
+      : `<option value="">— no records found —</option>`;
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  DYNAMIC CARD CREATION
+  // ═══════════════════════════════════════════════════════════════
+  let clothingCount = 2;
+
+  function cardInnerHTML(i) {
     const condOpts = CONDITIONS.map(c => `<option>${c}</option>`).join('');
-    const bmOpts   = BRANDS.flatMap(b => MATERIALS.map(m => `${b} ${m}`)).map(o => `<option>${o}</option>`).join('');
-    const card = document.createElement('div');
-    card.className = 'clothing-card'; card.id = `cs-${i}`;
-    card.innerHTML = `
+    return `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
         <div style="display:flex;align-items:center;gap:10px">
           <div class="clothing-num">${i+1}</div>
           <span style="font-family:'Poppins',sans-serif;font-weight:600;font-size:15px">Clothing ${i+1}</span>
         </div>
         <button type="button" class="trash-btn" onclick="this.closest('.clothing-card').remove()">
-          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <polyline points="3,6 5,6 21,6"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+          </svg>
         </button>
       </div>
       <div class="field-row">
-        <div class="field-group"><label class="form-label-upper">Clothing *</label><select class="form-select">${ctOpts}</select></div>
-        <div class="field-group"><label class="form-label-upper">Estimated Weight (kg)</label><input class="form-input" type="number" step="0.1" value="0.5"/></div>
+        <div class="field-group">
+          <label class="form-label-upper">Clothing *</label>
+          <div class="combobox-wrap" id="cb-clothing-wrap-${i}">
+            <div class="combobox-input-wrap">
+              <input type="text" class="combobox-input" id="cb-clothing-input-${i}"
+                name="clothing_${i}" value="" autocomplete="off"
+                placeholder="Select or type clothing…"
+                data-fromdb="false" data-selected-value=""
+                onfocus="openCombobox('clothing',${i})"
+                oninput="filterCombobox('clothing',${i},this.value)"
+                onblur="blurCombobox('clothing',${i})"
+                onkeydown="comboboxKeydown(event,'clothing',${i})"/>
+              <button type="button" class="combobox-arrow" tabindex="-1"
+                onmousedown="toggleCombobox(event,'clothing',${i})">
+                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg>
+              </button>
+            </div>
+            <div class="combobox-dropdown hidden" id="cb-clothing-list-${i}"></div>
+          </div>
+        </div>
+        <div class="field-group">
+          <label class="form-label-upper">Estimated Weight (kg)</label>
+          <input class="form-input" type="number" step="0.1" name="weight_${i}" value="0.5"/>
+        </div>
       </div>
-      <div class="field-group" style="margin-bottom:14px"><label class="form-label-upper">Condition</label><select class="form-select">${condOpts}</select></div>
-      <div class="field-group"><label class="form-label-upper">Brand &amp; Material</label><select class="form-select">${bmOpts}</select></div>`;
-    document.getElementById('clothing-sections').appendChild(card);
+      <div class="field-group" style="margin-bottom:14px">
+        <label class="form-label-upper">Condition</label>
+        <select class="form-select" name="condition_${i}">${condOpts}</select>
+      </div>
+      <div class="field-row" style="margin-bottom:0">
+        <div class="field-group">
+          <label class="form-label-upper">Brand</label>
+          <div class="combobox-wrap" id="cb-brand-wrap-${i}">
+            <div class="combobox-input-wrap">
+              <input type="text" class="combobox-input" id="cb-brand-input-${i}"
+                name="brand_${i}" value="" autocomplete="off"
+                placeholder="Select or type brand…"
+                data-fromdb="false" data-selected-value=""
+                onfocus="openCombobox('brand',${i})"
+                oninput="filterCombobox('brand',${i},this.value)"
+                onblur="blurCombobox('brand',${i})"
+                onkeydown="comboboxKeydown(event,'brand',${i})"/>
+              <button type="button" class="combobox-arrow" tabindex="-1"
+                onmousedown="toggleCombobox(event,'brand',${i})">
+                <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg>
+              </button>
+            </div>
+            <div class="combobox-dropdown hidden" id="cb-brand-list-${i}"></div>
+          </div>
+        </div>
+        <div class="field-group" id="material-group-${i}">
+          <label class="form-label-upper">Material</label>
+          <select class="form-select hidden" id="material-select-${i}" name="brand_fiber_lookup_id_${i}">
+            <option value="">— select material —</option>
+          </select>
+          <input type="text" class="form-input" id="material-approx-${i}"
+            value="Will be approximated" disabled
+            style="color:var(--disabled-text);font-style:italic"/>
+          <input type="hidden" id="material-tier-${i}" name="material_tier_${i}" value="4"/>
+        </div>
+      </div>`;
   }
 
+  function addClothingSection() {
+    clothingCount++;
+    const i = clothingCount - 1;
+    const card = document.createElement('div');
+    card.className = 'clothing-card';
+    card.id = `cs-${i}`;
+    card.innerHTML = cardInnerHTML(i);
+    document.getElementById('clothing-sections').appendChild(card);
+    updateMaterialTier(i);
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  SUBMIT
+  // ═══════════════════════════════════════════════════════════════
   function submitDonation() {
-    /* Django: POST to {% url 'edit_donation' pk=donation.id %} */
     alert('Changes saved! (Django: POST to edit_donation view)');
     history.back();
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  //  IMAGE UPLOAD
+  // ═══════════════════════════════════════════════════════════════
   function handleImageSelect(input) {
     const file = input.files[0]; if (!file) return;
     const reader = new FileReader();
@@ -355,7 +718,9 @@
   function handleImageDrop(e) {
     e.preventDefault(); e.currentTarget.style.background = '';
     const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) { const r = new FileReader(); r.onload = ev => showPreview(ev.target.result); r.readAsDataURL(file); }
+    if (file && file.type.startsWith('image/')) {
+      const r = new FileReader(); r.onload = ev => showPreview(ev.target.result); r.readAsDataURL(file);
+    }
   }
   function showPreview(src) {
     document.getElementById('donation-img-preview').src = src;
@@ -363,7 +728,9 @@
     document.getElementById('upload-placeholder').style.display = 'none';
   }
 
-  // Nominatim autocomplete
+  // ═══════════════════════════════════════════════════════════════
+  //  ADDRESS AUTOCOMPLETE (Nominatim)
+  // ═══════════════════════════════════════════════════════════════
   const nominatimTimers = {};
   let _acResults = [];
   async function nominatimSearch(val, acId, latId, lngId, inputId) {
@@ -372,10 +739,10 @@
     clearTimeout(nominatimTimers[acId]);
     nominatimTimers[acId] = setTimeout(async () => {
       try {
-        const data = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val+', Philippines')}&limit=5&countrycodes=ph&addressdetails=1`, { headers: { 'Accept-Language': 'en-US' } }).then(r => r.json());
+        const data = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val+', Philippines')}&limit=5&countrycodes=ph&addressdetails=1`,{headers:{'Accept-Language':'en-US'}}).then(r=>r.json());
         if (!data.length) { ac.classList.add('hidden'); return; }
         _acResults = data;
-        ac.innerHTML = data.map((r, i) => `<div class="ac-item" onclick="selectAC(${i},'${acId}','${latId}','${lngId}','${inputId}')">${r.display_name}</div>`).join('');
+        ac.innerHTML = data.map((r,i)=>`<div class="ac-item" onclick="selectAC(${i},'${acId}','${latId}','${lngId}','${inputId}')">${r.display_name}</div>`).join('');
         ac.classList.remove('hidden');
       } catch(e) { ac.classList.add('hidden'); }
     }, 400);
@@ -388,44 +755,57 @@
     document.getElementById(acId).classList.add('hidden');
   }
 
-  // Map picker
-  let pickerMap = null, pickerMarker = null;
-  let pickerField = null, pickerLatId = null, pickerLngId = null;
-  let pickerLat = 14.5645, pickerLng = 120.9930;
-
-  function openPickerFor(addrId, latId, lngId) {
-    pickerField = addrId; pickerLatId = latId; pickerLngId = lngId;
-    pickerLat = parseFloat(document.getElementById(latId)?.value) || 14.5645;
-    pickerLng = parseFloat(document.getElementById(lngId)?.value) || 120.9930;
+  // ═══════════════════════════════════════════════════════════════
+  //  MAP PICKER
+  // ═══════════════════════════════════════════════════════════════
+  let pickerMap=null, pickerMarker=null, pickerField=null, pickerLatId=null, pickerLngId=null;
+  let pickerLat=14.5890, pickerLng=120.9822;
+  function openPickerFor(addrId,latId,lngId) {
+    pickerField=addrId; pickerLatId=latId; pickerLngId=lngId;
+    pickerLat=parseFloat(document.getElementById(latId)?.value)||14.5890;
+    pickerLng=parseFloat(document.getElementById(lngId)?.value)||120.9822;
     document.getElementById('map-modal').classList.remove('hidden');
-    setTimeout(() => {
-      if (pickerMap) { pickerMap.remove(); pickerMap = null; }
-      pickerMap = L.map('picker-map').setView([pickerLat, pickerLng], 15);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(pickerMap);
-      pickerMarker = L.marker([pickerLat, pickerLng], { draggable: true }).addTo(pickerMap);
-      pickerMarker.on('dragend', e => { const ll = e.target.getLatLng(); pickerLat = ll.lat; pickerLng = ll.lng; });
-      pickerMap.on('click', e => { pickerLat = e.latlng.lat; pickerLng = e.latlng.lng; pickerMarker.setLatLng([pickerLat, pickerLng]); });
-    }, 120);
+    setTimeout(()=>{
+      if(pickerMap){pickerMap.remove();pickerMap=null;}
+      pickerMap=L.map('picker-map').setView([pickerLat,pickerLng],15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(pickerMap);
+      pickerMarker=L.marker([pickerLat,pickerLng],{draggable:true}).addTo(pickerMap);
+      pickerMarker.on('dragend',e=>{const ll=e.target.getLatLng();pickerLat=ll.lat;pickerLng=ll.lng;});
+      pickerMap.on('click',e=>{pickerLat=e.latlng.lat;pickerLng=e.latlng.lng;pickerMarker.setLatLng([pickerLat,pickerLng]);});
+    },120);
   }
   function closeMapPicker() {
     document.getElementById('map-modal').classList.add('hidden');
-    if (pickerMap) { pickerMap.remove(); pickerMap = null; }
+    if(pickerMap){pickerMap.remove();pickerMap=null;}
   }
   async function confirmMapPicker() {
-    let display = `${pickerLat.toFixed(5)}, ${pickerLng.toFixed(5)}`;
-    try {
-      const data = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pickerLat}&lon=${pickerLng}&addressdetails=1`, { headers: { 'Accept-Language': 'en-US' } }).then(r => r.json());
-      if (data.display_name) display = data.display_name;
-    } catch(e) {}
-    if (pickerField) document.getElementById(pickerField).value = display;
-    if (pickerLatId) document.getElementById(pickerLatId).value = pickerLat;
-    if (pickerLngId) document.getElementById(pickerLngId).value = pickerLng;
+    let display=`${pickerLat.toFixed(5)}, ${pickerLng.toFixed(5)}`;
+    try{
+      const data=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pickerLat}&lon=${pickerLng}&addressdetails=1`,{headers:{'Accept-Language':'en-US'}}).then(r=>r.json());
+      if(data.display_name) display=data.display_name;
+    }catch(e){}
+    if(pickerField) document.getElementById(pickerField).value=display;
+    if(pickerLatId) document.getElementById(pickerLatId).value=pickerLat;
+    if(pickerLngId) document.getElementById(pickerLngId).value=pickerLng;
     closeMapPicker();
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  //  GLOBAL CLICK
+  // ═══════════════════════════════════════════════════════════════
   document.addEventListener('click', e => {
-    document.querySelectorAll('.address-autocomplete').forEach(ac => { if (!ac.closest('.ac-wrap')?.contains(e.target)) ac.classList.add('hidden'); });
-    if (e.target === document.getElementById('map-modal')) closeMapPicker();
+    document.querySelectorAll('.address-autocomplete').forEach(ac=>{
+      if(!ac.closest('.ac-wrap')?.contains(e.target)) ac.classList.add('hidden');
+    });
+    if(e.target===document.getElementById('map-modal')) closeMapPicker();
+  });
+
+  // ═══════════════════════════════════════════════════════════════
+  //  INIT
+  // ═══════════════════════════════════════════════════════════════
+  document.addEventListener('DOMContentLoaded', () => {
+    updateMaterialTier(0);
+    updateMaterialTier(1);
   });
 </script>
 </body>
