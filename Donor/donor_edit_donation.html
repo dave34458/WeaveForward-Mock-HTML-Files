@@ -120,117 +120,179 @@
 <!-- MAP PICKER MODAL -->
 
 <script>
-  // ===== PRELOADED REFERENCE DATA =====
-  const O = {
-    d:['Good','Like New','Fair','Poor'],
-    l:[
-      {id:1,c:'Pants',b:"Levi's",m:'80% Cotton, 20% Polyester',s:'2026-03-20T08:30:00Z'},{id:2,c:'Shirt',b:'Uniqlo',m:'100% Cotton',s:'2026-03-11T09:00:00Z'},
-      {id:3,c:'Jacket',b:'Nike',m:'100% Polyester',s:'2026-03-05T13:00:00Z'},{id:4,c:'Jeans',b:"Levi's",m:'99% Cotton, 1% Elastane',s:'2026-03-27T06:20:00Z'},
-      {id:21,c:'Jacket',b:'H&M',m:'65% Cotton, 35% Polyester',s:'2026-03-29T16:45:00Z'},{id:22,c:'Jeans',b:'Zara',m:'98% Cotton, 2% Elastane',s:'2026-03-30T07:15:00Z'}
+  const donationData = {
+    conditions: ['Good', 'Like New', 'Fair', 'Poor'],
+    brandFiberLookup: [
+      { id: 1, clothing: 'Pants', brand: "Levi's", material: '80% Cotton, 20% Polyester', scrapedAt: '2026-03-20T08:30:00Z' },
+      { id: 2, clothing: 'Shirt', brand: 'Uniqlo', material: '100% Cotton', scrapedAt: '2026-03-11T09:00:00Z' },
+      { id: 3, clothing: 'Jacket', brand: 'Nike', material: '100% Polyester', scrapedAt: '2026-03-05T13:00:00Z' },
+      { id: 4, clothing: 'Jeans', brand: "Levi's", material: '99% Cotton, 1% Elastane', scrapedAt: '2026-03-27T06:20:00Z' },
+      { id: 21, clothing: 'Jacket', brand: 'H&M', material: '65% Cotton, 35% Polyester', scrapedAt: '2026-03-29T16:45:00Z' },
+      { id: 22, clothing: 'Jeans', brand: 'Zara', material: '98% Cotton, 2% Elastane', scrapedAt: '2026-03-30T07:15:00Z' }
     ]
   };
-
-  let n = 0;
-  const prefill = [
-    {c:'Jacket',w:'1.2',d:'Good',b:'H&M',id:'21'},
-    {c:'Jeans',w:'0.9',d:'Fair',b:'Zara',id:'22'}
+  const initialCards = [
+    { c: 'Jacket', w: '1.2', d: 'Good', b: 'H&M', id: '21' },
+    { c: 'Jeans', w: '0.9', d: 'Fair', b: 'Zara', id: '22' }
   ];
-
-  const uniq = a => [...new Set(a)];
-  const cs = () => uniq(O.l.map(x=>x.c));
-  const bs = () => uniq(O.l.map(x=>x.b));
-  const el = id => document.getElementById(id);
-  const src = (t,i) => t==='c'
-    ? (el(`b-${i}`)?.dataset.db==='1' ? uniq(O.l.filter(x=>x.b===el(`b-${i}`).dataset.v).map(x=>x.c)) : cs())
-    : (el(`c-${i}`)?.dataset.db==='1' ? uniq(O.l.filter(x=>x.c===el(`c-${i}`).dataset.v).map(x=>x.b)) : bs());
-
-  // ===== CARD RENDERING =====
-  function card(i,p={c:'',cdb:'1',cv:'',w:'0.5',d:'Good',b:'',bdb:'1',bv:'',id:''}) {
-    return `<div class="card" id="card-${i}">
-      <div class="head"><div class="title-wrap"><div class="num">${i+1}</div><span style="font-weight:600;font-size:15px">Clothing ${i+1}</span></div>${i?`<button type="button" class="trash" onclick="removeCard(${i})"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`:''}</div>
-      <div class="row">
-        <div class="group"><label class="up">Clothing *</label>${cb('c',i,{v:p.c,db:p.cdb,dv:p.cv||p.c})}</div>
-        <div class="group"><label class="up">Estimated Weight (kg)</label><input class="in" id="w-${i}" type="number" step="0.1" value="${p.w}" /></div>
-      </div>
-      <div class="group" style="margin-bottom:14px"><label class="up">Condition</label><select class="sel" id="d-${i}">${O.d.map(x=>`<option ${x===p.d?'selected':''}>${x}</option>`).join('')}</select></div>
-      <div class="row" style="margin-bottom:0">
-        <div class="group"><label class="up">Brand</label>${cb('b',i,{v:p.b,db:p.bdb,dv:p.bv||p.b})}</div>
-        <div class="group"><label class="up">Material</label>
-          <select class="sel" id="m-${i}" data-id="${p.id}"><option value="">— select material —</option></select>
-          <input class="in hidden" id="a-${i}" value="Will be approximated" disabled style="font-style:italic"/>
-          <input type="hidden" id="t-${i}" value="1"/>
-        </div>
-      </div>
-    </div>`;
-  }
-
-
-  // ===== COMBOBOX HELPERS =====
-  function cb(t,i,s={}){
-    const v=s.v||'', db=s.db??(v?'1':'0'), dv=s.dv??v;
-    return `<div class="cb"><div class="cb-wrap"><input id="${t}-${i}" class="cb-in" value="${v}" autocomplete="off" placeholder="Select or type..." data-db="${db}" data-v="${dv}" onfocus="openCb('${t}',${i})" oninput="onType('${t}',${i},this.value)" onblur="setTimeout(()=>closeCb('${t}',${i}),120)"/><button type="button" class="cb-btn" onmousedown="toggleCb(event,'${t}',${i})">⌄</button></div><div id="${t}l-${i}" class="cb-list hidden"></div></div>`;
-  }
-
-  function renderCb(t,i,q=''){ const l=el(`${t}l-${i}`),a=(src(t,i).length?src(t,i):(t==='c'?cs():bs())).filter(x=>x.toLowerCase().includes(q.toLowerCase())); l.innerHTML=a.length?a.map(x=>`<div class='cb-opt' data-v="${x}" onmousedown="pick(event,'${t}',${i},'${x.replace(/'/g,"\\'")}')">${x}</div>`).join(''):'<div class="cb-empty">No matches — typed value will be used</div>'; }
-  function openCb(t,i){ renderCb(t,i,el(`${t}-${i}`).value); el(`${t}l-${i}`).classList.remove('hidden'); }
-  function closeCb(t,i){ el(`${t}l-${i}`).classList.add('hidden'); tier(i); }
-  function toggleCb(e,t,i){ e.preventDefault(); const l=el(`${t}l-${i}`); l.classList.contains('hidden')?openCb(t,i):closeCb(t,i); }
-  function onType(t,i,v){ const x=el(`${t}-${i}`); x.dataset.db='0'; x.dataset.v=''; renderCb(t,i,v); el(`${t}l-${i}`).classList.remove('hidden'); tier(i); }
-  function pick(e,t,i,v){ e.preventDefault(); const x=el(`${t}-${i}`); x.value=v; x.dataset.db='1'; x.dataset.v=v; closeCb(t,i); tier(i); }
-
-  // ===== MATERIAL TIER RESOLUTION =====
-  function tier(i){
-    const c=el(`c-${i}`), b=el(`b-${i}`), m=el(`m-${i}`), a=el(`a-${i}`), t=el(`t-${i}`);
-    const cdb=c.dataset.db==='1', bdb=b.dataset.db==='1', cv=c.dataset.v||c.value.trim(), bv=b.dataset.v||b.value.trim();
-    const hits=O.l.filter(x=>x.c===cv&&x.b===bv).sort((x,y)=>new Date(y.s||0)-new Date(x.s||0));
-    const lv=(cdb&&bdb)?0:(!cdb&&!bdb&&hits.length)?1:(!cdb&&bdb)?2:(cdb&&!bdb)?3:4;
-    t.value=lv;
-    if(lv===0){
-      m.classList.remove('hidden'); a.classList.add('hidden');
-      m.innerHTML='<option value="">— select material —</option>'+hits.map(x=>`<option value="${x.id}">${x.m}</option>`).join('');
-      if(m.dataset.id && hits.some(x=>String(x.id)===m.dataset.id)) m.value=m.dataset.id;
-      a.value='Will be approximated';
-    } else {
-      m.classList.add('hidden'); a.classList.remove('hidden');
-      a.value=lv===1&&hits[0]?`Will be approximated (latest: ${hits[0].m})`:'Will be approximated';
+  function getById(id) { return document.getElementById(id); }
+  function unique(values) { return [...new Set(values)]; }
+  function getAllClothingTypes() { return unique(donationData.brandFiberLookup.map((row) => row.clothing)); }
+  function getAllBrands() { return unique(donationData.brandFiberLookup.map((row) => row.brand)); }
+  let cardCount = 0;
+  let autocompleteResults = [];
+  let autocompleteTimer;
+  let mapInstance;
+  let markerInstance;
+  let targetFieldId;
+  let targetLatId = 'lat';
+  let targetLngId = 'lng';
+  let selectedLat = 14.5645;
+  let selectedLng = 120.9930;
+  function getOptionsForCombobox(type, index) {
+    if (type === 'c') {
+      const brandInput = getById(`b-${index}`);
+      if (brandInput?.dataset.db === '1') {
+        return unique(donationData.brandFiberLookup.filter((row) => row.brand === brandInput.dataset.v).map((row) => row.clothing));
+      }
+      return getAllClothingTypes();
     }
+    const clothingInput = getById(`c-${index}`);
+    if (clothingInput?.dataset.db === '1') {
+      return unique(donationData.brandFiberLookup.filter((row) => row.clothing === clothingInput.dataset.v).map((row) => row.brand));
+    }
+    return getAllBrands();
   }
-
-  function snapshot(i){
-    const c=el(`c-${i}`),b=el(`b-${i}`),m=el(`m-${i}`);
-    return c&&b?{c:c.value,cdb:c.dataset.db||'0',cv:c.dataset.v||'',w:el(`w-${i}`)?.value||'',d:el(`d-${i}`)?.value||'Good',b:b.value,bdb:b.dataset.db||'0',bv:b.dataset.v||'',id:m?.value||m?.dataset.id||''}:null;
+  function comboboxHtml(type, index, state = {}) {
+    const value = state.v || '';
+    const selectedFromList = state.db ?? (value ? '1' : '0');
+    const selectedValue = state.dv ?? value;
+    return `<div class="cb"><div class="cb-wrap"><input id="${type}-${index}" class="cb-in" value="${value}" autocomplete="off" placeholder="Select or type..." data-db="${selectedFromList}" data-v="${selectedValue}" onfocus="openCombobox('${type}', ${index})" oninput="onComboboxType('${type}', ${index}, this.value)" onblur="setTimeout(() => closeCombobox('${type}', ${index}), 120)"/><button type="button" class="cb-btn" onmousedown="toggleCombobox(event, '${type}', ${index})">⌄</button></div><div id="${type}l-${index}" class="cb-list hidden"></div></div>`;
   }
-  function snapAll(){ return Array.from({length:n},(_,i)=>snapshot(i)).filter(Boolean); }
-  function normalizeCards(list){
-    const rows=list.length?list:[{c:'',w:'0.5',d:'Good',b:'',id:''}];
-    el('clothing-sections').innerHTML='';
-    rows.forEach((p,i)=>{el('clothing-sections').insertAdjacentHTML('beforeend',card(i,p));tier(i);});
-    n=rows.length;
+  function donationCardHtml(index, values = {}) {
+    const data = { c: values.c || '', cdb: values.cdb || '1', cv: values.cv || '', w: values.w || '0.5', d: values.d || 'Good', b: values.b || '', bdb: values.bdb || '1', bv: values.bv || '', id: values.id || '' };
+    const deleteButton = index ? `<button type="button" class="trash" onclick="removeCard(${index})"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>` : '';
+    const conditionOptions = donationData.conditions.map((condition) => `<option ${condition === data.d ? 'selected' : ''}>${condition}</option>`).join('');
+    return `<div class="card" id="card-${index}"><div class="head"><div class="title-wrap"><div class="num">${index + 1}</div><span style="font-weight:600;font-size:15px">Clothing ${index + 1}</span></div>${deleteButton}</div><div class="row"><div class="group"><label class="up">Clothing *</label>${comboboxHtml('c', index, { v: data.c, db: data.cdb, dv: data.cv || data.c })}</div><div class="group"><label class="up">Estimated Weight (kg)</label><input class="in" id="w-${index}" type="number" step="0.1" value="${data.w}" /></div></div><div class="group" style="margin-bottom:14px"><label class="up">Condition</label><select class="sel" id="d-${index}">${conditionOptions}</select></div><div class="row" style="margin-bottom:0"><div class="group"><label class="up">Brand</label>${comboboxHtml('b', index, { v: data.b, db: data.bdb, dv: data.bv || data.b })}</div><div class="group"><label class="up">Material</label><select class="sel" id="m-${index}" data-id="${data.id}"><option value="">— select material —</option></select><input class="in hidden" id="a-${index}" value="Will be approximated" disabled style="font-style:italic"/><input type="hidden" id="t-${index}" value="1"/></div></div></div>`;
   }
-  function addCard(p){ const rows=snapAll(); rows.push(p||{c:'',w:'0.5',d:'Good',b:'',id:''}); normalizeCards(rows); }
-  function removeCard(i){ normalizeCards(snapAll().filter((_,x)=>x!==i)); }
-  normalizeCards(prefill);
-
-
-  // ===== IMAGE UPLOAD HELPERS =====
-  function handleImageSelect(i){const f=i.files?.[0];if(!f)return;const r=new FileReader();r.onload=e=>showPreview(e.target.result);r.readAsDataURL(f)}
-  function handleImageDrop(e){e.preventDefault();e.currentTarget.style.background='';const f=e.dataTransfer.files?.[0];if(f&&f.type.startsWith('image/')){const r=new FileReader();r.onload=x=>showPreview(x.target.result);r.readAsDataURL(f)}}
-  function showPreview(src){el('img-prev').src=src;el('img-prev-wrap').classList.remove('hidden');el('img-ph').classList.add('hidden')}
-
-
-  // ===== ADDRESS AUTOCOMPLETE (NOMINATIM) =====
-  let acR=[],acT;
-  function nominatimSearch(v){const a=el('ac'); if(!v||v.length<3){a.classList.add('hidden');return;} clearTimeout(acT); acT=setTimeout(async()=>{try{const d=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(v+', Philippines')}&limit=5&countrycodes=ph&addressdetails=1`,{headers:{'Accept-Language':'en-US'}}).then(r=>r.json()); acR=d||[]; a.innerHTML=acR.length?acR.map((r,i)=>`<div class="ac-item" onmousedown="selectAC(${i})">${r.display_name}</div>`).join(''):'<div class="ac-item">No results</div>'; a.classList.remove('hidden');}catch{a.classList.add('hidden')}},350)}
-  function selectAC(i){const r=acR[i]; if(!r)return; el('addr').value=r.display_name; el('lat').value=r.lat; el('lng').value=r.lon; el('ac').classList.add('hidden')}
-
-
-  // ===== MAP PICKER (LEAFLET) =====
-  let mp,mk,pf,pl='lat',pg='lng',pv=14.5645,pw=120.9930;
-  function openPickerFor(f,lat,lng){pf=f;pl=lat;pg=lng;pv=parseFloat(el(lat)?.value)||14.5645;pw=parseFloat(el(lng)?.value)||120.9930;el('map-modal').classList.remove('hidden');setTimeout(()=>{if(mp){mp.remove()} mp=L.map('picker-map').setView([pv,pw],15);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(mp);mk=L.marker([pv,pw],{draggable:true}).addTo(mp);mk.on('dragend',e=>{const ll=e.target.getLatLng();pv=ll.lat;pw=ll.lng});mp.on('click',e=>{pv=e.latlng.lat;pw=e.latlng.lng;mk.setLatLng([pv,pw])});},120)}
-  function closeMapPicker(){el('map-modal').classList.add('hidden'); if(mp){mp.remove(); mp=null}}
-  async function confirmMapPicker(){let d=`${pv.toFixed(5)}, ${pw.toFixed(5)}`; try{const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pv}&lon=${pw}&addressdetails=1`,{headers:{'Accept-Language':'en-US'}}).then(x=>x.json()); if(r.display_name)d=r.display_name}catch{} if(pf)el(pf).value=d; el(pl).value=pv; el(pg).value=pw; closeMapPicker()}
-
-  document.addEventListener('click',e=>{['c','b'].forEach(t=>{document.querySelectorAll(`[id^='${t}l-']`).forEach(l=>{ if(!l.closest('.cb')?.contains(e.target)) l.classList.add('hidden'); });}); if(!el('ac')?.closest('.ac')?.contains(e.target)) el('ac')?.classList.add('hidden'); if(e.target===el('map-modal')) closeMapPicker();});
+  function renderCombobox(type, index, query = '') {
+    const listEl = getById(`${type}l-${index}`);
+    const options = getOptionsForCombobox(type, index);
+    const fallbackOptions = type === 'c' ? getAllClothingTypes() : getAllBrands();
+    const filteredOptions = (options.length ? options : fallbackOptions).filter((item) => item.toLowerCase().includes(query.toLowerCase()));
+    if (!filteredOptions.length) {
+      listEl.innerHTML = '<div class="cb-empty">No matches — typed value will be used</div>';
+      return;
+    }
+    listEl.innerHTML = filteredOptions.map((item) => `<div class="cb-opt" data-v="${item}" onmousedown="pickComboboxOption(event, '${type}', ${index}, '${item.replace(/'/g, "\\'")}')">${item}</div>`).join('');
+  }
+  function openCombobox(type, index) { renderCombobox(type, index, getById(`${type}-${index}`).value); getById(`${type}l-${index}`).classList.remove('hidden'); }
+  function closeCombobox(type, index) { getById(`${type}l-${index}`).classList.add('hidden'); applyMaterialTier(index); }
+  function toggleCombobox(event, type, index) { event.preventDefault(); getById(`${type}l-${index}`).classList.contains('hidden') ? openCombobox(type, index) : closeCombobox(type, index); }
+  function onComboboxType(type, index, value) { const input = getById(`${type}-${index}`); input.dataset.db = '0'; input.dataset.v = ''; renderCombobox(type, index, value); getById(`${type}l-${index}`).classList.remove('hidden'); applyMaterialTier(index); }
+  function pickComboboxOption(event, type, index, value) { event.preventDefault(); const input = getById(`${type}-${index}`); input.value = value; input.dataset.db = '1'; input.dataset.v = value; closeCombobox(type, index); applyMaterialTier(index); }
+  function applyMaterialTier(index) {
+    const clothingInput = getById(`c-${index}`);
+    const brandInput = getById(`b-${index}`);
+    const materialSelect = getById(`m-${index}`);
+    const approximationInput = getById(`a-${index}`);
+    const tierInput = getById(`t-${index}`);
+    const clothingFromList = clothingInput.dataset.db === '1';
+    const brandFromList = brandInput.dataset.db === '1';
+    const clothingValue = clothingInput.dataset.v || clothingInput.value.trim();
+    const brandValue = brandInput.dataset.v || brandInput.value.trim();
+    const matches = donationData.brandFiberLookup.filter((row) => row.clothing === clothingValue && row.brand === brandValue).sort((a, b) => new Date(b.scrapedAt || 0) - new Date(a.scrapedAt || 0));
+    let tier = 4;
+    if (clothingFromList && brandFromList) tier = 0;
+    else if (!clothingFromList && !brandFromList && matches.length) tier = 1;
+    else if (!clothingFromList && brandFromList) tier = 2;
+    else if (clothingFromList && !brandFromList) tier = 3;
+    tierInput.value = tier;
+    if (tier === 0) {
+      materialSelect.classList.remove('hidden');
+      approximationInput.classList.add('hidden');
+      materialSelect.innerHTML = '<option value="">— select material —</option>' + matches.map((row) => `<option value="${row.id}">${row.material}</option>`).join('');
+      if (materialSelect.dataset.id && matches.some((row) => String(row.id) === materialSelect.dataset.id)) materialSelect.value = materialSelect.dataset.id;
+      approximationInput.value = 'Will be approximated';
+      return;
+    }
+    materialSelect.classList.add('hidden');
+    approximationInput.classList.remove('hidden');
+    approximationInput.value = tier === 1 && matches[0] ? `Will be approximated (latest: ${matches[0].material})` : 'Will be approximated';
+  }
+  function getCardSnapshot(index) {
+    const clothingInput = getById(`c-${index}`);
+    const brandInput = getById(`b-${index}`);
+    const materialSelect = getById(`m-${index}`);
+    if (!clothingInput || !brandInput) return null;
+    return { c: clothingInput.value, cdb: clothingInput.dataset.db || '0', cv: clothingInput.dataset.v || '', w: getById(`w-${index}`)?.value || '', d: getById(`d-${index}`)?.value || 'Good', b: brandInput.value, bdb: brandInput.dataset.db || '0', bv: brandInput.dataset.v || '', id: materialSelect?.value || materialSelect?.dataset.id || '' };
+  }
+  function getAllCardSnapshots() { return Array.from({ length: cardCount }, (_, index) => getCardSnapshot(index)).filter(Boolean); }
+  function renderAllCards(cards) {
+    const rows = cards.length ? cards : [{ c: '', w: '0.5', d: 'Good', b: '', id: '' }];
+    const cardsContainer = getById('clothing-sections');
+    cardsContainer.innerHTML = '';
+    rows.forEach((row, index) => { cardsContainer.insertAdjacentHTML('beforeend', donationCardHtml(index, row)); applyMaterialTier(index); });
+    cardCount = rows.length;
+  }
+  function addCard(cardData) { const rows = getAllCardSnapshots(); rows.push(cardData || { c: '', w: '0.5', d: 'Good', b: '', id: '' }); renderAllCards(rows); }
+  function removeCard(indexToRemove) { renderAllCards(getAllCardSnapshots().filter((_, index) => index !== indexToRemove)); }
+  function showImagePreview(source) { getById('img-prev').src = source; getById('img-prev-wrap').classList.remove('hidden'); getById('img-ph').classList.add('hidden'); }
+  function handleImageSelect(inputElement) { const file = inputElement.files?.[0]; if (!file) return; const fileReader = new FileReader(); fileReader.onload = (event) => showImagePreview(event.target.result); fileReader.readAsDataURL(file); }
+  function handleImageDrop(event) { event.preventDefault(); event.currentTarget.style.background = ''; const file = event.dataTransfer.files?.[0]; if (!file || !file.type.startsWith('image/')) return; const fileReader = new FileReader(); fileReader.onload = (eventData) => showImagePreview(eventData.target.result); fileReader.readAsDataURL(file); }
+  function selectAutocompleteResult(index) { const picked = autocompleteResults[index]; if (!picked) return; getById('addr').value = picked.display_name; getById('lat').value = picked.lat; getById('lng').value = picked.lon; getById('ac').classList.add('hidden'); }
+  function nominatimSearch(value) {
+    const listEl = getById('ac');
+    if (!value || value.length < 3) { listEl.classList.add('hidden'); return; }
+    clearTimeout(autocompleteTimer);
+    autocompleteTimer = setTimeout(async () => {
+      try {
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value + ', Philippines')}&limit=5&countrycodes=ph&addressdetails=1`, { headers: { 'Accept-Language': 'en-US' } });
+        autocompleteResults = await response.json() || [];
+        listEl.innerHTML = autocompleteResults.length ? autocompleteResults.map((row, index) => `<div class="ac-item" onmousedown="selectAutocompleteResult(${index})">${row.display_name}</div>`).join('') : '<div class="ac-item">No results</div>';
+        listEl.classList.remove('hidden');
+      } catch { listEl.classList.add('hidden'); }
+    }, 350);
+  }
+  function openPickerFor(fieldId, latId, lngId) {
+    targetFieldId = fieldId;
+    targetLatId = latId;
+    targetLngId = lngId;
+    selectedLat = parseFloat(getById(latId)?.value) || 14.5645;
+    selectedLng = parseFloat(getById(lngId)?.value) || 120.9930;
+    getById('map-modal').classList.remove('hidden');
+    setTimeout(() => {
+      if (mapInstance) mapInstance.remove();
+      mapInstance = L.map('picker-map').setView([selectedLat, selectedLng], 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(mapInstance);
+      markerInstance = L.marker([selectedLat, selectedLng], { draggable: true }).addTo(mapInstance);
+      markerInstance.on('dragend', (event) => { const position = event.target.getLatLng(); selectedLat = position.lat; selectedLng = position.lng; });
+      mapInstance.on('click', (event) => { selectedLat = event.latlng.lat; selectedLng = event.latlng.lng; markerInstance.setLatLng([selectedLat, selectedLng]); });
+    }, 120);
+  }
+  function closeMapPicker() { getById('map-modal').classList.add('hidden'); if (mapInstance) { mapInstance.remove(); mapInstance = null; } }
+  async function confirmMapPicker() {
+    let displayAddress = `${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}`;
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${selectedLat}&lon=${selectedLng}&addressdetails=1`, { headers: { 'Accept-Language': 'en-US' } });
+      const data = await response.json();
+      if (data.display_name) displayAddress = data.display_name;
+    } catch {}
+    if (targetFieldId) getById(targetFieldId).value = displayAddress;
+    getById(targetLatId).value = selectedLat;
+    getById(targetLngId).value = selectedLng;
+    closeMapPicker();
+  }
+  renderAllCards(initialCards);
+  document.addEventListener('click', (event) => {
+    ['c', 'b'].forEach((type) => {
+      document.querySelectorAll(`[id^='${type}l-']`).forEach((listEl) => {
+        if (!listEl.closest('.cb')?.contains(event.target)) listEl.classList.add('hidden');
+      });
+    });
+    if (!getById('ac')?.closest('.ac')?.contains(event.target)) getById('ac')?.classList.add('hidden');
+    if (event.target === getById('map-modal')) closeMapPicker();
+  });
 </script>
 </body>
 </html>
