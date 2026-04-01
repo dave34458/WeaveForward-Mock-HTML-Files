@@ -22,10 +22,10 @@
     .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.num{width:28px;height:28px;border-radius:50%;background:var(--gold);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
     .title-wrap{display:flex;align-items:center;gap:10px}.trash{background:none;border:none;color:var(--gold);cursor:pointer}
     .btn-add{width:100%;padding:12px;border:2px dashed var(--gold);border-radius:30px;color:var(--gold);background:transparent;cursor:pointer}
-    .btn-submit{width:100%;margin-top:14px;padding:13px;border:none;border-radius:30px;background:var(--gold);color:#fff;cursor:pointer}.btn-submit:hover{background:var(--gold-dark)}
+    .btn-submit{width:100%;margin-top:14px;padding:13px;border:none;border-radius:30px;background:var(--gold);color:#fff;cursor:pointer}
     .cb{position:relative}.cb-wrap{position:relative}.cb-in{padding-right:34px}.cb-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--gold);cursor:pointer}
     .cb-list{position:absolute;z-index:50;top:calc(100% + 4px);left:0;width:100%;max-height:180px;overflow:auto;background:#fff;border:1.5px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.1)}
-    .cb-opt{padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid #f5f5f5}.cb-opt:hover,.cb-opt.h{background:var(--light)} .cb-empty{padding:9px 14px;font-size:13px;color:var(--muted);font-style:italic}
+    .cb-opt{padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid #f5f5f5}.cb-opt:hover{background:var(--light)} .cb-empty{padding:9px 14px;font-size:13px;color:var(--muted);font-style:italic}
     .time{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 
     .ac{position:relative}.ac-list{position:absolute;top:calc(100% + 4px);left:0;width:100%;max-height:200px;overflow:auto;background:#fff;border:1.5px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.1);z-index:60}
@@ -82,7 +82,6 @@
   };
 
   let n = 0;
-  const S = {};
   const prefill = [
     {c:'Jacket',w:'1.2',d:'Good',b:'H&M',id:'21'},
     {c:'Jeans',w:'0.9',d:'Fair',b:'Zara',id:'22'}
@@ -114,17 +113,15 @@
   }
 
   function cb(t,i,v){
-    return `<div class="cb"><div class="cb-wrap"><input id="${t}-${i}" class="cb-in" value="${v}" autocomplete="off" placeholder="Select or type..." data-db="${v?1:0}" data-v="${v}" onfocus="openCb('${t}',${i})" oninput="onType('${t}',${i},this.value)" onblur="setTimeout(()=>closeCb('${t}',${i}),120)" onkeydown="onKey(event,'${t}',${i})"/><button type="button" class="cb-btn" onmousedown="toggleCb(event,'${t}',${i})">⌄</button></div><div id="${t}l-${i}" class="cb-list hidden"></div></div>`;
+    return `<div class="cb"><div class="cb-wrap"><input id="${t}-${i}" class="cb-in" value="${v}" autocomplete="off" placeholder="Select or type..." data-db="${v?1:0}" data-v="${v}" onfocus="openCb('${t}',${i})" oninput="onType('${t}',${i},this.value)" onblur="setTimeout(()=>closeCb('${t}',${i}),120)"/><button type="button" class="cb-btn" onmousedown="toggleCb(event,'${t}',${i})">⌄</button></div><div id="${t}l-${i}" class="cb-list hidden"></div></div>`;
   }
 
-  function renderCb(t,i,q=''){ const l=el(`${t}l-${i}`),a=(src(t,i).length?src(t,i):(t==='c'?O.c:O.b)).filter(x=>x.toLowerCase().includes(q.toLowerCase())); l.innerHTML=a.length?a.map(x=>`<div class='cb-opt' data-v="${x}" onmousedown="pick(event,'${t}',${i},'${x.replace(/'/g,"\\'")}')">${x}</div>`).join(''):'<div class="cb-empty">No matches — typed value will be used</div>'; S[`${t}${i}`]=-1; }
+  function renderCb(t,i,q=''){ const l=el(`${t}l-${i}`),a=(src(t,i).length?src(t,i):(t==='c'?O.c:O.b)).filter(x=>x.toLowerCase().includes(q.toLowerCase())); l.innerHTML=a.length?a.map(x=>`<div class='cb-opt' data-v="${x}" onmousedown="pick(event,'${t}',${i},'${x.replace(/'/g,"\\'")}')">${x}</div>`).join(''):'<div class="cb-empty">No matches — typed value will be used</div>'; }
   function openCb(t,i){ renderCb(t,i,el(`${t}-${i}`).value); el(`${t}l-${i}`).classList.remove('hidden'); }
   function closeCb(t,i){ el(`${t}l-${i}`).classList.add('hidden'); tier(i); }
   function toggleCb(e,t,i){ e.preventDefault(); const l=el(`${t}l-${i}`); l.classList.contains('hidden')?openCb(t,i):closeCb(t,i); }
   function onType(t,i,v){ const x=el(`${t}-${i}`); x.dataset.db='0'; x.dataset.v=''; renderCb(t,i,v); el(`${t}l-${i}`).classList.remove('hidden'); tier(i); }
   function pick(e,t,i,v){ e.preventDefault(); const x=el(`${t}-${i}`); x.value=v; x.dataset.db='1'; x.dataset.v=v; closeCb(t,i); tier(i); }
-  function onKey(e,t,i){ const o=[...el(`${t}l-${i}`).querySelectorAll('.cb-opt')],k=`${t}${i}`; if(e.key==='ArrowDown'){e.preventDefault();S[k]=Math.min((S[k]??-1)+1,o.length-1)} if(e.key==='ArrowUp'){e.preventDefault();S[k]=Math.max((S[k]??0)-1,0)} if(e.key==='Enter'&&S[k]>=0&&o[S[k]]){e.preventDefault(); pick(e,t,i,o[S[k]].dataset.v)} o.forEach((x,j)=>x.classList.toggle('h',j===S[k])); }
-
   function tier(i){
     const c=el(`c-${i}`), b=el(`b-${i}`), m=el(`m-${i}`), a=el(`a-${i}`), t=el(`t-${i}`);
     const cdb=c.dataset.db==='1', bdb=b.dataset.db==='1', cv=c.dataset.v||c.value.trim(), bv=b.dataset.v||b.value.trim();
