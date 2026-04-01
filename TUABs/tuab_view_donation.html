@@ -1,285 +1,71 @@
 <!DOCTYPE html>
 <!--
-  WeaveForward TUAB — View Donation  (tuab_view_donation.html)
-  ════════════════════════════════════════════════════════════
-  PURPOSE
-  ───────
-  Standalone reference for the View Donation (available, pre-claim) page content.
-  Shows only what goes inside {% block content %} of base.html.
+  WeaveForward TUAB — View Donation (tuab_view_donation.html)
+  Read-only donation items (brand/material separated via brand_fiber_lookup FK),
+  with actionable right-side claim controls (pickup/delivery).
 
-  When converting to a Django template:
-    • {% extends 'base.html' %}
-    • {% block content %} ... {% endblock %}
-    • Set context: page_title = 'View Donation', sidebar_variant = 'tuab'
-    • Replace all hardcoded data with context variables from the donation object
-    • Clothing items: {% for item in donation.items.all %} ... {% endfor %}
-    • "Claim for Pick-Up": POST to {% url 'tuab_claim_pickup' pk=donation.id %}
-    • "Claim for Delivery": POST to {% url 'tuab_claim_delivery' pk=donation.id %}
-      with delivery_address, delivery_lat, delivery_lng, scheduled_time fields
-    • Address autocomplete via Nominatim stays client-side as-is
-    • Map picker modal stays client-side as-is
-
-  Context variables expected:
-    page_title      → 'View Donation'
-    sidebar_variant → 'tuab'
-    donation        → donation object with fields:
-                        donor_name, status, is_flagged, flag_reason,
-                        submitted_at, auto_archive_at, pickup_address,
-                        preferred_date, time_window, image_url,
-                        items (related manager or list)
-
-  Mobile:
-    Two-column layout (clothing left, details right) stacks to single column.
+  Django notes:
+  • {% extends 'base.html' %}
+  • {% block content %} ... {% endblock %}
+  • sidebar_variant = 'tuab'
+  • clothing_items each expose item.brand_fiber_lookup.brand/material
+  • Claim Pick-Up / Claim Delivery are POST actions
 -->
-<html lang="en">
-<head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>View Donation — Reference</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<html lang="en"><head>
+  <meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TUAB View Donation — Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/><script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
-    :root {
-      --gold:      #e8a020;
-      --tuab:      #c0410e;
-      --tuab-dark: #a0360c;
-      --bg:        #f5f2eb;
-      --border:    #e0dbd4;
-      --text:      #222222;
-      --muted:     #888888;
-      --green:     #4a7c59;
-    }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); }
-    .hidden { display: none !important; }
-
-    /* ── Two-column layout ── */
-    .don-layout { display: flex; gap: 24px; align-items: flex-start; }
-    .don-left  { flex: 1; min-width: 0; }
-    .don-right { width: 320px; flex-shrink: 0; }
-
-    /* ── Clothing card ── */
-    .clothing-card { background: #fff; border-radius: 14px; padding: 20px 22px; margin-bottom: 14px; border: 1.5px solid #f0ede8; }
-    .clothing-num  { width: 28px; height: 28px; border-radius: 50%; background: var(--tuab); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; font-weight: 700; flex-shrink: 0; }
-
-    /* ── Form fields (read-only) ── */
-    .form-label-upper { font-family: 'Poppins', sans-serif; font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; display: block; margin-bottom: 5px; }
-    .form-input { width: 100%; border: 1.5px solid #d5d5d5; border-radius: 8px; padding: 11px 16px; font-family: 'Poppins', sans-serif; font-size: 14px; color: var(--text); outline: none; background: #faf8f5; }
-    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
-    .field-group { display: flex; flex-direction: column; gap: 4px; }
-
-    /* ── Detail panel ── */
-    .detail-panel { background: #fff; border-radius: 14px; padding: 22px 24px; }
-    .detail-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #f5f0ea; font-family: 'Poppins', sans-serif; font-size: 13px; }
-    .detail-row:last-child { border-bottom: none; }
-    .detail-label { color: #aaa; }
-    .detail-val   { color: #1a1a1a; font-weight: 500; text-align: right; max-width: 55%; }
-    .sep { border-top: 1px solid #f0ede8; margin-top: 14px; padding-top: 14px; }
-
-    /* ── Claim buttons ── */
-    .btn-claim { background: var(--tuab); color: #fff; border: none; border-radius: 30px; padding: 12px; font-size: 14px; font-weight: 500; font-family: 'Poppins', sans-serif; cursor: pointer; width: 100%; margin-bottom: 10px; transition: background .2s; }
-    .btn-claim:hover { background: var(--tuab-dark); }
-
-    /* ── Address autocomplete ── */
-    .ac-wrap { position: relative; }
-    .loc-input-wrap { position: relative; }
-    .loc-input-wrap input { padding-right: 36px; }
-    .loc-pin-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--gold); }
-    .address-autocomplete { position: absolute; background: #fff; border: 1.5px solid var(--border); border-radius: 8px; width: 100%; top: calc(100% + 4px); left: 0; z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,.12); max-height: 220px; overflow-y: auto; }
-    .ac-item { padding: 10px 14px; font-family: 'Poppins', sans-serif; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
-    .ac-item:hover { background: #fdf6e8; }
-
-    /* ── Map picker modal ── */
-    .map-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 9000; }
-    .map-modal { background: #fff; border-radius: 16px; padding: 24px; width: 620px; max-width: 95vw; position: relative; }
-    #picker-map { width: 100%; height: 300px; border-radius: 8px; }
-
-    /* ══════════════════════
-       MOBILE  (≤ 768px)
-    ══════════════════════ */
-    @media (max-width: 768px) {
-      .don-layout { flex-direction: column; }
-      .don-left   { width: 100%; }
-      .don-right  { width: 100%; }
-      .field-row  { grid-template-columns: 1fr; }
-    }
+    :root{--tuab:#c0410e;--tuab-dark:#a0360c;--gold:#e8a020;--bg:#f5f2eb;--border:#e0dbd4;--text:#222;--muted:#888;--light:#fdf6e8}
+    *{box-sizing:border-box;margin:0;padding:0} html{scrollbar-gutter:stable} body{font-family:Poppins,sans-serif;background:var(--bg);color:var(--text)} .hidden{display:none!important}
+    .layout{display:flex;gap:24px;align-items:flex-start}.left{flex:1;min-width:0}.right{width:320px;flex-shrink:0}
+    .card,.panel{background:#fff;border:1.5px solid var(--border);border-radius:14px}.card{padding:20px 22px;margin-bottom:14px}.panel{padding:22px 24px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}.group{display:flex;flex-direction:column;gap:4px}
+    .up{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}.in{width:100%;height:44px;border:1.5px solid #d5d5d5;border-radius:8px;padding:10px 14px;font:14px Poppins,sans-serif;background:#faf8f5}
+    .head{display:flex;align-items:center;gap:10px;margin-bottom:14px}.num{width:28px;height:28px;border-radius:50%;background:var(--tuab);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center}
+    .drow{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid #f5f0ea;font-size:13px}.drow:last-child{border-bottom:none}.lbl{color:#aaa}.val{font-weight:500;text-align:right;max-width:58%}
+    .sep{border-top:1px solid #f0ede8;margin-top:14px;padding-top:14px}.btn{width:100%;border:none;border-radius:30px;padding:12px;color:#fff;font:500 14px Poppins,sans-serif;cursor:pointer}
+    .btn-tuab{background:var(--tuab);margin-bottom:10px}.btn-tuab:hover{background:var(--tuab-dark)}
+    .ac{position:relative}.pin-wrap{position:relative}.pin-wrap .in{padding-right:40px}.pin{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--gold);cursor:pointer}
+    .ac-list{position:absolute;top:calc(100% + 4px);left:0;width:100%;max-height:220px;overflow:auto;background:#fff;border:1.5px solid var(--border);border-radius:8px;z-index:60;box-shadow:0 8px 24px rgba(0,0,0,.12)}
+    .ac-item{padding:10px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid #f5f5f5}.ac-item:hover{background:var(--light)}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:9000}.box{background:#fff;border-radius:16px;padding:24px;position:relative;width:min(620px,95vw)} #picker-map{height:300px;border-radius:8px}
+    @media (max-width:768px){.layout{flex-direction:column;align-items:stretch}.left,.right{width:100%}.row{grid-template-columns:1fr}}
   </style>
-</head>
-<body>
-
-<!--
-  ═══════════════════════════════════════════════════════════════
-  CONTENT BLOCK — this is all that goes inside {% block content %}
-  ═══════════════════════════════════════════════════════════════
--->
-<div class="don-layout">
-
-  <!-- LEFT: clothing items (read-only)
-       Django: {% for item in donation.items.all %} -->
-  <div class="don-left">
-
-    <div class="clothing-card">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-        <div class="clothing-num">1</div>
-        <span style="font-family:'Poppins',sans-serif;font-weight:600;font-size:15px">Clothing 1</span>
-      </div>
-      <div class="field-row">
-        <div class="field-group"><label class="form-label-upper">Clothing</label><input class="form-input" value="Pants" readonly/></div>
-        <div class="field-group"><label class="form-label-upper">Estimated Weight (kg)</label><input class="form-input" value="0.8" readonly/></div>
-      </div>
-      <div class="field-group" style="margin-bottom:12px"><label class="form-label-upper">Condition</label><input class="form-input" value="Fair" readonly/></div>
-      <div class="field-group"><label class="form-label-upper">Brand &amp; Material</label><input class="form-input" value="Levi's Denim" readonly/></div>
-    </div>
-
-    <div class="clothing-card">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-        <div class="clothing-num">2</div>
-        <span style="font-family:'Poppins',sans-serif;font-weight:600;font-size:15px">Clothing 2</span>
-      </div>
-      <div class="field-row">
-        <div class="field-group"><label class="form-label-upper">Clothing</label><input class="form-input" value="Shirt" readonly/></div>
-        <div class="field-group"><label class="form-label-upper">Estimated Weight (kg)</label><input class="form-input" value="2.0" readonly/></div>
-      </div>
-      <div class="field-group" style="margin-bottom:12px"><label class="form-label-upper">Condition</label><input class="form-input" value="Good" readonly/></div>
-      <div class="field-group"><label class="form-label-upper">Brand &amp; Material</label><input class="form-input" value="Uniqlo Cotton" readonly/></div>
-    </div>
-
-  </div>
-
-  <!-- RIGHT: details + claim actions
-       Django: {{ donation.donor_name }}, {{ donation.status }}, etc. -->
-  <div class="don-right">
-    <div class="detail-panel">
-      <div class="detail-row"><span class="detail-label">Donor</span><span class="detail-val">Maria Santos</span></div>
-      <div class="detail-row"><span class="detail-label">Status</span><span class="detail-val" style="color:var(--tuab);font-weight:600">Pending</span></div>
-      <div class="detail-row"><span class="detail-label">Is Flagged</span><span class="detail-val">False</span></div>
-      <div class="detail-row"><span class="detail-label">Flag Reason</span><span class="detail-val">–</span></div>
-      <div class="detail-row"><span class="detail-label">Submitted At</span><span class="detail-val">01-28-2026</span></div>
-      <div class="detail-row"><span class="detail-label">Updated At</span><span class="detail-val">–</span></div>
-      <div class="detail-row"><span class="detail-label">Auto Archive At</span><span class="detail-val">03-28-2026</span></div>
-      <div class="detail-row"><span class="detail-label">Pickup Address</span><span class="detail-val">Escoda St, Ermita, Manila…</span></div>
-      <div class="detail-row"><span class="detail-label">Preferred Date</span><span class="detail-val">02-10-2026</span></div>
-      <div class="detail-row"><span class="detail-label">Time Window</span><span class="detail-val">4:02 AM – 5:50 PM</span></div>
-
-      <!-- Donation image
-           Django: {% if donation.image_url %}<img src="{{ donation.image_url }}">{% endif %} -->
-      <div class="sep">
-        <img src="https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=300&q=70" style="width:100%;max-height:160px;object-fit:cover;border-radius:10px;margin-bottom:16px"/>
-      </div>
-
-      <!-- Claim actions
-           Django: POST forms to tuab_claim_pickup and tuab_claim_delivery views -->
-      <div class="sep">
-        <button class="btn-claim" onclick="alert('Claimed for Pick-Up! (Django: POST to claim view)')">Claim for Pick-Up</button>
-
-        <div style="font-family:'Poppins',sans-serif;font-weight:600;font-size:15px;margin-bottom:8px">Delivery Location</div>
-        <div class="ac-wrap" style="margin-bottom:14px">
-          <div class="loc-input-wrap">
-            <input id="tuab-delivery-addr" class="form-input"
-              value="Escoda Street, Barangay 675, Ermita, Manila, Philippines"
-              oninput="nominatimSearch(this.value,'d-ac','d-lat','d-lng','tuab-delivery-addr')"
-              style="padding-right:36px;font-size:12px"/>
-            <button class="loc-pin-btn" onclick="openPickerFor('tuab-delivery-addr','d-lat','d-lng')">
-              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            </button>
-          </div>
-          <div id="d-ac" class="address-autocomplete hidden"></div>
-          <input type="hidden" id="d-lat" value="14.5890"/>
-          <input type="hidden" id="d-lng" value="120.9822"/>
-        </div>
-
-        <div style="font-family:'Poppins',sans-serif;font-weight:600;font-size:15px;margin-bottom:8px">Scheduled Time</div>
-        <div style="position:relative;margin-bottom:14px">
-          <input id="tuab-sched-time" class="form-input" type="time" value="09:00" style="padding-right:36px"/>
-          <svg style="position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;color:#c0a080" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
-        </div>
-        <button class="btn-claim" onclick="alert('Claimed for Delivery! (Django: POST to claim-delivery view)')">Claim for Delivery</button>
-      </div>
+</head><body>
+<div class="layout">
+  <div class="left">
+    <div class="card"><div class="head"><div class="num">1</div><span style="font-weight:600;font-size:15px">Clothing 1</span></div>
+      <div class="row"><div class="group"><label class="up">Clothing</label><input class="in" value="Pants" readonly/></div><div class="group"><label class="up">Estimated Weight (kg)</label><input class="in" value="0.8" readonly/></div></div>
+      <div class="group" style="margin-bottom:12px"><label class="up">Condition</label><input class="in" value="Fair" readonly/></div>
+      <div class="row" style="margin-bottom:0"><div class="group"><label class="up">Brand</label><input class="in" value="Levi's" readonly/></div><div class="group"><label class="up">Material</label><input class="in" value="99% Cotton, 1% Elastane" readonly/></div></div>
     </div>
   </div>
-
+  <div class="right"><div class="panel">
+    <div class="drow"><span class="lbl">Donor</span><span class="val">Juan Dela Cruz</span></div><div class="drow"><span class="lbl">Status</span><span class="val" style="color:var(--tuab)">Claimed</span></div>
+    <div class="drow"><span class="lbl">Is Flagged</span><span class="val">False</span></div><div class="drow"><span class="lbl">Flag Reason</span><span class="val">–</span></div>
+    <div class="drow"><span class="lbl">Submitted At</span><span class="val">1-25-2026 4:00 AM</span></div><div class="drow"><span class="lbl">Updated At</span><span class="val">–</span></div>
+    <div class="drow"><span class="lbl">Auto Archive At</span><span class="val">2-24-2026 4:00 AM</span></div><div class="drow"><span class="lbl">Pickup Address</span><span class="val">Escoda Street, Barangay 675, Manila</span></div>
+    <div class="drow"><span class="lbl">Pickup Preferred Date</span><span class="val">3-1-2026</span></div><div class="drow"><span class="lbl">Pickup Preferred Pickup Window</span><span class="val">4:02 AM – 5:50 PM</span></div>
+    <div class="sep"><img src="https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=300&q=70" style="width:100%;max-height:160px;object-fit:cover;border-radius:10px;margin-bottom:14px" alt="Donation"/>
+      <button class="btn btn-tuab" onclick="alert('Claimed for Pick-Up!')">Claim for Pick-Up</button>
+      <div style="font-weight:600;font-size:15px;margin-bottom:8px">Delivery Location</div>
+      <div class="ac" style="margin-bottom:12px"><div class="pin-wrap"><input id="d-addr" class="in" value="Escoda Street, Ermita, Manila" oninput="nominatimSearch(this.value,'d-ac','d-lat','d-lng','d-addr')"/><button class="pin" onclick="openPickerFor('d-addr','d-lat','d-lng')"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></button></div><div id="d-ac" class="ac-list hidden"></div><input id="d-lat" type="hidden" value="14.5890"/><input id="d-lng" type="hidden" value="120.9822"/></div>
+      <div style="font-weight:600;font-size:15px;margin-bottom:8px">Scheduled Time</div><input class="in" type="time" value="09:00" style="margin-bottom:12px"/>
+      <button class="btn btn-tuab" onclick="alert('Claimed for Delivery!')">Claim for Delivery</button>
+    </div>
+  </div></div>
 </div>
-
-
-<!-- ═══ MAP PICKER MODAL ═══ -->
-<div id="map-modal" class="map-modal-overlay hidden">
-  <div class="map-modal">
-    <button onclick="closeMapPicker()" style="position:absolute;top:14px;right:16px;background:none;border:none;cursor:pointer;font-size:22px;color:#888;line-height:1">×</button>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-family:'Poppins',sans-serif;font-weight:600;font-size:16px">
-      <svg width="16" height="16" fill="none" stroke="var(--gold)" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-      Pick on Map
-    </div>
-    <div style="font-family:'Poppins',sans-serif;font-size:13px;color:#888;margin-bottom:12px">Click anywhere or drag the marker to set the location.</div>
-    <div id="picker-map"></div>
-    <button onclick="confirmMapPicker()" style="margin-top:14px;width:100%;background:var(--gold);color:#fff;border:none;border-radius:30px;padding:13px;font-size:15px;font-family:'Poppins',sans-serif;cursor:pointer;font-weight:500">Confirm Location</button>
-  </div>
-</div>
-
+<div id="map-modal" class="modal hidden"><div class="box"><button onclick="closeMapPicker()" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:22px;cursor:pointer">×</button><div style="font-weight:600;margin-bottom:8px">Pick on Map</div><div id="picker-map"></div><button class="btn" style="background:var(--gold);margin-top:14px" onclick="confirmMapPicker()">Confirm Location</button></div></div>
 <script>
-  // Nominatim address autocomplete
-  const nominatimTimers = {};
-  let _acResults = [];
-  async function nominatimSearch(val, acId, latId, lngId, inputId) {
-    const ac = document.getElementById(acId); if (!ac) return;
-    if (!val || val.length < 3) { ac.classList.add('hidden'); return; }
-    clearTimeout(nominatimTimers[acId]);
-    nominatimTimers[acId] = setTimeout(async () => {
-      try {
-        const data = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val+', Philippines')}&limit=5&countrycodes=ph`, { headers:{'Accept-Language':'en-US'} }).then(r=>r.json());
-        if (!data.length) { ac.classList.add('hidden'); return; }
-        _acResults = data;
-        ac.innerHTML = data.map((r,i) => `<div class="ac-item" onclick="selectAC(${i},'${acId}','${latId}','${lngId}','${inputId}')">${r.display_name}</div>`).join('');
-        ac.classList.remove('hidden');
-      } catch(e) { ac.classList.add('hidden'); }
-    }, 400);
-  }
-  function selectAC(i, acId, latId, lngId, inputId) {
-    const r = _acResults[i];
-    document.getElementById(inputId).value = r.display_name;
-    document.getElementById(latId).value   = r.lat;
-    document.getElementById(lngId).value   = r.lon;
-    document.getElementById(acId).classList.add('hidden');
-  }
-
-  // Map picker
-  let pickerMap = null, pickerMarker = null;
-  let pickerField, pickerLatId, pickerLngId, pickerLat = 14.5890, pickerLng = 120.9822;
-  function openPickerFor(addrId, latId, lngId) {
-    pickerField = addrId; pickerLatId = latId; pickerLngId = lngId;
-    pickerLat = parseFloat(document.getElementById(latId)?.value) || 14.5890;
-    pickerLng = parseFloat(document.getElementById(lngId)?.value) || 120.9822;
-    document.getElementById('map-modal').classList.remove('hidden');
-    setTimeout(() => {
-      if (pickerMap) { pickerMap.remove(); pickerMap = null; }
-      pickerMap = L.map('picker-map').setView([pickerLat, pickerLng], 15);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(pickerMap);
-      pickerMarker = L.marker([pickerLat, pickerLng], { draggable: true }).addTo(pickerMap);
-      pickerMarker.on('dragend', e => { const ll = e.target.getLatLng(); pickerLat = ll.lat; pickerLng = ll.lng; });
-      pickerMap.on('click', e => { pickerLat = e.latlng.lat; pickerLng = e.latlng.lng; pickerMarker.setLatLng([pickerLat, pickerLng]); });
-    }, 120);
-  }
-  function closeMapPicker() {
-    document.getElementById('map-modal').classList.add('hidden');
-    if (pickerMap) { pickerMap.remove(); pickerMap = null; }
-  }
-  async function confirmMapPicker() {
-    let display = `${pickerLat.toFixed(5)}, ${pickerLng.toFixed(5)}`;
-    try {
-      const d = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pickerLat}&lon=${pickerLng}`, { headers:{'Accept-Language':'en-US'} }).then(r=>r.json());
-      if (d.display_name) display = d.display_name;
-    } catch(e){}
-    if (pickerField) document.getElementById(pickerField).value = display;
-    if (pickerLatId) document.getElementById(pickerLatId).value = pickerLat;
-    if (pickerLngId) document.getElementById(pickerLngId).value = pickerLng;
-    closeMapPicker();
-  }
-  document.addEventListener('click', e => {
-    document.querySelectorAll('.address-autocomplete').forEach(ac => { if (!ac.closest('.ac-wrap')?.contains(e.target)) ac.classList.add('hidden'); });
-    if (e.target === document.getElementById('map-modal')) closeMapPicker();
-  });
+const timers={},acR=[]; let mp,mk,pf,plat,plng,la=14.5890,lo=120.9822;
+async function nominatimSearch(v,ac,lat,lng,input){const A=document.getElementById(ac);if(!v||v.length<3){A.classList.add('hidden');return;}clearTimeout(timers[ac]);timers[ac]=setTimeout(async()=>{try{const d=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(v+', Philippines')}&limit=5&countrycodes=ph`,{headers:{'Accept-Language':'en-US'}}).then(r=>r.json());acR[ac]=d||[];A.innerHTML=(acR[ac].length?acR[ac].map((r,i)=>`<div class='ac-item' onmousedown="selectAC('${ac}',${i},'${lat}','${lng}','${input}')">${r.display_name}</div>`).join(''):'<div class="ac-item">No results</div>');A.classList.remove('hidden')}catch{A.classList.add('hidden')}},350)}
+function selectAC(ac,i,lat,lng,input){const r=(acR[ac]||[])[i];if(!r)return;document.getElementById(input).value=r.display_name;document.getElementById(lat).value=r.lat;document.getElementById(lng).value=r.lon;document.getElementById(ac).classList.add('hidden')}
+function openPickerFor(f,lat,lng){pf=f;plat=lat;plng=lng;la=parseFloat(document.getElementById(lat)?.value)||14.5890;lo=parseFloat(document.getElementById(lng)?.value)||120.9822;document.getElementById('map-modal').classList.remove('hidden');setTimeout(()=>{if(mp)mp.remove();mp=L.map('picker-map').setView([la,lo],15);L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(mp);mk=L.marker([la,lo],{draggable:true}).addTo(mp);mk.on('dragend',e=>{const ll=e.target.getLatLng();la=ll.lat;lo=ll.lng});mp.on('click',e=>{la=e.latlng.lat;lo=e.latlng.lng;mk.setLatLng([la,lo])});},120)}
+function closeMapPicker(){document.getElementById('map-modal').classList.add('hidden');if(mp){mp.remove();mp=null}}
+async function confirmMapPicker(){let d=`${la.toFixed(5)}, ${lo.toFixed(5)}`;try{const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${la}&lon=${lo}&addressdetails=1`,{headers:{'Accept-Language':'en-US'}}).then(x=>x.json());if(r.display_name)d=r.display_name}catch{};document.getElementById(pf).value=d;document.getElementById(plat).value=la;document.getElementById(plng).value=lo;closeMapPicker()}
+document.addEventListener('click',e=>{document.querySelectorAll('.ac-list').forEach(a=>{if(!a.closest('.ac')?.contains(e.target))a.classList.add('hidden')});if(e.target===document.getElementById('map-modal'))closeMapPicker()});
 </script>
-</body>
-</html>
+</body></html>
