@@ -81,7 +81,8 @@
   <div class="right">
     <div class="panel">
       <div class="meta">
-        <p><strong>Donation ID:</strong> {{ donation.id }}</p>
+                <p><strong>Donation ID:</strong> {{ donation.id }}</p>
+                <p><strong>Donor:</strong> {{ donation.donor_id.first_name|default:'' }} {{ donation.donor_id.last_name|default:'' }}</p>
         <p><strong>Current Record Status:</strong> {{ donation.status }}</p>
         <p><strong>Claimed By TUAB:</strong> {{ donation.claimed_by_tuab }}</p>
         <p><strong>Delivery Method:</strong> {{ donation.delivery_method }}</p>
