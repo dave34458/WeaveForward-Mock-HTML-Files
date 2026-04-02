@@ -145,27 +145,20 @@
       return document.getElementById(id);
     }
 
-    // Converts number-like input to Number; returns null for empty/invalid values.
-    function toNumberOrNull(value) {
-      if (value === '' || value == null) return null;
-      const parsed = Number(value);
-      return Number.isNaN(parsed) ? null : parsed;
-    }
-
     const ALL_CLOTHING_TYPES = [...new Set(donationData.brandFiberLookup.map((row) => row.clothing))];
     const ALL_BRANDS = [...new Set(donationData.brandFiberLookup.map((row) => row.brand))];
     let cardCount = 0;
 
     // ---------- Django Conversion Map (Keep vs Remove) ----------
     // Keep after Django template conversion:
-    // - getById, toNumberOrNull
+    // - getById
     // - buildCombobox, renderCombobox, openCombobox, closeCombobox, toggleCombobox
     // - onComboboxType, pickComboboxOption
     // - buildCard, applyMaterialTier, readCardStates, renderCards, addCard, removeCard
     // - openReject, closeReject, submitReceived, submitRejected
-    // - buildPayload
+    // - submit preview handler (FormData request.POST/request.FILES popup)
     // Remove/disable for production submit flow:
-    // - handleTuabSubmit (payload popup preview only). Keep only if you still want preview mode.
+    // - submit preview popup only (keep only if you still want preview mode).
 
     // ---------- Combobox ----------
     // Builds a clothing/brand combobox HTML block for a specific card index.
@@ -326,7 +319,7 @@
             </div>
             <div class="group">
               <label class="up">Material</label>
-              <select class="sel" id="m-${index}" name="material_id" data-id="${data.id}">
+              <select class="sel" id="m-${index}" name="lookup_id" data-id="${data.id}">
                 <option value="">- select material -</option>
               </select>
               <input class="in hidden" id="a-${index}" value="Will be approximated" disabled style="font-style:italic"/>
@@ -458,66 +451,59 @@
       getById('tuab-form').requestSubmit();
     }
 
-    // ---------- Payload Preview ----------
-    // Builds the submit payload shown in popup.
-    function buildPayload(formElement) {
-      const items = [];
-
-      for (let index = 0; index < cardCount; index += 1) {
-        const clothingInput = getById(`c-${index}`);
-        const brandInput = getById(`b-${index}`);
-        const materialSelect = getById(`m-${index}`);
-        const weightInput = getById(`w-${index}`);
-        const conditionInput = getById(`d-${index}`);
-        const weightRaw = weightInput?.value ?? '';
-        const condition = conditionInput?.value ?? '';
-        const clothingValue = clothingInput?.dataset.v || clothingInput?.value?.trim() || '';
-        const brandValue = brandInput?.dataset.v || brandInput?.value?.trim() || '';
-
-        const isLookupMode =
-          clothingInput?.dataset.db === '1' &&
-          brandInput?.dataset.db === '1' &&
-          donationData.brandFiberLookup.some((row) => row.clothing === clothingValue && row.brand === brandValue);
-
-        const item = {
-          weight: toNumberOrNull(weightRaw),
-          condition
-        };
-
-        if (isLookupMode) {
-          item.lookup_id = toNumberOrNull(materialSelect?.value ?? '');
-        } else {
-          item.clothing = (clothingInput?.value ?? '').trim();
-          item.brand = (brandInput?.value ?? '').trim();
-        }
-
-        items.push(item);
-      }
-
-      return {
-        action_status: formElement.elements.action_status?.value ?? '',
-        action_reason: formElement.elements.action_reason?.value ?? '',
-        upload_id: toNumberOrNull(formElement.elements.upload_id?.value ?? ''),
-        file_path: formElement.elements.file_path?.value ?? '',
-        donation_items: items
-      };
-    }
-
-    // Intercepts submit and shows payload in a large popup.
+    // ---------- Submit Preview (popup) ----------
+    // Opens a popup showing the exact successful form controls included in FormData.
     function handleTuabSubmit(event) {
       event.preventDefault();
-      const payload = buildPayload(event.currentTarget);
-      const payloadText = JSON.stringify(payload, null, 2);
-      const popup = window.open('', 'tuabPayloadPreview', 'width=980,height=760,resizable=yes,scrollbars=yes');
+      const form = event.currentTarget;
+      const formData = new FormData(form);
+      const postEntries = [];
+      const fileEntries = [];
 
-      if (!popup) {
-        alert(payloadText);
-        return;
+      for (const [name, value] of formData.entries()) {
+        if (value instanceof File) {
+          if (value.name) {
+            fileEntries.push(
+              `${name} -> FILE(name="${value.name}", type="${value.type || 'application/octet-stream'}", size=${value.size})`
+            );
+          }
+          continue;
+        }
+        postEntries.push(`${name}=${value}`);
       }
 
-      popup.document.title = 'TUAB POST Payload Preview';
-      popup.document.body.innerHTML = '<div style="font-family:Consolas,monospace;padding:16px;"><h3 style="margin:0 0 12px;">TUAB payload preview</h3><pre id="payload" style="margin:0;white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.45;"></pre></div>';
-      popup.document.getElementById('payload').textContent = payloadText;
+      const postPreview = postEntries.length ? postEntries.join('\n') : '(no POST fields)';
+      const filesPreview = fileEntries.length ? fileEntries.join('\n') : '(no file selected)';
+      const output = [
+        'request.POST (raw key=value entries in browser FormData order)',
+        postPreview,
+        '',
+        'request.FILES',
+        filesPreview
+      ].join('\n');
+
+      const popup = window.open('', 'postPreview', 'width=720,height=600,resizable=yes,scrollbars=yes');
+      if (!popup) { alert(output); return; }
+
+      popup.document.title = 'POST Preview';
+      popup.document.body.style.cssText = 'margin:0;background:#1e1e1e;color:#d4d4d4;font-family:Consolas,monospace;';
+      popup.document.body.innerHTML = `
+        <div style="padding:20px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <span style="font-size:15px;font-weight:600;color:#e8a020">POST Preview</span>
+            <button onclick="window.opener.getById('tuab-form').submit();window.close();"
+              style="padding:8px 18px;background:#e8a020;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">
+              Confirm &amp; Submit
+            </button>
+          </div>
+          <div style="margin-bottom:6px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px">request.POST (raw entries)</div>
+          <pre id="post-preview-block" style="background:#111;padding:14px;border-radius:8px;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word;margin:0 0 16px"></pre>
+          <div style="margin-bottom:6px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px">request.FILES</div>
+          <pre id="files-preview-block" style="background:#111;padding:14px;border-radius:8px;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word;margin:0"></pre>
+        </div>
+      `;
+      popup.document.getElementById('post-preview-block').textContent = postPreview;
+      popup.document.getElementById('files-preview-block').textContent = filesPreview;
       popup.focus();
     }
 
@@ -542,3 +528,4 @@
   </script>
 </body>
 </html>
+

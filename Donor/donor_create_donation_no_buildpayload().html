@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <!--
   WeaveForward  Create Donation  (donor_create_donation.html)
   
@@ -97,6 +98,7 @@
 </head>
 <body>
 <form id="donation-form" method="post" action="/create_donation/" enctype="multipart/form-data">
+<!-- Django: add {% csrf_token %} here -->
 <div class="layout">
   <div class="left">
     <div id="cards"></div>
@@ -112,8 +114,8 @@
     </div>
     <div class="panel upload"><div style="font-weight:600;font-size:14px;margin-bottom:4px">Donation Upload</div><p style="font-size:12px;color:#999;margin-bottom:12px">Upload an image for your donation</p>
       <div class="drop" ondragover="event.preventDefault();this.style.background='#fdf6e8'" ondragleave="this.style.background=''" ondrop="handleImageDrop(event)" onclick="document.getElementById('img-in').click()">
-        <div id="img-prev-wrap" class="{% if donation.upload.file_path %}{% else %}hidden{% endif %}"><img id="img-prev" src="{{ donation.upload.file_path|default:'' }}" style="max-width:100%;max-height:140px;border-radius:8px;object-fit:cover" alt="Preview"/></div>
-        <div id="img-ph" class="{% if donation.upload.file_path %}hidden{% endif %}" style="font-size:13px;color:#999">Click or drop image</div>
+        <div id="img-prev-wrap" class="hidden"><img id="img-prev" src="" style="max-width:100%;max-height:140px;border-radius:8px;object-fit:cover" alt="Preview"/></div>
+        <div id="img-ph" style="font-size:13px;color:#999">Click or drop image</div>
         <input id="img-in" name="donation_image" type="file" accept="image/*" style="display:none" onchange="handleImageSelect(this)"/>
       </div>
     </div>
@@ -372,6 +374,7 @@
 
     if (isLookupMode) {
       materialSelect.classList.remove('hidden');
+      materialSelect.disabled = false;
       approximationInput.classList.add('hidden');
       materialSelect.innerHTML =
         '<option value="">- select material -</option>' +
@@ -384,7 +387,9 @@
       return;
     }
 
+    // Non-lookup: hide but keep enabled so empty lookup_id is submitted, preserving index alignment.
     materialSelect.classList.add('hidden');
+    materialSelect.disabled = false;
     materialSelect.value = '';
     approximationInput.classList.remove('hidden');
     approximationInput.value = 'Will be approximated';
@@ -604,9 +609,12 @@
     getById(targetLngId).value = selectedLng;
     closeMapPicker();
   }
+  addCard();
+  initAddressFromUser();
+
   // ---------- Submit Preview (popup) ----------
   // Opens a popup showing the exact successful form controls included in FormData.
-  function handleDonationSubmit(event) {
+  getById('donation-form')?.addEventListener('submit', (event) => {
     event.preventDefault();
     const form = event.currentTarget;
     const formData = new FormData(form);
@@ -622,11 +630,13 @@
         }
         continue;
       }
+      // Keep duplicate keys and original order. No object reshaping.
       postEntries.push(`${name}=${value}`);
     }
 
     const postPreview = postEntries.length ? postEntries.join('\n') : '(no POST fields)';
     const filesPreview = fileEntries.length ? fileEntries.join('\n') : '(no file selected)';
+
     const output = [
       'request.POST (raw key=value entries in browser FormData order)',
       postPreview,
@@ -658,11 +668,7 @@
     popup.document.getElementById('post-preview-block').textContent = postPreview;
     popup.document.getElementById('files-preview-block').textContent = filesPreview;
     popup.focus();
-  }
-
-  addCard();
-  initAddressFromUser();
-  getById('donation-form')?.addEventListener('submit', handleDonationSubmit);
+  });
 
   document.addEventListener('click', (event) => {
     ['c', 'b'].forEach((type) => {
@@ -684,15 +690,3 @@
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
