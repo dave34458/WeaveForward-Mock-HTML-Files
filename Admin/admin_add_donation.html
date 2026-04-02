@@ -1,0 +1,764 @@
+﻿<!--
+  WeaveForward  Admin Add Donation  (admin_add_donation.html)
+  
+  SYNC NOTE
+  
+  This file reflects the latest conflict-resolved reference version.
+
+  MAIN SYNC NOTE
+  
+  Latest main-branch reference snapshot.
+
+  PURPOSE
+  
+  Standalone reference for Admin Add Donation page content (for later
+  conversion into Django templates rendered by views.py context).
+
+  DJANGO CONVERSION NOTES (EXPLICIT)
+  
+   {% extends 'base.html' %}
+   {% block content %} ... {% endblock %}
+   Wrap in form: <form method="post" action="{% url 'admin_add_donation' %}" enctype="multipart/form-data">
+      {% csrf_token %}
+   Replace sample values with context variables listed below.
+   Create form should start with no prefilled clothing/brand/material values.
+   Keep ids/hooks used by JS so combobox/tier/autocomplete/map behavior remains intact.
+
+  INDEPENDENT CLOTHING/BRAND SELECTION
+  
+   Clothing and brand lists are independent (no cross-filtering).
+   Material options are filtered only when both clothing and brand are
+    selected from lookup values.
+
+  MATERIAL TIER RULES
+  
+   Tier 0: clothing+brand selected from dropdown + combo exists in lookup
+             material select is shown (user picks specific material record)
+   Tier 1: clothing+brand both manually typed, combo exists in lookup
+             approximated using most recent record by scraped_at datetime
+   Tier 2: clothing typed, brand from dropdown
+             approximated
+   Tier 3: clothing from dropdown, brand typed
+             approximated
+   Tier 4: fallback approximation (e.g., manual combo not in lookup)
+
+  CONTEXT VARIABLES EXPECTED
+  
+  page_title          'Add Donation'
+  sidebar_variant     'admin'
+  donor_users_json    list of users from endpoint, each row has id + display fields
+  user_latitude       float (users.latitude)
+  user_longitude      float (users.longitude)
+  clothing_types      list of clothing type strings
+  brands              list of brand strings
+  conditions          list of condition strings
+  brand_fiber_lookup  list of {id, clothing, brand, material, scraped_at}
+
+  NOTE
+  
+  Prototype/reference file only; real validation and final submission
+  behavior should be enforced server-side in Django forms/views.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Add Donation - Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    :root{--gold:#e8a020;--gold-dark:#c8881a;--bg:#f5f2eb;--border:#e0dbd4;--text:#222;--muted:#888;--light:#fdf6e8;--disabled:#aaa}
+    *{box-sizing:border-box;margin:0;padding:0} html{scrollbar-gutter:stable} body{font-family:Poppins,sans-serif;background:var(--bg);color:var(--text)} .hidden{display:none!important}
+    .layout{display:flex;gap:24px;align-items:flex-start}.left{flex:1;min-width:0}.right{width:330px;flex-shrink:0}
+    .card,.panel{background:#fff;border:1.5px solid var(--border);border-radius:14px}.card{width:100%;padding:20px 22px;margin-bottom:14px}.panel{padding:22px 24px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}.group{display:flex;flex-direction:column;gap:4px}
+    label.up{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}.sub{font-size:13px;font-weight:600;color:#333;margin-bottom:8px}
+    .in,.sel,.cb-in{width:100%;height:44px;border:1.5px solid #d5d5d5;border-radius:8px;padding:10px 14px;font:14px Poppins,sans-serif;outline:none;background:#fff}
+    .sel{border-color:var(--border);appearance:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23e8a020' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E") no-repeat right 12px center;padding-right:34px}
+    .in:focus,.sel:focus,.cb-in:focus{border-color:var(--gold)} .in:disabled,.sel:disabled{color:var(--disabled);background:#f4f4f4}
+    .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.num{width:28px;height:28px;border-radius:50%;background:var(--gold);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+    .title-wrap{display:flex;align-items:center;gap:10px}.trash{background:none;border:none;color:var(--gold);cursor:pointer}
+    .btn-add{width:100%;padding:12px;border:2px dashed var(--gold);border-radius:30px;color:var(--gold);background:transparent;cursor:pointer}
+    .btn-submit{width:100%;margin-top:14px;padding:13px;border:none;border-radius:30px;background:var(--gold);color:#fff;cursor:pointer}
+    .cb{position:relative}.cb-wrap{position:relative}.cb-in{padding-right:34px}.cb-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--gold);cursor:pointer}
+    .cb-list{position:absolute;z-index:50;top:calc(100% + 4px);left:0;width:100%;max-height:180px;overflow:auto;background:#fff;border:1.5px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.1)}
+    .cb-opt{padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid #f5f5f5}.cb-opt:hover{background:var(--light)} .cb-empty{padding:9px 14px;font-size:13px;color:var(--muted);font-style:italic}
+    .time{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .ac{position:relative}.ac-list{position:absolute;top:calc(100% + 4px);left:0;width:100%;max-height:200px;overflow:auto;background:#fff;border:1.5px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.1);z-index:60}
+    .ac-item{padding:10px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid #f5f5f5}.ac-item:hover{background:var(--light)}
+    .pin-wrap{position:relative}.pin-wrap .in{padding-right:40px}.pin{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--gold);cursor:pointer}
+    .upload{margin-top:16px}.drop{border:2px dashed #f0c060;border-radius:12px;padding:18px;text-align:center;cursor:pointer}.drop:hover{background:var(--light)}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:999}.modal-box{background:#fff;border-radius:16px;padding:20px;position:relative;width:min(620px,95vw)}
+    .x{position:absolute;top:10px;right:12px;border:none;background:none;font-size:22px;cursor:pointer;color:#888} #picker-map{width:100%;height:300px;border-radius:8px}
+    @media (max-width:768px){.layout{flex-direction:column;align-items:stretch}.left,.right{width:100%}.row,.time{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<form id="donation-form" method="post" action="/admin/add_donation/" enctype="multipart/form-data">
+<div class="layout">
+  <div class="left">
+    <div id="cards"></div>
+    <button type="button" class="btn-add" onclick="addCard()">+ Add Another Clothing Group</button>
+  </div>
+
+  <div class="right">
+    <div class="panel">
+      <div class="group" style="margin-bottom:18px">
+        <label class="sub">Donor</label>
+        <select id="donor-user-id" class="sel" name="donor_user_id" required>
+          <option value="">Select donor...</option>
+        </select>
+      </div>
+      <div class="group" style="margin-bottom:18px"><label class="sub">Preferred Pick-Up Date</label><input class="in" type="date" name="preferred_pickup_date" value="2026-01-25"/></div>
+      <div style="margin-bottom:18px"><label class="sub">Preferred Time Window</label><div class="time"><div class="group"><label class="up">From</label><input class="in" type="time" name="preferred_time_start" value="09:00"/></div><div class="group"><label class="up">To</label><input class="in" type="time" name="preferred_time_end" value="12:00"/></div></div></div>
+      <div class="group"><label class="sub">Pick-Up Location</label><div class="ac"><div class="pin-wrap"><input id="addr" class="in" name="pickup_address" value="" placeholder="Loading your saved address..." oninput="nominatimSearch(this.value)"/><button type="button" class="pin" onclick="openPickerFor('addr','lat','lng')"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></button></div><div id="ac" class="ac-list hidden"></div><input id="lat" name="pickup_latitude" type="hidden" value="14.5645"/><input id="lng" name="pickup_longitude" type="hidden" value="120.9930"/></div></div>
+      <button type="submit" class="btn-submit">Submit Donation</button>
+    </div>
+    <div class="panel upload"><div style="font-weight:600;font-size:14px;margin-bottom:4px">Donation Upload</div><p style="font-size:12px;color:#999;margin-bottom:12px">Upload an image for your donation</p>
+      <div class="drop" ondragover="event.preventDefault();this.style.background='#fdf6e8'" ondragleave="this.style.background=''" ondrop="handleImageDrop(event)" onclick="document.getElementById('img-in').click()">
+        <div id="img-prev-wrap" class="{% if donation.upload.file_path %}{% else %}hidden{% endif %}"><img id="img-prev" src="{{ donation.upload.file_path|default:'' }}" style="max-width:100%;max-height:140px;border-radius:8px;object-fit:cover" alt="Preview"/></div>
+        <div id="img-ph" class="{% if donation.upload.file_path %}hidden{% endif %}" style="font-size:13px;color:#999">Click or drop image</div>
+        <input id="img-in" name="donation_image" type="file" accept="image/*" style="display:none" onchange="handleImageSelect(this)"/>
+      </div>
+    </div>
+  </div>
+</div>
+
+</form>
+
+<div id="map-modal" class="modal hidden"><div class="modal-box"><button type="button" class="x" onclick="closeMapPicker()">x</button><div style="font-weight:600;margin-bottom:8px">Pick on Map</div><div id="picker-map"></div><button type="button" class="btn-submit" onclick="confirmMapPicker()" style="margin-top:12px">Confirm Location</button></div></div>
+
+<script>
+  // Small demo data. In Django this comes from context variables.
+  const donationData = {
+    conditions: ['Good', 'Like New', 'Fair', 'Poor'],
+    brandFiberLookup: [
+      { id: 1, clothing: 'Pants', brand: "Levi's", material: '80% Cotton, 20% Polyester', scrapedAt: '2026-03-20T08:30:00Z' },
+      { id: 2, clothing: 'Pants', brand: "Levi's", material: '99% Cotton, 1% Elastane', scrapedAt: '2026-03-28T14:10:00Z' },
+      { id: 3, clothing: 'Shirt', brand: 'Uniqlo', material: '100% Cotton', scrapedAt: '2026-03-11T09:00:00Z' },
+      { id: 4, clothing: 'Shirt', brand: 'H&M', material: '50% Cotton, 50% Polyester', scrapedAt: '2026-03-18T10:00:00Z' },
+      { id: 5, clothing: 'Jacket', brand: 'Nike', material: '100% Polyester', scrapedAt: '2026-03-05T13:00:00Z' },
+      { id: 6, clothing: 'Jeans', brand: "Levi's", material: '99% Cotton, 1% Elastane', scrapedAt: '2026-03-27T06:20:00Z' },
+      { id: 7, clothing: 'Jacket', brand: 'H&M', material: '65% Cotton, 35% Polyester', scrapedAt: '2026-03-29T16:45:00Z' }
+    ]
+  };
+  const donorUsersEndpoint = '/admin/users.json';
+  const donorUsersFallback = [
+    { id: 101, full_name: 'Juan Dela Cruz', email: 'juan@example.com' },
+    { id: 102, full_name: 'Maria Santos', email: 'maria@example.com' }
+  ];
+  // ---------- Utilities ----------
+  // Returns a DOM element by id so we do not repeat document.getElementById everywhere.
+  function getById(id) {
+    return document.getElementById(id);
+  }
+
+  const ALL_CLOTHING_TYPES = [...new Set(donationData.brandFiberLookup.map((row) => row.clothing))];
+  const ALL_BRANDS = [...new Set(donationData.brandFiberLookup.map((row) => row.brand))];
+
+  let cardCount = 0;
+  let autocompleteResults = [];
+  let autocompleteTimer;
+
+  let mapInstance = null;
+  let markerInstance = null;
+  let targetFieldId = null;
+  let targetLatId = 'lat';
+  let targetLngId = 'lng';
+  let selectedLat = 14.5645;
+  let selectedLng = 120.9930;
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  // Loads donor list JSON and fills donor select with user ids.
+  async function initDonorDropdown() {
+    const donorSelect = getById('donor-user-id');
+    if (!donorSelect) return;
+
+    let users = donorUsersFallback;
+    try {
+      const response = await fetch(donorUsersEndpoint, { headers: { Accept: 'application/json' } });
+      if (response.ok) {
+        const payload = await response.json();
+        users = Array.isArray(payload) ? payload : (payload.results || donorUsersFallback);
+      }
+    } catch {
+      // Keep fallback users in static mock mode.
+    }
+
+    donorSelect.innerHTML =
+      '<option value="">Select donor...</option>' +
+      users.map((user) => {
+        const name = user.full_name || user.name || `User ${user.id}`;
+        const email = user.email ? ` (${user.email})` : '';
+        return `<option value="${escapeHtml(user.id)}">${escapeHtml(name + email)}</option>`;
+      }).join('');
+  }
+
+  // ---------- Django Conversion Map (Keep vs Remove) ----------
+  // Keep after Django template conversion:
+  // - getById, comboboxHtml, donationCardHtml, renderCombobox, openCombobox, closeCombobox
+  // - toggleCombobox, onComboboxType, pickComboboxOption, applyMaterialTier
+  // - readCards, writeCards, addCard, removeCard
+  // - showImagePreview, previewImageFile, handleImageSelect, handleImageDrop
+  // - selectAutocompleteResult, nominatimSearch, closeMapPicker, openPickerFor
+  // - toNumberOrNull, buildPayload
+  // Remove/disable for production submit flow:
+  // - handleDonationSubmit (payload popup preview only). Keep only if you still want preview mode.
+  // ---------- Combobox UI ----------
+  // Builds the HTML for one combobox input (clothing or brand) in a card.
+  function comboboxHtml(type, index, state = {}) {
+    const value = state.v || '';
+    const selectedFromList = state.db ?? (value ? '1' : '0');
+    const selectedValue = state.dv ?? value;
+
+    return `
+      <div class="cb">
+        <div class="cb-wrap">
+          <input
+            id="${type}-${index}"
+            name="${type === 'c' ? 'clothing' : 'brand'}"
+            class="cb-in"
+            value="${value}"
+            autocomplete="off"
+            placeholder="Select or type..."
+            data-db="${selectedFromList}"
+            data-v="${selectedValue}"
+            onfocus="openCombobox('${type}', ${index})"
+            oninput="onComboboxType('${type}', ${index}, this.value)"
+            onblur="setTimeout(() => closeCombobox('${type}', ${index}), 120)"
+          />
+          <button type="button" class="cb-btn" onmousedown="toggleCombobox(event, '${type}', ${index})" aria-label="Toggle options">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg>
+          </button>
+        </div>
+        <div id="${type}l-${index}" class="cb-list hidden"></div>
+      </div>
+    `;
+  }
+  // ---------- Clothing Cards ----------
+  // Builds the HTML for one clothing card, including weight, condition, brand, and material UI.
+  function donationCardHtml(index, values = {}) {
+    const data = {
+      c: values.c || '',
+      cdb: values.cdb || '0',
+      cv: values.cv || '',
+      w: values.w || '',
+      d: values.d || 'Good',
+      b: values.b || '',
+      bdb: values.bdb || '0',
+      bv: values.bv || '',
+      id: values.id || ''
+    };
+
+    const deleteButton = index
+      ? `<button type="button" class="trash" onclick="removeCard(${index})"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`
+      : '';
+
+    const conditionOptions = donationData.conditions
+      .map((condition) => `<option ${condition === data.d ? 'selected' : ''}>${condition}</option>`)
+      .join('');
+
+    return `
+      <div class="card" id="card-${index}">
+        <div class="head">
+          <div class="title-wrap">
+            <div class="num">${index + 1}</div>
+            <span style="font-weight:600;font-size:15px">Clothing ${index + 1}</span>
+          </div>
+          ${deleteButton}
+        </div>
+
+        <div class="row">
+          <div class="group">
+            <label class="up">Clothing *</label>
+            ${comboboxHtml('c', index, { v: data.c, db: data.cdb, dv: data.cv })}
+          </div>
+          <div class="group">
+            <label class="up">Estimated Weight (kg)</label>
+            <input id="w-${index}" name="estimated_weight_kg" class="in" type="number" step="0.1" value="${data.w}"/>
+          </div>
+        </div>
+
+        <div class="group" style="margin-bottom:14px">
+          <label class="up">Condition</label>
+          <select class="sel" id="d-${index}" name="condition">${conditionOptions}</select>
+        </div>
+
+        <div class="row" style="margin-bottom:0">
+          <div class="group">
+            <label class="up">Brand</label>
+            ${comboboxHtml('b', index, { v: data.b, db: data.bdb, dv: data.bv })}
+          </div>
+          <div class="group">
+            <label class="up">Material</label>
+            <select class="sel" id="m-${index}" name="material_id" data-id="${data.id}">
+              <option value="">- select material -</option>
+            </select>
+            <input class="in hidden" id="a-${index}" value="Will be approximated" disabled style="font-style:italic"/>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Renders the dropdown suggestion list for a combobox based on the current query text.
+
+  function renderCombobox(type, index, query = '') {
+    const listEl = getById(`${type}l-${index}`);
+    const options = type === 'c' ? ALL_CLOTHING_TYPES : ALL_BRANDS;
+    const filteredOptions = options.filter((item) => item.toLowerCase().includes(query.toLowerCase()));
+
+    if (!filteredOptions.length) {
+      listEl.innerHTML = '<div class="cb-empty">No matches - typed value will be used</div>';
+      return;
+    }
+
+    listEl.innerHTML = filteredOptions
+      .map((item) => {
+        const safeItem = item.replace(/'/g, "\\'");
+        return `<div class="cb-opt" data-v="${item}" onmousedown="pickComboboxOption(event, '${type}', ${index}, '${safeItem}')">${item}</div>`;
+      })
+      .join('');
+  }
+
+  // Opens a combobox list and refreshes suggestions for the current input value.
+
+  function openCombobox(type, index) {
+    const input = getById(`${type}-${index}`);
+    const list = getById(`${type}l-${index}`);
+    if (!input || !list) return;
+    renderCombobox(type, index, input.value);
+    list.classList.remove('hidden');
+  }
+
+  // Closes a combobox list and re-evaluates material mode for the current card.
+
+  function closeCombobox(type, index) {
+    const list = getById(`${type}l-${index}`);
+    if (!list) return;
+    list.classList.add('hidden');
+    applyMaterialTier(index);
+  }
+
+  // Toggles a combobox list open/closed when the chevron button is clicked.
+
+  function toggleCombobox(event, type, index) {
+    event.preventDefault();
+    const input = getById(`${type}-${index}`);
+    const list = getById(`${type}l-${index}`);
+    if (!input || !list) return;
+
+    if (list.classList.contains('hidden')) {
+      renderCombobox(type, index, input.value);
+      list.classList.remove('hidden');
+    } else {
+      list.classList.add('hidden');
+      applyMaterialTier(index);
+    }
+  }
+
+  // Handles manual typing in a combobox and marks the value as typed (not selected from list).
+
+  function onComboboxType(type, index, value) {
+    const input = getById(`${type}-${index}`);
+    const list = getById(`${type}l-${index}`);
+    if (!input || !list) return;
+
+    input.dataset.db = '0';
+    input.dataset.v = '';
+    renderCombobox(type, index, value);
+    list.classList.remove('hidden');
+    applyMaterialTier(index);
+  }
+
+  // Handles selecting a suggestion from the combobox list and marks it as lookup-selected.
+
+  function pickComboboxOption(event, type, index, value) {
+    event.preventDefault();
+    const input = getById(`${type}-${index}`);
+    const list = getById(`${type}l-${index}`);
+    if (!input || !list) return;
+
+    input.value = value;
+    input.dataset.db = '1';
+    input.dataset.v = value;
+    list.classList.add('hidden');
+    applyMaterialTier(index);
+  }
+
+  // Shows material dropdown only when a valid lookup combo exists; otherwise shows approximation mode.
+
+  function applyMaterialTier(index) {
+    const clothingInput = getById(`c-${index}`);
+    const brandInput = getById(`b-${index}`);
+    const materialSelect = getById(`m-${index}`);
+    const approximationInput = getById(`a-${index}`);
+    if (!clothingInput || !brandInput || !materialSelect || !approximationInput) return;
+
+    const clothingFromList = clothingInput.dataset.db === '1';
+    const brandFromList = brandInput.dataset.db === '1';
+    const clothingValue = clothingInput.dataset.v || clothingInput.value.trim();
+    const brandValue = brandInput.dataset.v || brandInput.value.trim();
+
+    const matches = donationData.brandFiberLookup
+      .filter((row) => row.clothing === clothingValue && row.brand === brandValue);
+
+    const isLookupMode = clothingFromList && brandFromList && matches.length > 0;
+
+    if (isLookupMode) {
+      materialSelect.classList.remove('hidden');
+      approximationInput.classList.add('hidden');
+      materialSelect.innerHTML =
+        '<option value="">- select material -</option>' +
+        matches.map((row) => `<option value="${row.id}">${row.material}</option>`).join('');
+
+      if (materialSelect.dataset.id && matches.some((row) => String(row.id) === materialSelect.dataset.id)) {
+        materialSelect.value = materialSelect.dataset.id;
+      }
+      approximationInput.value = 'Will be approximated';
+      return;
+    }
+
+    materialSelect.classList.add('hidden');
+    materialSelect.value = '';
+    approximationInput.classList.remove('hidden');
+    approximationInput.value = 'Will be approximated';
+  }
+
+  // Reads all current card values from the DOM and returns them as plain JS objects.
+
+  function readCards() {
+    const rows = [];
+    for (let index = 0; index < cardCount; index += 1) {
+      const clothingInput = getById(`c-${index}`);
+      const brandInput = getById(`b-${index}`);
+      const materialSelect = getById(`m-${index}`);
+      const weightInput = getById(`w-${index}`);
+      const conditionInput = getById(`d-${index}`);
+      if (!clothingInput || !brandInput) continue;
+
+      rows.push({
+        c: clothingInput.value,
+        cdb: clothingInput.dataset.db || '0',
+        cv: clothingInput.dataset.v || '',
+        w: weightInput?.value || '',
+        d: conditionInput?.value || 'Good',
+        b: brandInput.value,
+        bdb: brandInput.dataset.db || '0',
+        bv: brandInput.dataset.v || '',
+        id: materialSelect?.value || materialSelect?.dataset.id || ''
+      });
+    }
+    return rows;
+  }
+
+  // Re-renders all cards from a list of card objects and applies material behavior per card.
+
+  function writeCards(rows) {
+    const safeRows = rows.length ? rows : [{ c: '', w: '', d: 'Good', b: '', id: '' }];
+    const cardsContainer = getById('cards');
+    cardsContainer.innerHTML = '';
+
+    safeRows.forEach((row, index) => {
+      cardsContainer.insertAdjacentHTML('beforeend', donationCardHtml(index, row));
+      applyMaterialTier(index);
+    });
+
+    cardCount = safeRows.length;
+  }
+
+  // Adds a new blank (or provided) card while preserving existing card values.
+
+  function addCard(cardData) {
+    const currentRows = readCards();
+    currentRows.push(cardData || { c: '', w: '', d: 'Good', b: '', id: '' });
+    writeCards(currentRows);
+  }
+
+  // Removes one card by index and re-renders the remaining cards.
+
+  function removeCard(indexToRemove) {
+    const rows = readCards().filter((_, index) => index !== indexToRemove);
+    writeCards(rows);
+  }
+  // ---------- Image Upload ----------
+  // Updates the upload panel to show the selected image preview.
+  function showImagePreview(source) {
+    getById('img-prev').src = source;
+    getById('img-prev-wrap').classList.remove('hidden');
+    getById('img-ph').classList.add('hidden');
+  }
+
+  // Validates an image file and loads it into the preview (optionally syncing dropped file to input).
+
+  function previewImageFile(file, syncFileInput = false) {
+    if (!file || !file.type.startsWith('image/')) return;
+    if (syncFileInput) {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      getById('img-in').files = dt.files;
+    }
+    const fileReader = new FileReader();
+    fileReader.onload = (event) => showImagePreview(event.target.result);
+    fileReader.readAsDataURL(file);
+  }
+
+  // Handles file selection from the hidden file input.
+
+  function handleImageSelect(inputElement) {
+    previewImageFile(inputElement.files?.[0]);
+  }
+
+  // Handles drag-and-drop image upload into the drop area.
+
+  function handleImageDrop(event) {
+    event.preventDefault();
+    event.currentTarget.style.background = '';
+    previewImageFile(event.dataTransfer.files?.[0], true);
+  }
+  // ---------- Address Autocomplete ----------
+  // Applies a clicked address suggestion to address/lat/lng fields.
+  function selectAutocompleteResult(index) {
+    const picked = autocompleteResults[index];
+    if (!picked) return;
+
+    getById('addr').value = picked.display_name;
+    getById('lat').value = picked.lat;
+    getById('lng').value = picked.lon;
+    getById('ac').classList.add('hidden');
+  }
+
+  // Calls Nominatim search API for address autocomplete as the user types.
+
+  function nominatimSearch(value) {
+    const listEl = getById('ac');
+    if (!value || value.length < 3) {
+      listEl.classList.add('hidden');
+      return;
+    }
+
+    clearTimeout(autocompleteTimer);
+    autocompleteTimer = setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value + ', Philippines')}&limit=5&countrycodes=ph&addressdetails=1`,
+          { headers: { 'Accept-Language': 'en-US' } }
+        );
+        const data = await response.json();
+
+        autocompleteResults = data || [];
+        listEl.innerHTML = autocompleteResults.length
+          ? autocompleteResults
+              .map((result, index) => `<div class="ac-item" onmousedown="selectAutocompleteResult(${index})">${result.display_name}</div>`)
+              .join('')
+          : '<div class="ac-item">No results</div>';
+        listEl.classList.remove('hidden');
+      } catch {
+        listEl.classList.add('hidden');
+      }
+    }, 350);
+  }
+  // ---------- Map Picker ----------
+  // Closes the map modal and cleans up the Leaflet map instance.
+  function closeMapPicker() {
+    getById('map-modal').classList.add('hidden');
+    if (mapInstance) {
+      mapInstance.remove();
+      mapInstance = null;
+    }
+  }
+
+  // Opens the map modal for a target field and initializes the map/marker position.
+
+  function openPickerFor(fieldId, latId, lngId) {
+    targetFieldId = fieldId;
+    targetLatId = latId;
+    targetLngId = lngId;
+
+    selectedLat = parseFloat(getById(latId)?.value) || 14.5645;
+    selectedLng = parseFloat(getById(lngId)?.value) || 120.9930;
+
+    getById('map-modal').classList.remove('hidden');
+
+    setTimeout(() => {
+      if (mapInstance) mapInstance.remove();
+
+      mapInstance = L.map('picker-map').setView([selectedLat, selectedLng], 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '(c) OpenStreetMap contributors'
+      }).addTo(mapInstance);
+
+      markerInstance = L.marker([selectedLat, selectedLng], { draggable: true }).addTo(mapInstance);
+      markerInstance.on('dragend', (event) => {
+        const markerPosition = event.target.getLatLng();
+        selectedLat = markerPosition.lat;
+        selectedLng = markerPosition.lng;
+      });
+
+      mapInstance.on('click', (event) => {
+        selectedLat = event.latlng.lat;
+        selectedLng = event.latlng.lng;
+        markerInstance.setLatLng([selectedLat, selectedLng]);
+      });
+    }, 120);
+  }
+
+  async function initAddressFromUser() {
+    const lat = parseFloat(getById('lat')?.value);
+    const lng = parseFloat(getById('lng')?.value);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`,
+        { headers: { 'Accept-Language': 'en-US' } }
+      );
+      const data = await response.json();
+      getById('addr').value = data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    } catch {
+      getById('addr').value = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+    }
+  }
+
+  async function confirmMapPicker() {
+    let displayAddress = `${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}`;
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${selectedLat}&lon=${selectedLng}&addressdetails=1`,
+        { headers: { 'Accept-Language': 'en-US' } }
+      );
+      const data = await response.json();
+      if (data.display_name) displayAddress = data.display_name;
+    } catch {
+      // Keep coordinate fallback.
+    }
+
+    if (targetFieldId) getById(targetFieldId).value = displayAddress;
+    getById(targetLatId).value = selectedLat;
+    getById(targetLngId).value = selectedLng;
+    closeMapPicker();
+  }
+  // ---------- Payload + Submit ----------
+  // Safely converts numeric strings to numbers; returns null for empty/invalid input.
+  function toNumberOrNull(value) {
+    if (value === '' || value == null) return null;
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+
+  // Builds the final payload object that mirrors what backend views/DRF would receive.
+
+  function buildPayload(formElement) {
+    const imageFile = getById('img-in')?.files?.[0];
+    const items = [];
+    for (let index = 0; index < cardCount; index += 1) {
+      const clothingInput = getById(`c-${index}`);
+      const brandInput = getById(`b-${index}`);
+      const materialSelect = getById(`m-${index}`);
+      const weightInput = getById(`w-${index}`);
+      const conditionInput = getById(`d-${index}`);
+      const weightRaw = weightInput?.value ?? '';
+      const condition = conditionInput?.value ?? '';
+      const clothingValue = clothingInput?.dataset.v || clothingInput?.value?.trim() || '';
+      const brandValue = brandInput?.dataset.v || brandInput?.value?.trim() || '';
+      const isLookupMode =
+        clothingInput?.dataset.db === '1' &&
+        brandInput?.dataset.db === '1' &&
+        donationData.brandFiberLookup.some((row) => row.clothing === clothingValue && row.brand === brandValue);
+
+      const item = {
+        weight: toNumberOrNull(weightRaw),
+        condition
+      };
+
+      if (isLookupMode) {
+        const lookupRaw = materialSelect?.value ?? '';
+        item.lookup_id = toNumberOrNull(lookupRaw);
+      } else {
+        item.clothing = (clothingInput?.value ?? '').trim();
+        item.brand = (brandInput?.value ?? '').trim();
+      }
+
+      items.push(item);
+    }
+
+    return {
+      donor_user_id: formElement.elements.donor_user_id?.value ?? '',
+      preferred_pickup_date: formElement.elements.preferred_pickup_date?.value ?? '',
+      preferred_time_start: formElement.elements.preferred_time_start?.value ?? '',
+      preferred_time_end: formElement.elements.preferred_time_end?.value ?? '',
+      pickup_address: formElement.elements.pickup_address?.value ?? '',
+      pickup_latitude: toNumberOrNull(formElement.elements.pickup_latitude?.value ?? ''),
+      pickup_longitude: toNumberOrNull(formElement.elements.pickup_longitude?.value ?? ''),
+      donation_image: imageFile ? imageFile.name : null,
+      donation_items: items
+    };
+  }
+
+  // Intercepts submit, builds payload, and shows a large popup preview of what would be posted.
+
+  function handleDonationSubmit(event) {
+    event.preventDefault();
+    const payload = buildPayload(event.currentTarget);
+    const payloadText = JSON.stringify(payload, null, 2);
+    const popup = window.open('', 'donationPayloadPreview', 'width=980,height=760,resizable=yes,scrollbars=yes');
+
+    if (!popup) {
+      alert(payloadText);
+      return;
+    }
+
+    popup.document.title = 'POST Payload Preview';
+    popup.document.body.innerHTML = '<div style="font-family:Consolas,monospace;padding:16px;"><h3 style="margin:0 0 12px;">POST payload preview</h3><pre id="payload" style="margin:0;white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.45;"></pre></div>';
+    popup.document.getElementById('payload').textContent = payloadText;
+    popup.focus();
+  }
+
+  addCard();
+  initDonorDropdown();
+  initAddressFromUser();
+  getById('donation-form')?.addEventListener('submit', handleDonationSubmit);
+
+  document.addEventListener('click', (event) => {
+    ['c', 'b'].forEach((type) => {
+      document.querySelectorAll(`[id^='${type}l-']`).forEach((listEl) => {
+        if (!listEl.closest('.cb')?.contains(event.target)) {
+          listEl.classList.add('hidden');
+        }
+      });
+    });
+
+    if (!getById('ac')?.closest('.ac')?.contains(event.target)) {
+      getById('ac')?.classList.add('hidden');
+    }
+
+    if (event.target === getById('map-modal')) {
+      closeMapPicker();
+    }
+  });
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+

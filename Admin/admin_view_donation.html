@@ -1,40 +1,33 @@
 <!DOCTYPE html>
 <!--
-  WeaveForward — View Donation  (donor_view_donation.html)
-  ═══════════════════════════════════════════════════════════════
+  WeaveForward - Admin View Donation (admin_view_donation.html)
+  ============================================================
 
   PURPOSE
-  ───────
-  Read-only version of Donation Details for donors.
-  This should stay structurally close to Create Donation for easier
-  template conversion and long-term maintenance consistency.
+  -------
+  Read-only donation details for admin.
+  This intentionally mirrors donor_view_donation layout and styling.
+  The only meaningful content difference is the right panel includes
+  additional admin read-only donation metadata.
 
   DJANGO CONVERSION NOTES
-  ───────────────────────
-  • {% extends 'base.html' %}
-  • {% block content %} ... {% endblock %}
-  • This page is display-only: no editable controls, no submission.
-  • Back button should point to donor donations list.
+  -----------------------
+  - {% extends 'base.html' %}
+  - {% block content %} ... {% endblock %}
+  - page_title      -> 'View Donation'
+  - sidebar_variant -> 'admin'
+  - This page is display-only (no submit/edit behavior).
 
   CONTEXT VARIABLES EXPECTED
-  ──────────────────────────
-  page_title      → 'View Donation'
-  sidebar_variant → 'donor'
-  donation        → object with pickup_date, time_from, time_to, pickup_address, image_url
-  clothing_items  → list of {clothing_type, weight, condition, brand_fiber_lookup_id,
-                        brand_fiber_lookup: {id, clothing, brand, material, scraped_at}}
-
-  READ-ONLY BRAND/MATERIAL RULE
-  ─────────────────────────────
-  • DonationItem stores brand_fiber_lookup_id (FK).
-  • For view page, read Brand/Material directly from item.brand_fiber_lookup fields.
-  • Do not recompute approximation logic in this page.
+  --------------------------
+  donation        -> object with status, pickup fields, upload.file_path, etc.
+  clothing_items  -> list of items with brand_fiber_lookup relation
 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>View Donation — Reference</title>
+  <title>Admin View Donation - Reference</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
@@ -48,13 +41,15 @@
     .in{width:100%;height:44px;border:1.5px solid #d5d5d5;border-radius:8px;padding:10px 14px;font:14px Poppins,sans-serif;background:#faf8f5;color:var(--text)}
     .head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.num{width:28px;height:28px;border-radius:50%;background:var(--gold);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
     .time{display:grid;grid-template-columns:1fr 1fr;gap:12px}.img-panel{margin-top:16px}
+    .meta p{font-size:12px;margin-bottom:6px}
+    .meta p:last-child{margin-bottom:14px}
     @media (max-width:768px){.layout{flex-direction:column;align-items:stretch}.left,.right{width:100%}.row,.time{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
 <div class="layout">
   <div class="left">
-    <!-- Django: {% for item in clothing_items %} (each item has brand_fiber_lookup FK data) -->
+    <!-- Django: {% for item in clothing_items %} -->
     <div class="card">
       <div class="head"><div class="num">1</div><span style="font-weight:600;font-size:15px">Clothing 1</span></div>
       <div class="row">
@@ -63,8 +58,8 @@
       </div>
       <div class="group" style="margin-bottom:14px"><label class="up">Condition</label><input class="in" value="Fair" readonly/></div>
       <div class="row" style="margin-bottom:0">
-        <!-- Django: {{ item.brand_fiber_lookup.brand }} --><div class="group"><label class="up">Brand</label><input class="in" value="Levi's" readonly/></div>
-        <!-- Django: {{ item.brand_fiber_lookup.material }} --><div class="group"><label class="up">Material</label><input class="in" value="99% Cotton, 1% Elastane" readonly/></div>
+        <div class="group"><label class="up">Brand</label><input class="in" value="Levi's" readonly/></div>
+        <div class="group"><label class="up">Material</label><input class="in" value="99% Cotton, 1% Elastane" readonly/></div>
       </div>
     </div>
 
@@ -76,8 +71,8 @@
       </div>
       <div class="group" style="margin-bottom:14px"><label class="up">Condition</label><input class="in" value="Good" readonly/></div>
       <div class="row" style="margin-bottom:0">
-        <!-- Django: {{ item.brand_fiber_lookup.brand }} --><div class="group"><label class="up">Brand</label><input class="in" value="Uniqlo" readonly/></div>
-        <!-- Django: {{ item.brand_fiber_lookup.material }} --><div class="group"><label class="up">Material</label><input class="in" value="100% Cotton" readonly/></div>
+        <div class="group"><label class="up">Brand</label><input class="in" value="Uniqlo" readonly/></div>
+        <div class="group"><label class="up">Material</label><input class="in" value="100% Cotton" readonly/></div>
       </div>
     </div>
     <!-- Django: {% endfor %} -->
@@ -85,9 +80,18 @@
 
   <div class="right">
     <div class="panel">
-      <div class="group" style="margin-bottom:18px"><label class="sub">Preferred Pick-Up Date</label><input class="in" value="02-10-2026" readonly/></div>
-      <div style="margin-bottom:18px"><label class="sub">Preferred Time Window</label><div class="time"><div class="group"><label class="up">From</label><input class="in" value="4:02 AM" readonly/></div><div class="group"><label class="up">To</label><input class="in" value="5:50 PM" readonly/></div></div></div>
-      <div class="group"><label class="sub">Pick-Up Location</label><input class="in" value="Escoda Street, Barangay 675, Ermita, Fifth District, Manila, Metro Manila, 1000, Philippines" readonly/></div>
+      <div class="meta">
+        <p><strong>Donation ID:</strong> {{ donation.id }}</p>
+        <p><strong>Current Record Status:</strong> {{ donation.status }}</p>
+        <p><strong>Claimed By TUAB:</strong> {{ donation.claimed_by_tuab }}</p>
+        <p><strong>Delivery Method:</strong> {{ donation.delivery_method }}</p>
+        <p><strong>Flag Reason:</strong> {{ donation.flag_reason }}</p>
+        <p><strong>Is Flagged:</strong> {{ donation.is_flagged }}</p>
+      </div>
+
+      <div class="group" style="margin-bottom:18px"><label class="sub">Preferred Pick-Up Date</label><input class="in" value="{{ donation.preferred_pickup_date }}" readonly/></div>
+      <div style="margin-bottom:18px"><label class="sub">Preferred Time Window</label><div class="time"><div class="group"><label class="up">From</label><input class="in" value="{{ donation.preferred_pickup_window_start }}" readonly/></div><div class="group"><label class="up">To</label><input class="in" value="{{ donation.preferred_pickup_window_end }}" readonly/></div></div></div>
+      <div class="group"><label class="sub">Pick-Up Location</label><input class="in" value="{{ donation.pickup_display_address }}" readonly/></div>
     </div>
 
     <div class="panel img-panel">

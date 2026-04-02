@@ -1,0 +1,686 @@
+﻿<!DOCTYPE html>
+<!--
+  WeaveForward Admin - Update Donation (admin_update_donation.html)
+  - Reuses donor edit layout for clothing items.
+  - Right panel is compact and admin-focused.
+  - Read-only values are shown as info rows.
+  - Pickup coordinates are set via map picker.
+
+  DJANGO CONVERSION NOTES
+  - Keep left-side card ids/names for item parsing hooks.
+  - Right-side hidden inputs mirror backend fields for plain POST.
+  - Backend owns business rules/nulling behavior.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Update Donation - Reference</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    :root { --gold:#e8a020; --bg:#f5f2eb; --border:#e0dbd4; --text:#222; --muted:#888; --light:#fdf6e8; --disabled:#aaa; }
+    *{box-sizing:border-box;margin:0;padding:0} html{scrollbar-gutter:stable} body{font-family:Poppins,sans-serif;background:var(--bg);color:var(--text)} .hidden{display:none!important}
+    .don-layout{display:flex;gap:24px;align-items:flex-start}.don-left{flex:1;min-width:0}.don-right{width:330px;flex-shrink:0}
+    .card,.panel{background:#fff;border:1.5px solid var(--border);border-radius:14px}.card{width:100%;padding:20px 22px;margin-bottom:14px}.panel{padding:16px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}.group{display:flex;flex-direction:column;gap:4px}
+    label.up{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+    .in,.sel,.cb-in,.ta{width:100%;border:1.5px solid #d5d5d5;border-radius:8px;padding:10px 14px;font:14px Poppins,sans-serif;outline:none;background:#fff}
+    .in,.sel,.cb-in{height:44px}
+    .ta{min-height:72px;resize:vertical}
+    .sel{border-color:var(--border);appearance:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23e8a020' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E") no-repeat right 12px center;padding-right:34px}
+    .in:focus,.sel:focus,.cb-in:focus,.ta:focus{border-color:var(--gold)} .in:disabled,.sel:disabled,.cb-in:disabled,.ta:disabled{color:var(--disabled);background:#f4f4f4}
+    .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.num{width:28px;height:28px;border-radius:50%;background:var(--gold);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+    .title-wrap{display:flex;align-items:center;gap:10px}.trash{background:none;border:none;color:var(--gold);cursor:pointer}
+    .btn-add{width:100%;padding:12px;border:2px dashed var(--gold);border-radius:30px;color:var(--gold);background:transparent;cursor:pointer}
+    .btn-submit{width:100%;margin-top:10px;padding:12px;border:none;border-radius:30px;background:var(--gold);color:#fff;cursor:pointer}
+    .cb{position:relative}.cb-wrap{position:relative}.cb-in{padding-right:34px}.cb-btn{position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:none;color:var(--gold);cursor:pointer}
+    .cb-list{position:absolute;z-index:50;top:calc(100% + 4px);left:0;width:100%;max-height:180px;overflow:auto;background:#fff;border:1.5px solid var(--border);border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.1)}
+    .cb-opt{padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid #f5f5f5}.cb-opt:hover{background:var(--light)} .cb-empty{padding:9px 14px;font-size:13px;color:var(--muted);font-style:italic}
+    .time{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+    .upload{margin-top:12px}.drop{border:2px dashed #f0c060;border-radius:12px;padding:16px;text-align:center;cursor:pointer}.drop:hover{background:var(--light)}
+    .mini-note{font-size:11px;color:#888;line-height:1.35;margin-top:4px}
+    .lock-note{margin-bottom:12px;padding:10px 12px;border-radius:8px;background:#fff8e8;border:1px solid #f1dcac;font-size:12px;color:#8f6a1a}
+    .map-row{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+    .map-btn{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--border);background:#fff;border-radius:8px;padding:8px 10px;color:#333;cursor:pointer;font:500 12px Poppins,sans-serif}
+    .map-btn:disabled{opacity:.6;cursor:not-allowed}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:999}.modal-box{background:#fff;border-radius:16px;padding:20px;position:relative;width:min(620px,95vw)}
+    .x{position:absolute;top:10px;right:12px;border:none;background:none;font-size:22px;cursor:pointer;color:#888} #picker-map{width:100%;height:300px;border-radius:8px}
+    @media (max-width:768px){.don-layout{flex-direction:column;align-items:stretch}.don-left,.don-right{width:100%}.row,.time{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<form id="admin-donation-form" method="post" action="/admin/update_donation/" enctype="multipart/form-data">
+  <input type="hidden" id="record-status" name="record_status" value="{{ donation.status|default:'PENDING' }}" />
+  <input type="hidden" id="claimed-by-tuab" name="claimed_by_tuab" value="KulturaKalikasan" data-original="KulturaKalikasan" />
+  <input type="hidden" id="delivery-method" name="delivery_method" value="PICKUP" data-original="PICKUP" />
+  <input type="hidden" id="pickup-barangay" name="pickup_barangay" value="Barangay 675" />
+  <input type="hidden" id="pickup-city" name="pickup_city" value="Manila" />
+  <input type="hidden" id="pickup-display-address" name="pickup_display_address" value="Escoda Street, Barangay 675, Ermita, Manila" />
+  <input type="hidden" id="pickup-latitude" name="pickup_latitude" value="14.580760000000000" />
+  <input type="hidden" id="pickup-longitude" name="pickup_longitude" value="120.980120000000000" />
+  <input type="hidden" id="flag-reason" name="flag_reason" value="aosijdoiasjdaosidjoi" data-original="aosijdoiasjdaosidjoi" />
+  <input type="hidden" id="donation-id" name="donation_id" value="45" />
+
+  <div class="don-layout">
+    <div class="don-left">
+      <div id="transit-lock-note" class="lock-note hidden">
+        This donation is <strong>IN_TRANSIT</strong>. Donation items and pickup schedule/coordinates are locked.
+      </div>
+
+      <div id="clothing-sections"></div>
+      <button type="button" id="add-card-btn" class="btn-add" onclick="addCard()">+ Add Another Clothing Group</button>
+    </div>
+
+    <div class="don-right">
+      <div class="panel">
+        <p style="font-size:12px;margin-bottom:6px;"><strong>Donation ID:</strong> <span id="donation-id-display">45</span></p>
+
+        <p style="font-size:12px;margin-bottom:10px;"><strong>Flag Reason:</strong> <span>aosijdoiasjdaosidjoi</span></p>
+        <p style="font-size:12px;margin-bottom:6px;">
+          <strong>Is Flagged:</strong>
+          <input id="is-flagged" name="is_flagged" type="checkbox" value="true" checked style="vertical-align:middle; margin-left:6px;" />
+        </p>
+
+        <p style="font-size:12px;margin-bottom:6px;"><strong>Current Record Status:</strong> <span id="current-status-display">{{ donation.status|default:'PENDING' }}</span></p>
+        <p style="font-size:12px;margin-bottom:6px;"><strong>Claimed By TUAB:</strong> <span id="claimed-by-tuab-display">KulturaKalikasan</span></p>
+        <p style="font-size:12px;margin-bottom:10px;"><strong>Delivery Method:</strong> <span id="delivery-method-display">PICKUP</span></p>
+
+        <p style="font-size:12px;margin-bottom:6px;"><strong>Pickup Barangay:</strong> <span id="pickup-barangay-display">Barangay 675</span></p>
+        <p style="font-size:12px;margin-bottom:6px;"><strong>Pickup City:</strong> <span id="pickup-city-display">Manila</span></p>
+        <p style="font-size:12px;margin-bottom:10px;"><strong>Pickup Display Address:</strong> <span id="pickup-display-address-display">Escoda Street, Barangay 675, Ermita, Manila</span></p>
+
+        <p style="font-size:12px;margin-bottom:6px;"><strong>Status:</strong></p>
+        <select id="status" name="status" class="sel" style="margin-bottom:10px;">
+          <option value="PENDING">PENDING</option>
+          <option value="CANCELLED">CANCELLED</option>
+          <option value="ARCHIVED">ARCHIVED</option>
+        </select>
+
+        <p style="font-size:12px;margin-bottom:6px;"><strong>Preferred Pick-Up Date:</strong></p>
+        <input id="preferred-pickup-date" name="preferred_pickup_date" class="in" type="date" value="2026-04-05" style="margin-bottom:10px;" />
+
+        <p style="font-size:12px;margin-bottom:6px;"><strong>Preferred Pick-Up Window:</strong></p>
+        <div class="time" style="margin-bottom:10px;">
+          <div class="group">
+            <label class="up">Start</label>
+            <input id="preferred-window-start" name="preferred_pickup_window_start" class="in" type="time" value="09:00" />
+          </div>
+          <div class="group">
+            <label class="up">End</label>
+            <input id="preferred-window-end" name="preferred_pickup_window_end" class="in" type="time" value="12:00" />
+          </div>
+        </div>
+
+        <div class="map-row" style="margin-bottom:6px;">
+          <p style="font-size:12px;"><strong>Coordinates:</strong> <span id="lat-display">14.580760000000000</span>, <span id="lng-display">120.980120000000000</span></p>
+          <button type="button" id="map-pick-btn" class="map-btn" onclick="openPickerFor('pickup-latitude','pickup-longitude')">
+            Pick on Map
+          </button>
+        </div>
+        <div class="mini-note">Coordinates and pickup schedule are editable only when current record status is not IN_TRANSIT.</div>
+
+        <button type="submit" class="btn-submit">Save Changes</button>
+      </div>
+
+      <div class="panel upload">
+        <div style="font-weight:600;font-size:13px;margin-bottom:4px">Donation Upload</div>
+        <p style="font-size:12px;color:#999;margin-bottom:10px">You can replace this image anytime.</p>
+        <div class="drop" ondragover="event.preventDefault();this.style.background='#fdf6e8'" ondragleave="this.style.background=''" ondrop="handleImageDrop(event)" onclick="document.getElementById('img-in').click()">
+          <div id="img-prev-wrap" class="{% if donation.upload.file_path %}{% else %}hidden{% endif %}"><img id="img-prev" src="{{ donation.upload.file_path|default:'' }}" style="max-width:100%;max-height:130px;border-radius:8px;object-fit:cover" alt="Preview"/></div>
+          <div id="img-ph" class="{% if donation.upload.file_path %}hidden{% endif %}" style="font-size:13px;color:#999">Click or drop image</div>
+          <input id="img-in" name="donation_image" type="file" accept="image/*" style="display:none" onchange="handleImageSelect(this)"/>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+
+<div id="map-modal" class="modal hidden"><div class="modal-box"><button type="button" class="x" onclick="closeMapPicker()">x</button><div style="font-weight:600;margin-bottom:8px">Pick Pickup Coordinates</div><div id="picker-map"></div><button type="button" class="btn-submit" onclick="confirmMapPicker()" style="margin-top:12px">Confirm Location</button></div></div>
+
+<script>
+  // Reference lookup data for combobox/material behavior.
+  const donationData = {
+    conditions: ['Good', 'Like New', 'Fair', 'Poor'],
+    brandFiberLookup: [
+      { id: 1, clothing: 'Pants', brand: "Levi's", material: '80% Cotton, 20% Polyester', scrapedAt: '2026-03-20T08:30:00Z' },
+      { id: 2, clothing: 'Shirt', brand: 'Uniqlo', material: '100% Cotton', scrapedAt: '2026-03-11T09:00:00Z' },
+      { id: 3, clothing: 'Jacket', brand: 'Nike', material: '100% Polyester', scrapedAt: '2026-03-05T13:00:00Z' },
+      { id: 4, clothing: 'Jeans', brand: "Levi's", material: '99% Cotton, 1% Elastane', scrapedAt: '2026-03-27T06:20:00Z' },
+      { id: 21, clothing: 'Jacket', brand: 'H&M', material: '65% Cotton, 35% Polyester', scrapedAt: '2026-03-29T16:45:00Z' },
+      { id: 22, clothing: 'Jeans', brand: 'Zara', material: '98% Cotton, 2% Elastane', scrapedAt: '2026-03-30T07:15:00Z' }
+    ]
+  };
+
+  const initialCards = [
+    { c: 'Jacket', w: '1.2', d: 'Good', b: 'H&M', id: '21' },
+    { c: 'Jeans', w: '0.9', d: 'Fair', b: 'Zara', id: '22' }
+  ];
+  // Utility shortcut for DOM lookup.
+  function getById(id) {
+    return document.getElementById(id);
+  }
+
+  const ALL_CLOTHING_TYPES = [...new Set(donationData.brandFiberLookup.map((row) => row.clothing))];
+  const ALL_BRANDS = [...new Set(donationData.brandFiberLookup.map((row) => row.brand))];
+
+  let cardCount = 0;
+  let mapInstance = null;
+  let markerInstance = null;
+  let targetLatId = 'pickup-latitude';
+  let targetLngId = 'pickup-longitude';
+  let selectedLat = 14.58076;
+  let selectedLng = 120.98012;
+
+  // Current saved status controls IN_TRANSIT lock behavior.
+  function currentRecordStatus() {
+    return (getById('record-status')?.value || '').trim().toUpperCase();
+  }
+
+  function isTransitLocked() {
+    return currentRecordStatus() === 'IN_TRANSIT';
+  }
+
+  function updateCoordDisplays() {
+    const lat = getById('pickup-latitude')?.value || 'NULL';
+    const lng = getById('pickup-longitude')?.value || 'NULL';
+    const latView = getById('lat-display');
+    const lngView = getById('lng-display');
+    if (latView) latView.textContent = lat;
+    if (lngView) lngView.textContent = lng;
+  }
+
+  // Apply hard locks when current record is IN_TRANSIT.
+  function applyTransitLocks() {
+    const locked = isTransitLocked();
+    ['preferred-pickup-date', 'preferred-window-start', 'preferred-window-end'].forEach((id) => {
+      const el = getById(id);
+      if (el) el.disabled = locked;
+    });
+
+    const mapBtn = getById('map-pick-btn');
+    if (mapBtn) mapBtn.disabled = locked;
+
+    const lockNote = getById('transit-lock-note');
+    if (lockNote) lockNote.classList.toggle('hidden', !locked);
+
+    const addBtn = getById('add-card-btn');
+    if (addBtn) {
+      addBtn.disabled = locked;
+      addBtn.style.opacity = locked ? '0.6' : '1';
+      addBtn.style.cursor = locked ? 'not-allowed' : 'pointer';
+    }
+
+    document.querySelectorAll('#clothing-sections input, #clothing-sections select, #clothing-sections button').forEach((el) => {
+      el.disabled = locked;
+    });
+  }
+  // Combobox renderer for clothing/brand fields.
+  function comboboxHtml(type, index, state = {}) {
+    const value = state.v || '';
+    const selectedFromList = state.db ?? (value ? '1' : '0');
+    const selectedValue = state.dv ?? value;
+
+    return `
+      <div class="cb">
+        <div class="cb-wrap">
+          <input
+            id="${type}-${index}"
+            name="${type === 'c' ? 'clothing' : 'brand'}"
+            class="cb-in"
+            value="${value}"
+            autocomplete="off"
+            placeholder="Select or type..."
+            data-db="${selectedFromList}"
+            data-v="${selectedValue}"
+            onfocus="openCombobox('${type}', ${index})"
+            oninput="onComboboxType('${type}', ${index}, this.value)"
+            onblur="setTimeout(() => closeCombobox('${type}', ${index}), 120)"
+          />
+          <button type="button" class="cb-btn" onmousedown="toggleCombobox(event, '${type}', ${index})" aria-label="Toggle options">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="6,9 12,15 18,9"/></svg>
+          </button>
+        </div>
+        <div id="${type}l-${index}" class="cb-list hidden"></div>
+      </div>
+    `;
+  }
+  // Build one donation item card.
+  function donationCardHtml(index, values = {}) {
+    const data = {
+      c: values.c || '',
+      cdb: values.cdb || (values.c ? '1' : '0'),
+      cv: values.cv || values.c || '',
+      w: values.w || '0.5',
+      d: values.d || 'Good',
+      b: values.b || '',
+      bdb: values.bdb || (values.b ? '1' : '0'),
+      bv: values.bv || values.b || '',
+      id: values.id || ''
+    };
+
+    const deleteButton = index
+      ? `<button type="button" class="trash" onclick="removeCard(${index})"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3,6 5,6 21,6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`
+      : '';
+
+    const conditionOptions = donationData.conditions
+      .map((condition) => `<option ${condition === data.d ? 'selected' : ''}>${condition}</option>`)
+      .join('');
+
+    return `
+      <div class="card" id="card-${index}">
+        <div class="head">
+          <div class="title-wrap">
+            <div class="num">${index + 1}</div>
+            <span style="font-weight:600;font-size:15px">Clothing ${index + 1}</span>
+          </div>
+          ${deleteButton}
+        </div>
+
+        <div class="row">
+          <div class="group">
+            <label class="up">Clothing *</label>
+            ${comboboxHtml('c', index, { v: data.c, db: data.cdb, dv: data.cv })}
+          </div>
+          <div class="group">
+            <label class="up">Estimated Weight (kg)</label>
+            <input id="w-${index}" name="estimated_weight_kg" class="in" type="number" step="0.1" value="${data.w}"/>
+          </div>
+        </div>
+
+        <div class="group" style="margin-bottom:14px">
+          <label class="up">Condition</label>
+          <select class="sel" id="d-${index}" name="condition">${conditionOptions}</select>
+        </div>
+
+        <div class="row" style="margin-bottom:0">
+          <div class="group">
+            <label class="up">Brand</label>
+            ${comboboxHtml('b', index, { v: data.b, db: data.bdb, dv: data.bv })}
+          </div>
+          <div class="group">
+            <label class="up">Material</label>
+            <select class="sel" id="m-${index}" name="material_id" data-id="${data.id}">
+              <option value="">- select material -</option>
+            </select>
+            <input class="in hidden" id="a-${index}" value="Will be approximated" disabled style="font-style:italic"/>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+
+  function renderCombobox(type, index, query = '') {
+    const listEl = getById(`${type}l-${index}`);
+    const options = type === 'c' ? ALL_CLOTHING_TYPES : ALL_BRANDS;
+    const filteredOptions = options.filter((item) => item.toLowerCase().includes(query.toLowerCase()));
+
+    if (!filteredOptions.length) {
+      listEl.innerHTML = '<div class="cb-empty">No matches - typed value will be used</div>';
+      return;
+    }
+
+    listEl.innerHTML = filteredOptions
+      .map((item) => {
+        const safeItem = item.replace(/'/g, "\\'");
+        return `<div class="cb-opt" data-v="${item}" onmousedown="pickComboboxOption(event, '${type}', ${index}, '${safeItem}')">${item}</div>`;
+      })
+      .join('');
+  }
+
+
+  function openCombobox(type, index) {
+    const input = getById(`${type}-${index}`);
+    const list = getById(`${type}l-${index}`);
+    if (!input || !list || input.disabled) return;
+    renderCombobox(type, index, input.value);
+    list.classList.remove('hidden');
+  }
+
+
+  function closeCombobox(type, index) {
+    const list = getById(`${type}l-${index}`);
+    if (!list) return;
+    list.classList.add('hidden');
+    applyMaterialTier(index);
+  }
+
+
+  function toggleCombobox(event, type, index) {
+    event.preventDefault();
+    if (isTransitLocked()) return;
+    const input = getById(`${type}-${index}`);
+    const list = getById(`${type}l-${index}`);
+    if (!input || !list || input.disabled) return;
+
+    if (list.classList.contains('hidden')) {
+      renderCombobox(type, index, input.value);
+      list.classList.remove('hidden');
+    } else {
+      list.classList.add('hidden');
+      applyMaterialTier(index);
+    }
+  }
+
+
+  function onComboboxType(type, index, value) {
+    if (isTransitLocked()) return;
+    const input = getById(`${type}-${index}`);
+    const list = getById(`${type}l-${index}`);
+    if (!input || !list || input.disabled) return;
+
+    input.dataset.db = '0';
+    input.dataset.v = '';
+    renderCombobox(type, index, value);
+    list.classList.remove('hidden');
+    applyMaterialTier(index);
+  }
+
+
+  function pickComboboxOption(event, type, index, value) {
+    event.preventDefault();
+    if (isTransitLocked()) return;
+    const input = getById(`${type}-${index}`);
+    const list = getById(`${type}l-${index}`);
+    if (!input || !list || input.disabled) return;
+
+    input.value = value;
+    input.dataset.db = '1';
+    input.dataset.v = value;
+    list.classList.add('hidden');
+    applyMaterialTier(index);
+  }
+
+
+  function applyMaterialTier(index) {
+    const clothingInput = getById(`c-${index}`);
+    const brandInput = getById(`b-${index}`);
+    const materialSelect = getById(`m-${index}`);
+    const approximationInput = getById(`a-${index}`);
+    if (!clothingInput || !brandInput || !materialSelect || !approximationInput) return;
+
+    const clothingFromList = clothingInput.dataset.db === '1';
+    const brandFromList = brandInput.dataset.db === '1';
+    const clothingValue = clothingInput.dataset.v || clothingInput.value.trim();
+    const brandValue = brandInput.dataset.v || brandInput.value.trim();
+
+    const matches = donationData.brandFiberLookup
+      .filter((row) => row.clothing === clothingValue && row.brand === brandValue);
+
+    const isLookupMode = clothingFromList && brandFromList && matches.length > 0;
+
+    if (isLookupMode) {
+      materialSelect.classList.remove('hidden');
+      approximationInput.classList.add('hidden');
+      materialSelect.innerHTML =
+        '<option value="">- select material -</option>' +
+        matches.map((row) => `<option value="${row.id}">${row.material}</option>`).join('');
+
+      if (materialSelect.dataset.id && matches.some((row) => String(row.id) === materialSelect.dataset.id)) {
+        materialSelect.value = materialSelect.dataset.id;
+      }
+      approximationInput.value = 'Will be approximated';
+      return;
+    }
+
+    materialSelect.classList.add('hidden');
+    materialSelect.value = '';
+    approximationInput.classList.remove('hidden');
+    approximationInput.value = 'Will be approximated';
+  }
+
+
+  function readCards() {
+    const rows = [];
+    for (let index = 0; index < cardCount; index += 1) {
+      const clothingInput = getById(`c-${index}`);
+      const brandInput = getById(`b-${index}`);
+      const materialSelect = getById(`m-${index}`);
+      const weightInput = getById(`w-${index}`);
+      const conditionInput = getById(`d-${index}`);
+      if (!clothingInput || !brandInput) continue;
+
+      rows.push({
+        c: clothingInput.value,
+        cdb: clothingInput.dataset.db || '0',
+        cv: clothingInput.dataset.v || '',
+        w: weightInput?.value || '0.5',
+        d: conditionInput?.value || 'Good',
+        b: brandInput.value,
+        bdb: brandInput.dataset.db || '0',
+        bv: brandInput.dataset.v || '',
+        id: materialSelect?.value || materialSelect?.dataset.id || ''
+      });
+    }
+    return rows;
+  }
+
+
+  function renderAllCards(cards) {
+    const rows = cards.length ? cards : [{ c: '', w: '0.5', d: 'Good', b: '', id: '' }];
+    const cardsContainer = getById('clothing-sections');
+    cardsContainer.innerHTML = '';
+
+    rows.forEach((row, index) => {
+      cardsContainer.insertAdjacentHTML('beforeend', donationCardHtml(index, row));
+      applyMaterialTier(index);
+    });
+
+    cardCount = rows.length;
+    applyTransitLocks();
+  }
+
+
+  function addCard(cardData) {
+    if (isTransitLocked()) return;
+    const rows = readCards();
+    rows.push(cardData || { c: '', w: '0.5', d: 'Good', b: '', id: '' });
+    renderAllCards(rows);
+  }
+
+
+  function removeCard(indexToRemove) {
+    if (isTransitLocked()) return;
+    renderAllCards(readCards().filter((_, index) => index !== indexToRemove));
+  }
+  function showImagePreview(source) {
+    getById('img-prev').src = source;
+    getById('img-prev-wrap').classList.remove('hidden');
+    getById('img-ph').classList.add('hidden');
+  }
+
+
+  function previewImageFile(file, syncFileInput = false) {
+    if (!file || !file.type.startsWith('image/')) return;
+
+    if (syncFileInput) {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      getById('img-in').files = dt.files;
+    }
+
+    const fileReader = new FileReader();
+    fileReader.onload = (event) => showImagePreview(event.target.result);
+    fileReader.readAsDataURL(file);
+  }
+
+
+  function handleImageSelect(inputElement) {
+    previewImageFile(inputElement.files?.[0]);
+  }
+
+
+  function handleImageDrop(event) {
+    event.preventDefault();
+    event.currentTarget.style.background = '';
+    previewImageFile(event.dataTransfer.files?.[0], true);
+  }
+  function closeMapPicker() {
+    getById('map-modal').classList.add('hidden');
+    if (mapInstance) {
+      mapInstance.remove();
+      mapInstance = null;
+    }
+  }
+
+  // Map picker for hidden pickup_latitude/pickup_longitude fields.
+  function openPickerFor(latId, lngId) {
+    if (isTransitLocked()) return;
+
+    targetLatId = latId;
+    targetLngId = lngId;
+
+    selectedLat = parseFloat(getById(latId)?.value) || 14.58076;
+    selectedLng = parseFloat(getById(lngId)?.value) || 120.98012;
+
+    getById('map-modal').classList.remove('hidden');
+
+    setTimeout(() => {
+      if (mapInstance) mapInstance.remove();
+
+      mapInstance = L.map('picker-map').setView([selectedLat, selectedLng], 15);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '(c) OpenStreetMap contributors'
+      }).addTo(mapInstance);
+
+      markerInstance = L.marker([selectedLat, selectedLng], { draggable: true }).addTo(mapInstance);
+      markerInstance.on('dragend', (event) => {
+        const position = event.target.getLatLng();
+        selectedLat = position.lat;
+        selectedLng = position.lng;
+      });
+
+      mapInstance.on('click', (event) => {
+        selectedLat = event.latlng.lat;
+        selectedLng = event.latlng.lng;
+        markerInstance.setLatLng([selectedLat, selectedLng]);
+      });
+    }, 120);
+  }
+
+  function confirmMapPicker() {
+    getById(targetLatId).value = Number(selectedLat).toFixed(15);
+    getById(targetLngId).value = Number(selectedLng).toFixed(15);
+    updateCoordDisplays();
+    closeMapPicker();
+  }
+  // Convert strings to numbers for preview payload output.
+  function toNumberOrNull(value) {
+    if (value === '' || value == null) return null;
+    const parsed = Number(value);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+
+  // Build preview payload that mirrors backend field intent.
+  function buildPayload(formElement) {
+    const imageFile = getById('img-in')?.files?.[0];
+    const items = [];
+
+    for (let index = 0; index < cardCount; index += 1) {
+      const clothingInput = getById(`c-${index}`);
+      const brandInput = getById(`b-${index}`);
+      const materialSelect = getById(`m-${index}`);
+      const weightInput = getById(`w-${index}`);
+      const conditionInput = getById(`d-${index}`);
+      const weightRaw = weightInput?.value ?? '';
+      const condition = conditionInput?.value ?? '';
+      const clothingValue = clothingInput?.dataset.v || clothingInput?.value?.trim() || '';
+      const brandValue = brandInput?.dataset.v || brandInput?.value?.trim() || '';
+      const isLookupMode =
+        clothingInput?.dataset.db === '1' &&
+        brandInput?.dataset.db === '1' &&
+        donationData.brandFiberLookup.some((row) => row.clothing === clothingValue && row.brand === brandValue);
+
+      const item = {
+        weight: toNumberOrNull(weightRaw),
+        condition
+      };
+
+      if (isLookupMode) {
+        item.lookup_id = toNumberOrNull(materialSelect?.value ?? '');
+      } else {
+        item.clothing = (clothingInput?.value ?? '').trim();
+        item.brand = (brandInput?.value ?? '').trim();
+      }
+
+      items.push(item);
+    }
+
+    const status = (formElement.elements.status?.value || '').toUpperCase();
+    const isFlagged = getById('is-flagged')?.checked === true;
+
+    return {
+      donation_id: formElement.elements.donation_id?.value ?? '',
+      claimed_by_tuab: formElement.elements.claimed_by_tuab?.value || null,
+      status,
+      is_flagged: isFlagged,
+      delivery_method: formElement.elements.delivery_method?.value || null,
+      flag_reason: formElement.elements.flag_reason?.value || null,
+      pickup_barangay: formElement.elements.pickup_barangay?.value ?? '',
+      pickup_city: formElement.elements.pickup_city?.value ?? '',
+      pickup_display_address: formElement.elements.pickup_display_address?.value ?? '',
+      pickup_latitude: toNumberOrNull(formElement.elements.pickup_latitude?.value ?? ''),
+      pickup_longitude: toNumberOrNull(formElement.elements.pickup_longitude?.value ?? ''),
+      preferred_pickup_date: formElement.elements.preferred_pickup_date?.value ?? '',
+      preferred_pickup_window_start: formElement.elements.preferred_pickup_window_start?.value ?? '',
+      preferred_pickup_window_end: formElement.elements.preferred_pickup_window_end?.value ?? '',
+      donation_image: imageFile ? imageFile.name : null,
+      donation_items: items
+    };
+  }
+
+  function handleDonationSubmit(event) {
+    event.preventDefault();
+    const payload = buildPayload(event.currentTarget);
+    const payloadText = JSON.stringify(payload, null, 2);
+    const popup = window.open('', 'donationPayloadPreview', 'width=980,height=760,resizable=yes,scrollbars=yes');
+
+    if (!popup) {
+      alert(payloadText);
+      return;
+    }
+
+    popup.document.title = 'Admin POST Payload Preview';
+    popup.document.body.innerHTML = '<div style="font-family:Consolas,monospace;padding:16px;"><h3 style="margin:0 0 12px;">Admin POST payload preview</h3><pre id="payload" style="margin:0;white-space:pre-wrap;word-break:break-word;font-size:13px;line-height:1.45;"></pre></div>';
+    popup.document.getElementById('payload').textContent = payloadText;
+    popup.focus();
+  }
+
+  renderAllCards(initialCards);
+  applyTransitLocks();
+  updateCoordDisplays();
+
+  getById('current-status-display').textContent = currentRecordStatus() || 'PENDING';
+  getById('pickup-barangay-display').textContent = getById('pickup-barangay').value;
+  getById('pickup-city-display').textContent = getById('pickup-city').value;
+  getById('pickup-display-address-display').textContent = getById('pickup-display-address').value;
+
+  getById('admin-donation-form')?.addEventListener('submit', handleDonationSubmit);
+
+  document.addEventListener('click', (event) => {
+    ['c', 'b'].forEach((type) => {
+      document.querySelectorAll(`[id^='${type}l-']`).forEach((listEl) => {
+        if (!listEl.closest('.cb')?.contains(event.target)) {
+          listEl.classList.add('hidden');
+        }
+      });
+    });
+
+    if (event.target === getById('map-modal')) {
+      closeMapPicker();
+    }
+  });
+</script>
+</body>
+</html>
+
+
+
+
+
+
