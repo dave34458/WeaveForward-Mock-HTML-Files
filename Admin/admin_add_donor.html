@@ -1,0 +1,185 @@
+<!--
+  WeaveForward Admin Add Donor (admin_add_donor.html)
+  DJANGO CONVERSION NOTES: uncomment {% csrf_token %}
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Add Donor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    :root { --g: #e8a020; --bg: #f5f4f0; --brd: #e0dbd4; --lt: #fdf6e8; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: Poppins, sans-serif; }
+    body { background: var(--bg); color: #222; }
+    .hidden { display: none !important; }
+
+    .panel { background: #fff; border: 1.5px solid var(--brd); border-radius: 14px; padding: 24px; width: 100%; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+    
+    .group { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+    .group:last-of-type { margin-bottom: 0; }
+    .up { font-size: 10px; color: #888; text-transform: uppercase; }
+    
+    .in { width: 100%; height: 44px; border: 1.5px solid #d5d5d5; border-radius: 8px; padding: 10px 14px; font-size: 14px; outline: none; }
+    .in:focus { border-color: var(--g); }
+    
+    .pin-wrap { position: relative; }
+    .pin-wrap .in { padding-right: 42px; }
+    .pin { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--g); cursor: pointer; }
+    .ac-list { position: absolute; z-index: 50; top: 100%; left: 0; width: 100%; max-height: 180px; overflow: auto; background: #fff; border: 1.5px solid var(--brd); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.1); }
+    .ac-item { padding: 10px 14px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
+    .ac-item:hover { background: var(--lt); }
+
+    hr { border: none; border-top: 1px solid var(--brd); margin: 20px 0; }
+
+    .btn-submit { width: 100%; padding: 12px; border-radius: 30px; border: none; background: var(--g); color: #fff; font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 20px; }
+
+    .modal { position: fixed; inset: 0; background: transparent; display: flex; align-items: center; justify-content: center; z-index: 999; }
+    .modal-box { background: #f3f3f3; border-radius: 16px; overflow: hidden; width: min(640px, 95vw); box-shadow: 0 20px 60px rgba(0,0,0,.22); }
+    .map-head { display: flex; justify-content: space-between; align-items: flex-start; padding: 14px 16px 10px; }
+    .map-title { display: flex; align-items: center; gap: 7px; color: var(--g); }
+    .map-title-text { font-size: 20px; color: #1f1f1f; }
+    .map-caption { font-size: 12px; color: #7a7a7a; margin-top: 4px; }
+    .map-close { border: none; background: none; color: #333; cursor: pointer; }
+    #picker-map { width: 100%; height: 300px; }
+    .map-actions { display: flex; justify-content: center; padding: 12px 16px 16px; }
+  </style>
+</head>
+
+<body>
+  <form id="frm" method="post" action="/admin/add_donor/">
+    <!-- {% csrf_token %} -->
+    <div class="panel">
+
+      <div class="group"><label class="up">First Name *</label><input class="in" name="first_name" placeholder="Juan"
+          required></div>
+      <div class="group"><label class="up">Middle Name</label><input class="in" name="middle_name"
+          placeholder="(Optional)"></div>
+      <div class="group"><label class="up">Last Name *</label><input class="in" name="last_name" placeholder="Dela Cruz"
+          required></div>
+
+      <hr>
+
+      <div class="group"><label class="up">Email Address *</label><input class="in" type="email" name="email"
+          placeholder="juan@email.com" required></div>
+      <div class="group"><label class="up">Phone Number *</label><input class="in" type="tel" name="phone"
+          placeholder="+63 9XX XXX XXXX" required></div>
+
+      <hr>
+
+      <div class="group"><label class="up">Password *</label><input class="in" type="password" name="password" required>
+      </div>
+      <div class="group"><label class="up">Confirm Password *</label><input class="in" type="password"
+          name="confirm_password" required></div>
+
+      <hr>
+
+      <div class="group" style="position:relative">
+        <label class="up">Pickup Address *</label>
+        <div class="pin-wrap">
+          <input id="addr" class="in" name="pickup_address" placeholder="Address..." oninput="srchAddr(this.value)"
+            onblur="hideAc()" required>
+          <button type="button" class="pin" onclick="openMap()">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+          </button>
+        </div>
+        <div id="ac" class="ac-list hidden"></div>
+        <input id="lat" name="pickup_latitude" type="hidden" value="14.5645">
+        <input id="lng" name="pickup_longitude" type="hidden" value="120.9930">
+      </div>
+
+      <button type="submit" class="btn-submit">Create Donor Account</button>
+    </div>
+  </form>
+
+  <div id="map-modal" class="modal hidden">
+    <div class="modal-box">
+      <div class="map-head">
+        <div>
+          <div class="map-title">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            <span class="map-title-text">Pick on Map</span>
+          </div>
+          <div class="map-caption">Click or drag the marker to set the pickup location.</div>
+        </div>
+        <button type="button" class="map-close" onclick="closeMap()">
+          <svg style="display:block" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"
+            viewBox="0 0 24 24">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div id="picker-map"></div>
+      <div class="map-actions">
+        <button type="button" class="btn-submit" style="width:min(220px,100%);margin:0" onclick="confirmMap()">Confirm
+          Location</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const getEl = id => document.getElementById(id);
+    const hideAc = () => setTimeout(() => getEl('ac').classList.add('hidden'), 200);
+    let acTmr, acRes = [], map, mrk, tmpLat, tmpLng;
+
+    function srchAddr(v) {
+      const ac = getEl('ac');
+      if (v.length < 3) return ac.classList.add('hidden');
+      clearTimeout(acTmr);
+      acTmr = setTimeout(async () => {
+        try {
+          acRes = await (await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${v}, Philippines&limit=5&countrycodes=ph`)).json();
+          ac.innerHTML = acRes.map((r, i) => `<div class="ac-item" onmousedown="selAddr(${i})">${r.display_name}</div>`).join('');
+          ac.classList.remove('hidden');
+        } catch { }
+      }, 350);
+    }
+
+    function selAddr(i) {
+      getEl('addr').value = acRes[i].display_name;
+      getEl('lat').value = acRes[i].lat;
+      getEl('lng').value = acRes[i].lon;
+    }
+
+    function openMap() {
+      getEl('map-modal').classList.remove('hidden');
+      tmpLat = +getEl('lat').value || 14.56;
+      tmpLng = +getEl('lng').value || 120.99;
+      if (!map) {
+        map = L.map('picker-map').setView([tmpLat, tmpLng], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        mrk = L.marker([tmpLat, tmpLng], { draggable: true }).addTo(map);
+        mrk.on('dragend', e => { tmpLat = e.target.getLatLng().lat; tmpLng = e.target.getLatLng().lng; });
+        map.on('click', e => { tmpLat = e.latlng.lat; tmpLng = e.latlng.lng; mrk.setLatLng(e.latlng); });
+      } else {
+        map.setView([tmpLat, tmpLng]); mrk.setLatLng([tmpLat, tmpLng]);
+      }
+    }
+
+    async function confirmMap() {
+      getEl('lat').value = tmpLat; getEl('lng').value = tmpLng;
+      closeMap();
+      try { getEl('addr').value = (await (await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${tmpLat}&lon=${tmpLng}`)).json()).display_name || `${tmpLat}, ${tmpLng}`; } catch { }
+    }
+
+    function closeMap() { getEl('map-modal').classList.add('hidden'); }
+
+    getEl('frm').onsubmit = e => {
+      if (e.target.password.value !== e.target.confirm_password.value) {
+        e.preventDefault(); alert('Passwords do not match.');
+      }
+    };
+  </script>
+</body>
+
+</html>
