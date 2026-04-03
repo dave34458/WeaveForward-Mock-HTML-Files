@@ -252,7 +252,7 @@
 
     <nav class="wf-sidebar__nav">
 
-      <a class="wf-nav-item" id="nav-browse" href="/browse">
+      <a class="wf-nav-item {% if '/browse' in request.path %}active{% endif %}" id="nav-browse" href="/browse">
         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
           <circle cx="9" cy="7" r="4"/>
@@ -261,7 +261,7 @@
         <span>Browse Businesses</span>
       </a>
 
-      <a class="wf-nav-item" id="nav-donations" href="/donations">
+      <a class="wf-nav-item {% if '/donations' in request.path %}active{% endif %}" id="nav-donations" href="/donations">
         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
           <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
@@ -270,7 +270,7 @@
         <span>My Donations</span>
       </a>
 
-      <a class="wf-nav-item" id="nav-dashboard" href="/dashboard">
+      <a class="wf-nav-item {% if '/dashboard' in request.path and not '/tuab' in request.path %}active{% endif %}" id="nav-dashboard" href="/dashboard">
         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <rect x="3" y="3" width="18" height="18" rx="2"/>
           <path d="M3 9h18"/>
@@ -283,7 +283,7 @@
 
     <div class="wf-sidebar__bottom">
 
-      <a class="wf-nav-item" id="nav-profile" href="/profile">
+      <a class="wf-nav-item {% if '/profile' in request.path and not '/tuab' in request.path %}active{% endif %}" id="nav-profile" href="/profile">
         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
           <circle cx="12" cy="7" r="4"/>
@@ -320,7 +320,7 @@
 
     <nav class="wf-sidebar__nav">
 
-      <a class="wf-nav-item" id="tnav-dashboard" href="/tuab/dashboard">
+      <a class="wf-nav-item {% if '/tuab/dashboard' in request.path %}active{% endif %}" id="tnav-dashboard" href="/tuab/dashboard">
         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <rect x="3" y="3" width="7" height="7" rx="1"/>
           <rect x="14" y="3" width="7" height="7" rx="1"/>
@@ -330,7 +330,7 @@
         <span>Dashboard</span>
       </a>
 
-      <a class="wf-nav-item" id="tnav-fiber" href="/tuab/fiber">
+      <a class="wf-nav-item {% if '/tuab/fiber' in request.path %}active{% endif %}" id="tnav-fiber" href="/tuab/fiber">
         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <polygon points="12,2 20.5,7 20.5,17 12,22 3.5,17 3.5,7"/>
           <circle cx="12" cy="12" r="3"/>
@@ -338,7 +338,7 @@
         <span>Fiber-Match Recommendations</span>
       </a>
 
-      <a class="wf-nav-item" id="tnav-inventory" href="/tuab/inventory">
+      <a class="wf-nav-item {% if '/tuab/inventory' in request.path %}active{% endif %}" id="tnav-inventory" href="/tuab/inventory">
         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <rect x="3" y="3" width="18" height="18" rx="2"/>
           <line x1="3" y1="9" x2="21" y2="9"/>
@@ -348,7 +348,7 @@
         <span>Inventory Snapshots</span>
       </a>
 
-      <a class="wf-nav-item" id="tnav-circular" href="/tuab/circular">
+      <a class="wf-nav-item {% if '/tuab/circular' in request.path %}active{% endif %}" id="tnav-circular" href="/tuab/circular">
         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="10"/>
           <line x1="2" y1="12" x2="22" y2="12"/>
@@ -357,7 +357,7 @@
         <span>Circular Economy</span>
       </a>
 
-      <a class="wf-nav-item" id="tnav-premium" href="/tuab/premium">
+      <a class="wf-nav-item {% if '/tuab/premium' in request.path %}active{% endif %}" id="tnav-premium" href="/tuab/premium">
         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>
           <path d="M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/>
@@ -366,7 +366,7 @@
         <span>Premium Subscription</span>
       </a>
 
-      <a class="wf-nav-item" id="tnav-payments" href="/tuab/payments">
+      <a class="wf-nav-item {% if '/tuab/payments' in request.path %}active{% endif %}" id="tnav-payments" href="/tuab/payments">
         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <line x1="12" y1="1" x2="12" y2="23"/>
           <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
@@ -378,7 +378,7 @@
 
     <div class="wf-sidebar__bottom">
 
-      <a class="wf-nav-item" id="tnav-profile" href="/tuab/profile">
+      <a class="wf-nav-item {% if '/tuab/profile' in request.path %}active{% endif %}" id="tnav-profile" href="/tuab/profile">
         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
           <circle cx="12" cy="7" r="4"/>
@@ -433,36 +433,6 @@
 
 <script>
 (function () {
-  const path = window.location.pathname;
-
-  /* ── Active-state maps ── */
-  const donorMap = {
-    '/browse':    'nav-browse',
-    '/donations': 'nav-donations',
-    '/dashboard': 'nav-dashboard',
-    '/profile':   'nav-profile',
-  };
-  const tuabMap = {
-    '/tuab/dashboard': 'tnav-dashboard',
-    '/tuab/fiber':     'tnav-fiber',
-    '/tuab/inventory': 'tnav-inventory',
-    '/tuab/circular':  'tnav-circular',
-    '/tuab/premium':   'tnav-premium',
-    '/tuab/payments':  'tnav-payments',
-    '/tuab/profile':   'tnav-profile',
-  };
-
-  function setActive(map) {
-    for (const [fragment, id] of Object.entries(map)) {
-      if (path.startsWith(fragment)) {
-        document.getElementById(id)?.classList.add('active');
-        break;
-      }
-    }
-  }
-  setActive(donorMap);
-  setActive(tuabMap);
-
   /* ── Mobile hamburger ── */
   const hamburger = document.getElementById('wf-hamburger');
   const overlay   = document.getElementById('wf-overlay');
