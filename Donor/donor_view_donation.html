@@ -44,9 +44,9 @@
     .layout{display:flex;gap:24px;align-items:flex-start}.left{flex:1}.right{width:330px;flex-shrink:0}
     .card,.panel{background:#fff;border:1.5px solid var(--border);border-radius:14px}.card{padding:20px 22px;margin-bottom:14px}.panel{padding:22px 24px}
     .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}.group{display:flex;flex-direction:column;gap:4px}
-    label.up{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}.sub{font-size:13px;font-weight:600;color:#333;margin-bottom:8px}
+    label.up{font-size:10px;font-weight:400;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}.sub{font-size:13px;font-weight:600;color:#333;margin-bottom:8px}
     .in{width:100%;height:44px;border:1.5px solid #d5d5d5;border-radius:8px;padding:10px 14px;font:14px Poppins,sans-serif;background:#faf8f5;color:var(--text)}
-    .head{display:flex;align-items:center;gap:10px;margin-bottom:16px}.num{width:28px;height:28px;border-radius:50%;background:var(--gold);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+    .head{display:flex;align-items:center;gap:10px;margin-bottom:14px}.num{width:28px;height:28px;border-radius:50%;background:var(--gold);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
     .time{display:grid;grid-template-columns:1fr 1fr;gap:12px}.img-panel{margin-top:16px}
     @media (max-width:768px){.layout{flex-direction:column;align-items:stretch}.left,.right{width:100%}.row,.time{grid-template-columns:1fr}}
   </style>
@@ -56,7 +56,7 @@
   <div class="left">
     <!-- Django: {% for item in clothing_items %} (each item has brand_fiber_lookup FK data) -->
     <div class="card">
-      <div class="head"><div class="num">1</div><span style="font-weight:600;font-size:15px">Clothing 1</span></div>
+      <div class="head"><div class="num">1</div><span style="font-weight:400;font-size:15px">Clothing 1</span></div>
       <div class="row">
         <div class="group"><label class="up">Clothing</label><input class="in" value="Pants" readonly/></div>
         <div class="group"><label class="up">Estimated Weight (kg)</label><input class="in" value="0.8" readonly/></div>
@@ -69,7 +69,7 @@
     </div>
 
     <div class="card">
-      <div class="head"><div class="num">2</div><span style="font-weight:600;font-size:15px">Clothing 2</span></div>
+      <div class="head"><div class="num">2</div><span style="font-weight:400;font-size:15px">Clothing 2</span></div>
       <div class="row">
         <div class="group"><label class="up">Clothing</label><input class="in" value="Shirt" readonly/></div>
         <div class="group"><label class="up">Estimated Weight (kg)</label><input class="in" value="2.0" readonly/></div>

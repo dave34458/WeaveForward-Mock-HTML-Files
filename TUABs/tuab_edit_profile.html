@@ -97,7 +97,18 @@
     /* â”€â”€ Modals â”€â”€ */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 9000; }
     .modal-box { background: #fff; border-radius: 16px; padding: 24px; width: 620px; max-width: 95vw; position: relative; }
+    .map-modal-overlay { position: fixed; inset: 0; background: transparent; display: flex; align-items: center; justify-content: center; z-index: 9000; }
+    .map-modal-box { background: #f3f3f3; border-radius: 16px; overflow: hidden; width: min(640px, 95vw); box-shadow: 0 20px 60px rgba(0,0,0,.22); }
+    .map-head { display: flex; justify-content: space-between; align-items: flex-start; padding: 14px 16px 10px; background: #f3f3f3; }
+    .map-head-left { min-width: 0; }
+    .map-title { display: flex; align-items: center; gap: 7px; font-size: 24px; color: var(--gold); }
+    .map-title-text { font: 400 24px Poppins, sans-serif; color: #1f1f1f; line-height: 1.1; }
+    .map-caption { margin-top: 4px; font: 400 12px Poppins, sans-serif; color: #7a7a7a; }
+    .map-close { border: none; background: none; color: #333; cursor: pointer; line-height: 1; padding: 2px; }
+    .map-close svg { display: block; }
     #picker-map { width: 100%; height: 300px; border-radius: 8px; }
+    .map-actions { display: flex; justify-content: center; padding: 12px 16px 16px; background: #f3f3f3; }
+    .map-confirm { width: min(220px, 100%); margin: 0; background: var(--gold); color: #fff; border: none; border-radius: 30px; padding: 12px; font-size: 14px; font-family: 'Poppins', sans-serif; cursor: pointer; }
 
     /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        MOBILE  (â‰¤ 768px)
@@ -234,16 +245,24 @@
 
 
 <!-- â•â•â• MAP PICKER MODAL â•â•â• -->
-<div id="map-modal" class="modal-overlay hidden">
-  <div class="modal-box">
-    <button type="button" onclick="closeMapPicker()" style="position:absolute;top:14px;right:16px;background:none;border:none;cursor:pointer;font-size:22px;color:#888;line-height:1">Ã—</button>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-family:'Poppins',sans-serif;font-weight:600;font-size:16px">
-      <svg width="16" height="16" fill="none" stroke="var(--gold)" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-      Pick on Map
+<div id="map-modal" class="map-modal-overlay hidden">
+  <div class="map-modal-box">
+    <div class="map-head">
+      <div class="map-head-left">
+        <div class="map-title">
+          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          <span class="map-title-text">Pick on Map</span>
+        </div>
+        <div class="map-caption">Click anywhere or drag the marker to set your pickup location.</div>
+      </div>
+      <button type="button" class="map-close" onclick="closeMapPicker()" aria-label="Close map">
+        <svg width="34" height="34" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
     </div>
-    <div style="font-family:'Poppins',sans-serif;font-size:13px;color:#888;margin-bottom:12px">Click anywhere or drag the marker to set your location.</div>
     <div id="picker-map"></div>
-    <button type="button" onclick="confirmMapPicker()" style="margin-top:14px;width:100%;background:var(--gold);color:#fff;border:none;border-radius:30px;padding:13px;font-size:15px;font-family:'Poppins',sans-serif;cursor:pointer;font-weight:500">Confirm Location</button>
+    <div class="map-actions">
+      <button type="button" class="map-confirm" onclick="confirmMapPicker()">Confirm Location</button>
+    </div>
   </div>
 </div>
 
