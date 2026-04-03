@@ -1,25 +1,25 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!--
-  WeaveForward — Browse Businesses  (browse.html)
-  ═══════════════════════════════════════════════
+  WeaveForward â€” Browse Businesses  (browse.html)
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   PURPOSE
-  ───────
+  â”€â”€â”€â”€â”€â”€â”€
   Standalone design reference. Shows only what goes inside
   {% block content %} of base.html.
 
   When converting to a Django template:
-    • {% extends 'base.html' %}
-    • {% block content %} ... {% endblock %}
-    • context: page_title = 'Browse Businesses', sidebar_variant = 'donor'
-    • Business list: {% for biz in businesses %} render a .biz-card {% endfor %}
-    • Filters: GET params ?category=&lat=&lng= handled in Django view
-    • Autocomplete: Nominatim API calls (pure JS, no Django needed)
+    â€¢ {% extends 'base.html' %}
+    â€¢ {% block content %} ... {% endblock %}
+    â€¢ context: page_title = 'Browse Businesses', sidebar_variant = 'donor'
+    â€¢ Business list: {% for biz in businesses %} render a .biz-card {% endfor %}
+    â€¢ Filters: GET params ?category=&lat=&lng= handled in Django view
+    â€¢ Autocomplete: Nominatim API calls (pure JS, no Django needed)
 
   Context variables expected:
-    page_title   → 'Browse Businesses'
-    businesses   → queryset: name, barangay, city, description,
+    page_title   â†’ 'Browse Businesses'
+    businesses   â†’ queryset: name, barangay, city, description,
                               tags (list), distance_km, avatar_url, slug
-    categories   → list of category strings for the dropdown
+    categories   â†’ list of category strings for the dropdown
 
   Mobile:
     Filter row wraps to column. Business cards stack vertically.
@@ -28,7 +28,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Browse Businesses — Reference</title>
+  <title>Browse Businesses â€” Reference</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
@@ -36,7 +36,7 @@
     :root {
       --gold:      #e8a020;
       --gold-dark: #c8881a;
-      --bg:        #f5f2eb;
+      --bg:        #f5f4f0;
       --border:    #e0dbd4;
       --text:      #222222;
       --muted:     #888888;
@@ -45,14 +45,14 @@
     html, body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); }
     .hidden { display: none !important; }
 
-    /* ── Buttons ── */
+    /* â”€â”€ Buttons â”€â”€ */
     .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: none; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; transition: all .2s; text-decoration: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; }
     .btn-primary { background: var(--gold); color: #fff; }
     .btn-primary:hover { background: var(--gold-dark); }
     .btn-outline { background: #fff; color: #444; border: 1.5px solid #ccc; }
     .btn-outline:hover { border-color: #999; }
 
-    /* ── Forms ── */
+    /* â”€â”€ Forms â”€â”€ */
     .form-label-upper { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; display: block; margin-bottom: 5px; }
     .form-input { width: 100%; border: 1.5px solid #d5d5d5; border-radius: 8px; padding: 10px 16px; font-family: 'Poppins', sans-serif; font-size: 14px; color: var(--text); outline: none; transition: border-color .2s; }
     .form-input:focus { border-color: var(--gold); }
@@ -60,26 +60,26 @@
     .form-select:focus { border-color: var(--gold); }
     .field-group { display: flex; flex-direction: column; gap: 4px; }
 
-    /* ── Location bar ── */
+    /* â”€â”€ Location bar â”€â”€ */
     .location-bar { background: #fdf6e8; border: 1px solid #f0d898; border-radius: 10px; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
     .location-bar-text { font-size: 13px; color: #666; display: flex; align-items: center; gap: 8px; }
 
-    /* ── Filter row ── */
+    /* â”€â”€ Filter row â”€â”€ */
     .filter-row { display: flex; gap: 14px; margin-bottom: 20px; align-items: flex-end; flex-wrap: wrap; }
     .filter-group-wide { flex: 1; min-width: 180px; }
 
-    /* ── Autocomplete ── */
+    /* â”€â”€ Autocomplete â”€â”€ */
     .ac-wrap { position: relative; }
     .address-autocomplete { position: absolute; background: #fff; border: 1.5px solid var(--border); border-radius: 8px; width: 100%; top: calc(100% + 4px); left: 0; z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,.12); max-height: 220px; overflow-y: auto; }
     .ac-item { padding: 10px 14px; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
     .ac-item:last-child { border-bottom: none; }
     .ac-item:hover { background: #fdf6e8; }
 
-    /* ── Results header ── */
+    /* â”€â”€ Results header â”€â”€ */
     .results-header { font-size: 13px; color: #666; margin-bottom: 12px; }
     .results-header strong { color: var(--text); }
 
-    /* ── Business cards ── */
+    /* â”€â”€ Business cards â”€â”€ */
     .biz-card { background: #fff; border-radius: 14px; padding: 18px 20px; margin-bottom: 10px; display: flex; align-items: center; gap: 16px; cursor: pointer; transition: box-shadow .2s, border-color .2s; border: 1.5px solid transparent; text-decoration: none; color: inherit; }
     .biz-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,.09); border-color: var(--gold); }
     .biz-avatar { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: #ddd; flex-shrink: 0; }
@@ -91,9 +91,9 @@
     .biz-desc { font-size: 12px; color: #777; line-height: 1.6; flex: 1; margin: 0 16px; }
     .distance-badge { background: #FFF3DC; color: #888; border-radius: 6px; padding: 4px 10px; font-size: 12px; white-space: nowrap; flex-shrink: 0; align-self: flex-start; }
 
-    /* ══════════════════════
-       MOBILE  (≤ 768px)
-    ══════════════════════ */
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+       MOBILE  (â‰¤ 768px)
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     @media (max-width: 768px) {
       .filter-row { flex-direction: column; align-items: stretch; }
       .filter-group-wide { min-width: unset; }
@@ -107,9 +107,9 @@
 <body>
 
 <!--
-  ═══════════════════════════════════════════════════════════════
-  CONTENT BLOCK — everything below goes inside {% block content %}
-  ═══════════════════════════════════════════════════════════════
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  CONTENT BLOCK â€” everything below goes inside {% block content %}
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 -->
 
 <!-- Location permission bar
@@ -210,7 +210,7 @@
       </div>
       <div class="biz-tags"><span class="tag">poly</span><span class="tag">denim</span></div>
     </div>
-    <div class="biz-desc">A community-based enterprise that reworks surplus woven fabrics and factory offcuts into premium home décor items.</div>
+    <div class="biz-desc">A community-based enterprise that reworks surplus woven fabrics and factory offcuts into premium home dÃ©cor items.</div>
     <span class="distance-badge">2.5km</span>
   </a>
 
@@ -232,7 +232,7 @@
 <!-- Django: {% endfor %} -->
 
 <script>
-  /* Nominatim address autocomplete — pure JS, no Django needed */
+  /* Nominatim address autocomplete â€” pure JS, no Django needed */
   const nominatimTimers = {};
   let _acResults = [];
 
@@ -284,3 +284,4 @@
 </script>
 </body>
 </html>
+

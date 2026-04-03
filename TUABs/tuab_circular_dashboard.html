@@ -1,31 +1,31 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!--
-  WeaveForward TUAB — Circular Economy Impact Dashboard  (tuab_circular.html)
-  ════════════════════════════════════════════════════════════════════════════
+  WeaveForward TUAB â€” Circular Economy Impact Dashboard  (tuab_circular.html)
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   PURPOSE
-  ───────
+  â”€â”€â”€â”€â”€â”€â”€
   Standalone reference for the Circular Economy page content.
   Shows only what goes inside {% block content %} of base.html.
 
   When converting to a Django template:
-    • {% extends 'base.html' %}
-    • {% block content %} ... {% endblock %}
-    • Set context: page_title = 'Circular Economy Impact Dashboard', sidebar_variant = 'tuab'
-    • Date filter: wrap in <form method="get"> and read request.GET.date_from / date_to
-    • Replace CIRC JS object with {{ circular_json|safe }} from view
-    • Export button → link to a CSV/PDF export view /tuab/circular/export/
-    • Charts stay client-side using Chart.js; data source swapped to Django JSON
+    â€¢ {% extends 'base.html' %}
+    â€¢ {% block content %} ... {% endblock %}
+    â€¢ Set context: page_title = 'Circular Economy Impact Dashboard', sidebar_variant = 'tuab'
+    â€¢ Date filter: wrap in <form method="get"> and read request.GET.date_from / date_to
+    â€¢ Replace CIRC JS object with {{ circular_json|safe }} from view
+    â€¢ Export button â†’ link to a CSV/PDF export view /tuab/circular/export/
+    â€¢ Charts stay client-side using Chart.js; data source swapped to Django JSON
 
   Context variables expected:
-    page_title       → 'Circular Economy Impact Dashboard'
-    sidebar_variant  → 'tuab'
-    circular_json    → JSON with keys: biodeg, cities, cityData, brands, decisions
+    page_title       â†’ 'Circular Economy Impact Dashboard'
+    sidebar_variant  â†’ 'tuab'
+    circular_json    â†’ JSON with keys: biodeg, cities, cityData, brands, decisions
 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Circular Economy — Reference</title>
+  <title>Circular Economy â€” Reference</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
@@ -35,7 +35,7 @@
       --gold:      #e8a020;
       --gold-dark: #c8881a;
       --tuab:      #c0410e;
-      --bg:        #f5f2eb;
+      --bg:        #f5f4f0;
       --text:      #222222;
       --muted:     #888888;
       --green:     #4a7c59;
@@ -43,17 +43,17 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); overflow-x: hidden; }
 
-    /* ── Form inputs ── */
+    /* â”€â”€ Form inputs â”€â”€ */
     .form-input { width: 100%; border: 1.5px solid #d5d5d5; border-radius: 8px; padding: 11px 16px; font-family: 'Poppins', sans-serif; font-size: 14px; color: var(--text); outline: none; transition: border-color .2s; }
     .form-input:focus { border-color: var(--gold); }
 
-    /* ── Date filter row ── */
+    /* â”€â”€ Date filter row â”€â”€ */
     .filter-row { display: flex; gap: 16px; align-items: center; margin-bottom: 12px; }
     .filter-row .form-input { flex: 1; }
     .btn-apply { flex: 1; background: var(--gold); color: #fff; border: none; border-radius: 10px; padding: 13px 0; font-size: 14px; font-family: 'Poppins', sans-serif; font-weight: 600; cursor: pointer; transition: background .2s; }
     .btn-apply:hover { background: var(--gold-dark); }
 
-    /* ── Chart cards grid ── */
+    /* â”€â”€ Chart cards grid â”€â”€ */
     .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
     .chart-card { background: #fff; border-radius: 16px; padding: 20px 22px; min-width: 0; overflow: hidden; }
     .chart-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
@@ -64,9 +64,9 @@
     .legend-item { display: flex; align-items: center; gap: 5px; font-family: 'Poppins', sans-serif; font-size: 11px; color: #888; }
     .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
 
-    /* ══════════════════════
-       MOBILE  (≤ 768px)
-    ══════════════════════ */
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+       MOBILE  (â‰¤ 768px)
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     @media (max-width: 768px) {
       .filter-row { flex-direction: column; }
       .charts-grid { grid-template-columns: 1fr; }
@@ -78,9 +78,9 @@
 <body>
 
 <!--
-  ═══════════════════════════════════════════════════════════════
-  CONTENT BLOCK — this is all that goes inside {% block content %}
-  ═══════════════════════════════════════════════════════════════
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  CONTENT BLOCK â€” this is all that goes inside {% block content %}
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 -->
 
   <!-- Date filter
@@ -105,14 +105,14 @@
       <div class="chart-card-header">
         <div>
           <div class="chart-title">Biodegradability Score Distribution</div>
-          <div class="chart-sub">Frequency histogram · ML-verified scores</div>
+          <div class="chart-sub">Frequency histogram Â· ML-verified scores</div>
         </div>
         <span class="chart-badge" style="background:#e8f5ee;color:#4a7c59">ML-Verified</span>
       </div>
       <canvas id="bio-chart" height="160"></canvas>
       <div class="chart-legend">
         <div class="legend-item"><div class="legend-dot" style="background:var(--tuab)"></div>Low (&lt;40%)</div>
-        <div class="legend-item"><div class="legend-dot" style="background:var(--gold)"></div>Mid (40–70%)</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--gold)"></div>Mid (40â€“70%)</div>
         <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>High (&gt;70%)</div>
       </div>
     </div>
@@ -122,7 +122,7 @@
       <div class="chart-card-header">
         <div>
           <div class="chart-title">Donation Volume by NCR City</div>
-          <div class="chart-sub">Stacked by fiber category · horizontal</div>
+          <div class="chart-sub">Stacked by fiber category Â· horizontal</div>
         </div>
         <span class="chart-badge" style="background:#fff3e0;color:var(--gold)">Freq. Chart</span>
       </div>
@@ -151,7 +151,7 @@
       <div class="chart-card-header">
         <div>
           <div class="chart-title">Donation Decisions per NCR City</div>
-          <div class="chart-sub">Accepted · Rejected · Flagged · Pending</div>
+          <div class="chart-sub">Accepted Â· Rejected Â· Flagged Â· Pending</div>
         </div>
         <span class="chart-badge" style="background:#e8f0fe;color:#3d6fa0">Decision Flow</span>
       </div>
@@ -167,8 +167,8 @@
 <script>
   /* Django: replace with {{ circular_json|safe }} from view */
   const CIRC = {
-    biodeg:    { labels:['0–10','10–20','20–30','30–40','40–50','50–60','60–70','70–80','80–90','90–100'], raw:[25,45,60,80,100,160,200,310,280,190] },
-    cities:    ['Manila','QC','Makati','Parañaque','Taguig','Las Piñas','Muntinlupa','Caloocan','Marikina','Pasay'],
+    biodeg:    { labels:['0â€“10','10â€“20','20â€“30','30â€“40','40â€“50','50â€“60','60â€“70','70â€“80','80â€“90','90â€“100'], raw:[25,45,60,80,100,160,200,310,280,190] },
+    cities:    ['Manila','QC','Makati','ParaÃ±aque','Taguig','Las PiÃ±as','Muntinlupa','Caloocan','Marikina','Pasay'],
     cityData:  { Denim:[310,290,220,170,190,140,120,150,110,90], Cotton:[220,210,180,140,160,120,100,130,90,80], Silk:[80,90,70,60,65,50,45,55,40,35], Linen:[50,60,40,30,35,25,20,30,22,18], Other:[40,55,30,25,28,18,15,22,18,12] },
     brands:    [{name:"Levi's",val:312},{name:"H&M",val:289},{name:"Uniqlo",val:241},{name:"Zara",val:198},{name:"SM Dept.",val:176},{name:"Penshoppe",val:162},{name:"Bench",val:148},{name:"Pull&Bear",val:134},{name:"Forever21",val:121},{name:"Mango",val:108},{name:"Nike",val:97},{name:"Adidas",val:91},{name:"Gap",val:84},{name:"Topshop",val:77},{name:"Bershka",val:70},{name:"Old Navy",val:63},{name:"Cotton On",val:58},{name:"Stradivarius",val:51},{name:"Massimo Dutti",val:44},{name:"Jack & Jones",val:37}],
     decisions: { accepted:[140,130,105,80,90,70,58,68,52,42], rejected:[35,40,30,25,28,20,15,22,18,12] }
@@ -215,7 +215,7 @@
 
   function exportReport() {
     /* Django: replace with a link to the export view */
-    const csv = ['WeaveForward — Circular Economy Impact Report','','Biodegradability Score Distribution','Range,Count',
+    const csv = ['WeaveForward â€” Circular Economy Impact Report','','Biodegradability Score Distribution','Range,Count',
       ...CIRC.biodeg.labels.map((l,i) => `${l},${CIRC.biodeg.raw[i]}`),
       '','Top Brands by Donation Volume','Brand,kg',
       ...CIRC.brands.map(b => `${b.name},${b.val}`)
@@ -229,3 +229,4 @@
 </script>
 </body>
 </html>
+

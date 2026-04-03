@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!--
-  WeaveForward TUAB — Fiber-Match Recommendations  (tuab_fiber_match.html)
-  ════════════════════════════════════════════════════════════════════════════
+  WeaveForward TUAB â€” Fiber-Match Recommendations  (tuab_fiber_match.html)
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   PURPOSE
-  ───────
+  â”€â”€â”€â”€â”€â”€â”€
   Standalone reference for the Fiber-Match Recommendations page content.
   Shows only what goes inside {% block content %} of base.html.
 
@@ -16,18 +16,18 @@
   And in CSS: .fiber-page .wf-content { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
 
   When converting to a Django template:
-    • {% extends 'base.html' %}
-    • {% block content %} ... {% endblock %}
-    • Set context: page_title = 'Fiber-Match Recommendations', sidebar_variant = 'tuab'
-    • Replace FIBER_MATCHES with {{ fiber_matches_json|safe }} from view
-    • Accept: POST to /tuab/donations/<id>/accept/
-    • Reject: POST to /tuab/donations/<id>/reject/ with reason field
+    â€¢ {% extends 'base.html' %}
+    â€¢ {% block content %} ... {% endblock %}
+    â€¢ Set context: page_title = 'Fiber-Match Recommendations', sidebar_variant = 'tuab'
+    â€¢ Replace FIBER_MATCHES with {{ fiber_matches_json|safe }} from view
+    â€¢ Accept: POST to /tuab/donations/<id>/accept/
+    â€¢ Reject: POST to /tuab/donations/<id>/reject/ with reason field
 
   Context variables expected:
-    page_title        → 'Fiber-Match Recommendations'
-    sidebar_variant   → 'tuab'
-    fiber_matches_json → JSON list of match objects
-    pending_count     → integer count of pending matches
+    page_title        â†’ 'Fiber-Match Recommendations'
+    sidebar_variant   â†’ 'tuab'
+    fiber_matches_json â†’ JSON list of match objects
+    pending_count     â†’ integer count of pending matches
 
   Mobile behaviour:
     Map stacks above panel. Panel becomes a normal scrollable list below the map.
@@ -36,7 +36,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Fiber-Match Recommendations — Reference</title>
+  <title>Fiber-Match Recommendations â€” Reference</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
@@ -47,7 +47,7 @@
       --gold:      #e8a020;
       --tuab:      #c0410e;
       --tuab-dark: #a0360c;
-      --bg:        #f5f2eb;
+      --bg:        #f5f4f0;
       --border:    #e0dbd4;
       --text:      #222222;
       --muted:     #888888;
@@ -83,9 +83,9 @@
     .modal-input { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 10px 14px; font-family: 'Poppins', sans-serif; font-size: 14px; outline: none; margin-bottom: 16px; }
     .modal-input:focus { border-color: var(--tuab); }
 
-    /* ══════════════════════
-       MOBILE  (≤ 768px)
-    ══════════════════════ */
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+       MOBILE  (â‰¤ 768px)
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     @media (max-width: 768px) {
       .fiber-shell { height: auto; overflow: visible; }
       .fiber-layout { flex-direction: column; overflow: visible; }
@@ -97,9 +97,9 @@
 <body>
 
 <!--
-  ═══════════════════════════════════════════════════════════════
-  CONTENT BLOCK — this is all that goes inside {% block content %}
-  ═══════════════════════════════════════════════════════════════
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  CONTENT BLOCK â€” this is all that goes inside {% block content %}
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 -->
 <div class="fiber-shell">
 
@@ -107,7 +107,7 @@
        Django: {{ pending_count }} -->
   <div class="fiber-banner">
     <span style="font-family:'Poppins',sans-serif;font-size:13px;font-weight:600;color:var(--gold)">Match Recommendation</span>
-    <span style="font-family:'Poppins',sans-serif;font-size:12px;color:#aaa">5 pending · sorted by match score</span>
+    <span style="font-family:'Poppins',sans-serif;font-size:12px;color:#aaa">5 pending Â· sorted by match score</span>
   </div>
 
   <div class="fiber-layout">
@@ -132,13 +132,13 @@
 </div>
 
 
-<!-- ═══ REJECT MODAL ═══
+<!-- â•â•â• REJECT MODAL â•â•â•
      Django: replace JS with a form POST to /tuab/donations/<id>/reject/ -->
 <div id="fm-reject-modal" class="modal-overlay hidden">
   <div class="modal-box">
     <div style="font-family:'Poppins',sans-serif;font-weight:600;font-size:15px;margin-bottom:4px;color:#1a1a1a">Reject Donation</div>
     <div style="font-family:'Poppins',sans-serif;font-size:13px;color:#aaa;margin-bottom:14px">Enter a reason for rejection</div>
-    <input id="fm-reject-reason" class="modal-input" placeholder="Reason for rejection…"/>
+    <input id="fm-reject-reason" class="modal-input" placeholder="Reason for rejectionâ€¦"/>
     <div style="display:flex;gap:10px;justify-content:flex-end">
       <button onclick="closeFmReject()" style="background:#f5f0ea;color:#888;border:none;border-radius:30px;padding:9px 20px;font-size:13px;font-family:'Poppins',sans-serif;cursor:pointer">Cancel</button>
       <button onclick="submitFmReject()" style="background:var(--tuab);color:#fff;border:none;border-radius:30px;padding:9px 20px;font-size:13px;font-family:'Poppins',sans-serif;cursor:pointer;font-weight:600">Confirm</button>
@@ -174,7 +174,7 @@
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
           <div>
             <div style="font-family:'Poppins',sans-serif;font-weight:600;font-size:13px;color:#1a1a1a">${m.name}</div>
-            <div style="font-family:'Poppins',sans-serif;font-size:11px;color:#aaa">${m.brgy} · ${m.dist}</div>
+            <div style="font-family:'Poppins',sans-serif;font-size:11px;color:#aaa">${m.brgy} Â· ${m.dist}</div>
           </div>
           <div style="background:#fff8ee;border:1.5px solid #f5d898;border-radius:20px;padding:4px 10px;font-family:'Poppins',sans-serif;font-size:12px;font-weight:700;color:var(--gold)">${m.score}</div>
         </div>
@@ -202,9 +202,9 @@
 
   window.addEventListener('load', () => {
     fmMap = L.map('fm-map', { zoomControl: true }).setView([14.560, 121.030], 11);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(fmMap);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'Â© OpenStreetMap contributors' }).addTo(fmMap);
     FIBER_MATCHES.forEach(m => {
-      fmMarkers[m.id] = L.marker([m.lat, m.lng]).addTo(fmMap).bindPopup(`<b>${m.name}</b><br>${m.fiber} · ${m.weight}`);
+      fmMarkers[m.id] = L.marker([m.lat, m.lng]).addTo(fmMap).bindPopup(`<b>${m.name}</b><br>${m.fiber} Â· ${m.weight}`);
     });
     renderFmCards();
   });
@@ -215,3 +215,4 @@
 </script>
 </body>
 </html>
+

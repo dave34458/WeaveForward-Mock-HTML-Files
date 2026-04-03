@@ -1,27 +1,27 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!--
-  WeaveForward — Edit Profile  (edit_profile.html)
-  ══════════════════════════════════════════════════
+  WeaveForward â€” Edit Profile  (edit_profile.html)
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   PURPOSE
-  ───────
+  â”€â”€â”€â”€â”€â”€â”€
   Standalone reference for the Edit Profile page content.
   Shows only what goes inside {% block content %} of base.html.
 
   When converting to a Django template:
-    • {% extends 'base.html' %}
-    • {% block content %} ... {% endblock %}
-    • Set context: page_title = 'Account Profile', sidebar_variant = 'donor'
-    • Wrap form in: <form method="post" action="{% url 'edit_profile' %}">
+    â€¢ {% extends 'base.html' %}
+    â€¢ {% block content %} ... {% endblock %}
+    â€¢ Set context: page_title = 'Account Profile', sidebar_variant = 'donor'
+    â€¢ Wrap form in: <form method="post" action="{% url 'edit_profile' %}">
                       {% csrf_token %}
-    • Profile photo: use Django ImageField / enctype="multipart/form-data"
-    • 2FA toggle: POST enabled=true/false to a separate {% url 'toggle_2fa' %}
-    • Save: POST to {% url 'edit_profile' %}
-    • Cancel: href="{% url 'profile' %}"
+    â€¢ Profile photo: use Django ImageField / enctype="multipart/form-data"
+    â€¢ 2FA toggle: POST enabled=true/false to a separate {% url 'toggle_2fa' %}
+    â€¢ Save: POST to {% url 'edit_profile' %}
+    â€¢ Cancel: href="{% url 'profile' %}"
 
   Context variables expected:
-    page_title      → 'Account Profile'
-    sidebar_variant → 'donor'
-    user            → user object with fields:
+    page_title      â†’ 'Account Profile'
+    sidebar_variant â†’ 'donor'
+    user            â†’ user object with fields:
                         get_initials, first_name, middle_name, last_name,
                         phone, barangay, city, pickup_address,
                         pickup_lat, pickup_lng, twofa_enabled
@@ -33,7 +33,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Edit Profile — Reference</title>
+  <title>Edit Profile â€” Reference</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
@@ -43,7 +43,7 @@
     :root {
       --gold:      #e8a020;
       --gold-dark: #c8881a;
-      --bg:        #f5f2eb;
+      --bg:        #f5f4f0;
       --border:    #e0dbd4;
       --text:      #222222;
       --muted:     #888888;
@@ -52,28 +52,28 @@
     html, body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); }
     .hidden { display: none !important; }
 
-    /* ── Cards ── */
+    /* â”€â”€ Cards â”€â”€ */
     .card { background: #fff; border-radius: 14px; padding: 24px; margin-bottom: 16px; }
     .card-title { font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 15px; margin-bottom: 16px; }
 
-    /* ── Buttons ── */
+    /* â”€â”€ Buttons â”€â”€ */
     .btn-primary { background: var(--gold); color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 500; font-family: 'Poppins', sans-serif; cursor: pointer; transition: background .2s; }
     .btn-primary:hover { background: var(--gold-dark); }
     .btn-outline { background: #fff; color: #444; border: 1.5px solid #ccc; border-radius: 8px; padding: 9px 18px; font-size: 13px; font-family: 'Poppins', sans-serif; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; }
     .btn-outline:hover { border-color: #999; }
     .choose-file-btn { background: #fff; border: 1.5px solid #ccc; border-radius: 20px; padding: 6px 14px; font-size: 13px; font-family: 'Poppins', sans-serif; cursor: pointer; }
 
-    /* ── Form fields ── */
+    /* â”€â”€ Form fields â”€â”€ */
     .form-label-upper { font-family: 'Poppins', sans-serif; font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; display: block; margin-bottom: 5px; }
     .form-input { width: 100%; border: 1.5px solid #d5d5d5; border-radius: 8px; padding: 11px 16px; font-family: 'Poppins', sans-serif; font-size: 14px; color: var(--text); outline: none; transition: border-color .2s; }
     .form-input:focus { border-color: var(--gold); }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
     .field-group { display: flex; flex-direction: column; gap: 4px; }
 
-    /* ── Profile avatar ── */
+    /* â”€â”€ Profile avatar â”€â”€ */
     .profile-avatar-lg { width: 68px; height: 68px; border-radius: 50%; background: #e8d5a8; display: flex; align-items: center; justify-content: center; color: #8b6914; font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 17px; flex-shrink: 0; }
 
-    /* ── Address autocomplete ── */
+    /* â”€â”€ Address autocomplete â”€â”€ */
     .ac-wrap { position: relative; }
     .address-autocomplete { position: absolute; background: #fff; border: 1.5px solid var(--border); border-radius: 8px; width: 100%; top: calc(100% + 4px); left: 0; z-index: 200; box-shadow: 0 8px 24px rgba(0,0,0,.12); max-height: 220px; overflow-y: auto; }
     .ac-item { padding: 10px 14px; font-family: 'Poppins', sans-serif; font-size: 13px; cursor: pointer; border-bottom: 1px solid #f5f5f5; }
@@ -82,23 +82,23 @@
     .loc-input-wrap input { padding-right: 36px; }
     .loc-pin-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--gold); }
 
-    /* ── 2FA toggle ── */
+    /* â”€â”€ 2FA toggle â”€â”€ */
     .toggle-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
     .toggle { width: 40px; height: 22px; border-radius: 11px; background: var(--gold); position: relative; cursor: pointer; transition: background .2s; flex-shrink: 0; }
     .toggle.off { background: #ccc; }
     .toggle-knob { width: 18px; height: 18px; background: #fff; border-radius: 50%; position: absolute; top: 2px; right: 2px; transition: right .2s, left .2s; }
     .toggle.off .toggle-knob { right: auto; left: 2px; }
 
-    /* ── Map modal ── */
+    /* â”€â”€ Map modal â”€â”€ */
     .map-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; z-index: 9000; }
     .map-modal { background: #fff; border-radius: 16px; padding: 24px; width: 620px; max-width: 95vw; position: relative; }
     .map-close { position: absolute; top: 14px; right: 16px; background: none; border: none; cursor: pointer; font-size: 22px; color: #888; line-height: 1; }
     #picker-map { width: 100%; height: 300px; border-radius: 8px; z-index: 1; }
 
-    /* ── 2FA modal ── */
+    /* â”€â”€ 2FA modal â”€â”€ */
     .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 8000; }
 
-    /* ── Mobile ── */
+    /* â”€â”€ Mobile â”€â”€ */
     @media (max-width: 768px) {
       .grid-2 { grid-template-columns: 1fr; }
     }
@@ -107,11 +107,11 @@
 <body>
 
 <!--
-  ════════════════════════════════════════════════════
-  CONTENT BLOCK — this is all that goes inside {% block content %}
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  CONTENT BLOCK â€” this is all that goes inside {% block content %}
   Django: wrap in <form method="post" enctype="multipart/form-data" action="{% url 'edit_profile' %}">
           {% csrf_token %}
-  ════════════════════════════════════════════════════
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 -->
 
 <!-- Profile photo -->
@@ -197,10 +197,10 @@
   </div>
 </div>
 
-<!-- ═══ MAP PICKER MODAL ═══ -->
+<!-- â•â•â• MAP PICKER MODAL â•â•â• -->
 <div id="map-modal" class="map-modal-overlay hidden">
   <div class="map-modal">
-    <button type="button" class="map-close" onclick="closeMapPicker()">×</button>
+    <button type="button" class="map-close" onclick="closeMapPicker()">Ã—</button>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;font-family:'Poppins',sans-serif;font-weight:600;font-size:16px">
       <svg width="16" height="16" fill="none" stroke="var(--gold)" stroke-width="2" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
       Pick on Map
@@ -211,7 +211,7 @@
   </div>
 </div>
 
-<!-- ═══ 2FA MODAL ═══
+<!-- â•â•â• 2FA MODAL â•â•â•
      Django: on verify, POST TOTP code to {% url 'verify_2fa' %} -->
 <div id="twofa-modal" class="modal-overlay hidden">
   <div style="background:#fff;border-radius:20px;padding:36px 40px 32px;width:440px;max-width:95vw;box-shadow:0 24px 80px rgba(0,0,0,.22)">
@@ -222,7 +222,7 @@
       KZMFQ2LONRUXG5DFMZTWQ3LQN5ZXIYQK
     </div>
     <!-- Django: name="totp_code" -->
-    <input id="twofa-totp-input" type="password" placeholder="● ● ● ● ● ●" maxlength="6"
+    <input id="twofa-totp-input" type="password" placeholder="â— â— â— â— â— â—" maxlength="6"
       style="width:100%;border:1.5px solid #ede8e0;border-radius:12px;padding:11px 16px;font-family:'Poppins',sans-serif;font-size:22px;letter-spacing:8px;text-align:center;background:#fafaf8;color:#333;outline:none;margin-bottom:24px"/>
     <div style="display:flex;gap:12px;justify-content:flex-end">
       <button type="button" onclick="cancelTwoFA()" style="border-radius:30px;padding:11px 32px;font-size:14px;background:#fef7ea;border:1.5px solid #f5d898;color:#888;font-family:'Poppins',sans-serif;cursor:pointer;font-weight:500">Cancel</button>
@@ -307,7 +307,7 @@
     setTimeout(() => {
       if (pickerMap) { pickerMap.remove(); pickerMap = null; }
       pickerMap = L.map('picker-map').setView([pickerLat, pickerLng], 15);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors' }).addTo(pickerMap);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'Â© OpenStreetMap contributors' }).addTo(pickerMap);
       pickerMarker = L.marker([pickerLat, pickerLng], { draggable: true }).addTo(pickerMap);
       pickerMarker.on('dragend', e => { const ll = e.target.getLatLng(); pickerLat = ll.lat; pickerLng = ll.lng; });
       pickerMap.on('click', e => { pickerLat = e.latlng.lat; pickerLng = e.latlng.lng; pickerMarker.setLatLng([pickerLat, pickerLng]); });
@@ -337,3 +337,4 @@
 </script>
 </body>
 </html>
+

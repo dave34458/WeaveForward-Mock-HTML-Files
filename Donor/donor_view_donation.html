@@ -1,45 +1,45 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!--
-  WeaveForward — View Donation  (donor_view_donation.html)
-  ═══════════════════════════════════════════════════════════════
+  WeaveForward â€” View Donation  (donor_view_donation.html)
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
   PURPOSE
-  ───────
+  â”€â”€â”€â”€â”€â”€â”€
   Read-only version of Donation Details for donors.
   This should stay structurally close to Create Donation for easier
   template conversion and long-term maintenance consistency.
 
   DJANGO CONVERSION NOTES
-  ───────────────────────
-  • {% extends 'base.html' %}
-  • {% block content %} ... {% endblock %}
-  • This page is display-only: no editable controls, no submission.
-  • Back button should point to donor donations list.
+  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  â€¢ {% extends 'base.html' %}
+  â€¢ {% block content %} ... {% endblock %}
+  â€¢ This page is display-only: no editable controls, no submission.
+  â€¢ Back button should point to donor donations list.
 
   CONTEXT VARIABLES EXPECTED
-  ──────────────────────────
-  page_title      → 'View Donation'
-  sidebar_variant → 'donor'
-  donation        → object with pickup_date, time_from, time_to, pickup_address, image_url
-  clothing_items  → list of {clothing_type, weight, condition, brand_fiber_lookup_id,
+  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  page_title      â†’ 'View Donation'
+  sidebar_variant â†’ 'donor'
+  donation        â†’ object with pickup_date, time_from, time_to, pickup_address, image_url
+  clothing_items  â†’ list of {clothing_type, weight, condition, brand_fiber_lookup_id,
                         brand_fiber_lookup: {id, clothing, brand, material, scraped_at}}
 
   READ-ONLY BRAND/MATERIAL RULE
-  ─────────────────────────────
-  • DonationItem stores brand_fiber_lookup_id (FK).
-  • For view page, read Brand/Material directly from item.brand_fiber_lookup fields.
-  • Do not recompute approximation logic in this page.
+  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  â€¢ DonationItem stores brand_fiber_lookup_id (FK).
+  â€¢ For view page, read Brand/Material directly from item.brand_fiber_lookup fields.
+  â€¢ Do not recompute approximation logic in this page.
 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>View Donation — Reference</title>
+  <title>View Donation â€” Reference</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
-    :root{--gold:#e8a020;--bg:#f5f2eb;--border:#e0dbd4;--text:#222;--muted:#888}
+    :root{--gold:#e8a020;--bg:#f5f4f0;--border:#e0dbd4;--text:#222;--muted:#888}
     *{box-sizing:border-box;margin:0;padding:0} body{font-family:Poppins,sans-serif;background:var(--bg);color:var(--text)}
     .layout{display:flex;gap:24px;align-items:flex-start}.left{flex:1}.right{width:330px;flex-shrink:0}
     .card,.panel{background:#fff;border:1.5px solid var(--border);border-radius:14px}.card{padding:20px 22px;margin-bottom:14px}.panel{padding:22px 24px}
@@ -99,3 +99,4 @@
 </div>
 </body>
 </html>
+

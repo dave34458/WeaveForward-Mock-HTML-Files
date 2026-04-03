@@ -1,4 +1,4 @@
-<!--
+﻿<!--
   WeaveForward Create Donation (donor_create_donation.html) - Clean Refactor
   DJANGO CONVERSION NOTES: Wrap in form, uncomment {% csrf_token %}
 -->
@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <style>
-    :root { --g: #e8a020; --bg: #f5f2eb; --brd: #e0dbd4; --lt: #fdf6e8; }
+    :root { --g: #e8a020; --bg: #f5f4f0; --brd: #e0dbd4; --lt: #fdf6e8; }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: Poppins, sans-serif; }
     body { background: var(--bg); color: #222; }
     .hidden { display: none !important; }
@@ -147,7 +147,7 @@
 
 <div id="map-modal" class="modal hidden">
   <div class="modal-box">
-    <button type="button" class="x" onclick="closeMap()">×</button>
+    <button type="button" class="x" onclick="closeMap()">Ã—</button>
     <div style="font-weight:600;margin-bottom:8px">Pick on Map</div>
     <div id="picker-map"></div>
     <button type="button" class="btn-submit" onclick="confirmMap()">Confirm Location</button>
@@ -313,3 +313,4 @@
 </script>
 </body>
 </html>
+

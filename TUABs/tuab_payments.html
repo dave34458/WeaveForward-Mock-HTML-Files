@@ -1,48 +1,48 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!--
-  WeaveForward TUAB — Payment History  (tuab_payments.html)
-  ═══════════════════════════════════════════════════════════
+  WeaveForward TUAB â€” Payment History  (tuab_payments.html)
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   PURPOSE
-  ───────
+  â”€â”€â”€â”€â”€â”€â”€
   Standalone reference for the Payment History page content.
   Shows only what goes inside {% block content %} of base.html.
 
   When converting to a Django template:
-    • {% extends 'base.html' %}
-    • {% block content %} ... {% endblock %}
-    • Set context: page_title = 'View Payment History', sidebar_variant = 'tuab'
-    • Replace PAYMENTS JS array with {{ payments_json|safe }} from view
-    • Or render rows server-side: {% for p in payments %} ... {% endfor %}
-    • Search can be client-side JS (as here) or server-side via GET param ?q=
+    â€¢ {% extends 'base.html' %}
+    â€¢ {% block content %} ... {% endblock %}
+    â€¢ Set context: page_title = 'View Payment History', sidebar_variant = 'tuab'
+    â€¢ Replace PAYMENTS JS array with {{ payments_json|safe }} from view
+    â€¢ Or render rows server-side: {% for p in payments %} ... {% endfor %}
+    â€¢ Search can be client-side JS (as here) or server-side via GET param ?q=
 
   Context variables expected:
-    page_title      → 'View Payment History'
-    sidebar_variant → 'tuab'
-    payments        → list of {type, amount, reference, status}
+    page_title      â†’ 'View Payment History'
+    sidebar_variant â†’ 'tuab'
+    payments        â†’ list of {type, amount, reference, status}
 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Payment History — Reference</title>
+  <title>Payment History â€” Reference</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
     :root {
       --gold:  #e8a020;
-      --bg:    #f5f2eb;
+      --bg:    #f5f4f0;
       --text:  #222222;
       --muted: #888888;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); }
 
-    /* ── Search bar ── */
+    /* â”€â”€ Search bar â”€â”€ */
     .search-bar { background: #f5f3f0; border-radius: 10px; padding: 13px 18px; display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
     .search-bar input { border: none; outline: none; background: transparent; font-family: 'Poppins', sans-serif; font-size: 14px; color: #555; width: 100%; }
 
-    /* ── Table ── */
+    /* â”€â”€ Table â”€â”€ */
     .tbl-wrap { background: #fff; border-radius: 14px; overflow: hidden; }
     .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .pay-table { width: 100%; border-collapse: collapse; }
@@ -57,9 +57,9 @@
 <body>
 
 <!--
-  ═══════════════════════════════════════════════════════════════
-  CONTENT BLOCK — this is all that goes inside {% block content %}
-  ═══════════════════════════════════════════════════════════════
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  CONTENT BLOCK â€” this is all that goes inside {% block content %}
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 -->
 
   <!-- Search -->
@@ -118,3 +118,4 @@
 </script>
 </body>
 </html>
+

@@ -1,39 +1,39 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!--
-  WeaveForward TUAB — Account Profile  (tuab_profile.html)
-  ══════════════════════════════════════════════════════════
+  WeaveForward TUAB â€” Account Profile  (tuab_profile.html)
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   PURPOSE
-  ───────
+  â”€â”€â”€â”€â”€â”€â”€
   Standalone reference for the Account Profile page content.
   Shows only what goes inside {% block content %} of base.html.
 
   When converting to a Django template:
-    • {% extends 'base.html' %}
-    • {% block content %} ... {% endblock %}
-    • Set context: page_title = 'Account Profile', sidebar_variant = 'tuab'
-    • Replace all hardcoded values with context variables (see below)
-    • "Update Account Information" → {% url 'tuab_edit_profile' %}
+    â€¢ {% extends 'base.html' %}
+    â€¢ {% block content %} ... {% endblock %}
+    â€¢ Set context: page_title = 'Account Profile', sidebar_variant = 'tuab'
+    â€¢ Replace all hardcoded values with context variables (see below)
+    â€¢ "Update Account Information" â†’ {% url 'tuab_edit_profile' %}
 
   Context variables expected:
-    page_title          → 'Account Profile'
-    sidebar_variant     → 'tuab'
-    org_name            → display name, e.g. 'KulturaKalikasan'
-    org_initials        → e.g. 'KK'
-    org_location        → e.g. 'Pinyahan, Quezon City, Metro Manila'
-    org_bio             → description paragraph
-    org_social_link     → e.g. 'instagram.com/kulturakalikasan'
-    total_donations     → integer
-    max_distance_km     → integer
+    page_title          â†’ 'Account Profile'
+    sidebar_variant     â†’ 'tuab'
+    org_name            â†’ display name, e.g. 'KulturaKalikasan'
+    org_initials        â†’ e.g. 'KK'
+    org_location        â†’ e.g. 'Pinyahan, Quezon City, Metro Manila'
+    org_bio             â†’ description paragraph
+    org_social_link     â†’ e.g. 'instagram.com/kulturakalikasan'
+    total_donations     â†’ integer
+    max_distance_km     â†’ integer
     barangay, city, display_address, contact_number
-    target_fibers       → list of fiber name strings
-    min_biodeg_score    → integer
-    max_pickup_distance → float (km)
+    target_fibers       â†’ list of fiber name strings
+    min_biodeg_score    â†’ integer
+    max_pickup_distance â†’ float (km)
 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Account Profile — Reference</title>
+  <title>Account Profile â€” Reference</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
@@ -41,7 +41,7 @@
     :root {
       --gold:  #e8a020;
       --tuab:  #c0410e;
-      --bg:    #f5f2eb;
+      --bg:    #f5f4f0;
       --text:  #222222;
       --muted: #888888;
       --green: #4a7c59;
@@ -49,25 +49,25 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); }
 
-    /* ── Cards ── */
+    /* â”€â”€ Cards â”€â”€ */
     .prof-card { background: #fff; border-radius: 16px; padding: 22px 26px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
 
-    /* ── Detail rows ── */
+    /* â”€â”€ Detail rows â”€â”€ */
     .detail-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid #f5f0ea; font-family: 'Poppins', sans-serif; font-size: 13px; }
     .detail-row:last-child { border-bottom: none; }
     .detail-label { color: #aaa; flex-shrink: 0; }
     .detail-val { color: #1a1a1a; font-weight: 500; text-align: right; max-width: 60%; }
 
-    /* ── Fiber tag ── */
+    /* â”€â”€ Fiber tag â”€â”€ */
     .fiber-tag { background: #f0e8d8; color: #6b4c2a; border-radius: 20px; padding: 3px 11px; font-size: 12px; font-family: 'Poppins', sans-serif; font-weight: 500; }
 
-    /* ── Stat card ── */
+    /* â”€â”€ Stat card â”€â”€ */
     .stat-num { font-family: 'Poppins', sans-serif; font-size: 36px; font-weight: 700; color: var(--gold); margin-bottom: 4px; }
     .stat-lbl { font-family: 'Poppins', sans-serif; font-size: 12px; color: #aaa; }
 
-    /* ══════════════════════
-       MOBILE  (≤ 768px)
-    ══════════════════════ */
+    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+       MOBILE  (â‰¤ 768px)
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
     @media (max-width: 768px) {
       .stats-row  { grid-template-columns: 1fr 1fr !important; }
       .info-row   { grid-template-columns: 1fr !important; }
@@ -79,9 +79,9 @@
 <body>
 
 <!--
-  ═══════════════════════════════════════════════════════════════
-  CONTENT BLOCK — this is all that goes inside {% block content %}
-  ═══════════════════════════════════════════════════════════════
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  CONTENT BLOCK â€” this is all that goes inside {% block content %}
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 -->
 
   <!-- Hero card -->
@@ -161,3 +161,4 @@
 
 </body>
 </html>
+

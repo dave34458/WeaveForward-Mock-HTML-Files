@@ -1,26 +1,26 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!--
-  WeaveForward — My Donations  (my_donations.html)
-  ══════════════════════════════════════════════════
+  WeaveForward â€” My Donations  (my_donations.html)
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   PURPOSE
-  ───────
+  â”€â”€â”€â”€â”€â”€â”€
   Standalone reference for the My Donations page content.
   Shows only what goes inside {% block content %} of base.html.
 
   When converting to a Django template:
-    • {% extends 'base.html' %}
-    • {% block content %} ... {% endblock %}
-    • Set context: page_title = 'My Donations', sidebar_variant = 'donor'
-    • Donation rows: {% for donation in donations %} render a <tr> {% endfor %}
-    • Create Donation: href="{% url 'create_donation' %}"
-    • View: href="{% url 'view_donation' pk=donation.id %}"
-    • Edit: href="{% url 'edit_donation' pk=donation.id %}"
-    • Cancel: POST to {% url 'cancel_donation' pk=donation.id %}
+    â€¢ {% extends 'base.html' %}
+    â€¢ {% block content %} ... {% endblock %}
+    â€¢ Set context: page_title = 'My Donations', sidebar_variant = 'donor'
+    â€¢ Donation rows: {% for donation in donations %} render a <tr> {% endfor %}
+    â€¢ Create Donation: href="{% url 'create_donation' %}"
+    â€¢ View: href="{% url 'view_donation' pk=donation.id %}"
+    â€¢ Edit: href="{% url 'edit_donation' pk=donation.id %}"
+    â€¢ Cancel: POST to {% url 'cancel_donation' pk=donation.id %}
 
   Context variables expected:
-    page_title      → 'My Donations'
-    sidebar_variant → 'donor'
-    donations       → queryset of donation objects with fields:
+    page_title      â†’ 'My Donations'
+    sidebar_variant â†’ 'donor'
+    donations       â†’ queryset of donation objects with fields:
                         pickup_date, time_from, time_to, display_address,
                         items_summary, status, claimed_by, image_url
 
@@ -31,7 +31,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>My Donations — Reference</title>
+  <title>My Donations â€” Reference</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
@@ -39,7 +39,7 @@
     :root {
       --gold:      #e8a020;
       --gold-dark: #c8881a;
-      --bg:        #f5f2eb;
+      --bg:        #f5f4f0;
       --border:    #e0dbd4;
       --text:      #222222;
       --muted:     #888888;
@@ -48,7 +48,7 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); }
 
-    /* ── Search + Create row ── */
+    /* â”€â”€ Search + Create row â”€â”€ */
     .search-bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
     .search-wrap { position: relative; flex: 1; }
     .search-wrap input {
@@ -59,14 +59,14 @@
     .search-wrap input:focus { border-color: var(--gold); }
     .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); pointer-events: none; }
 
-    /* ── Buttons ── */
+    /* â”€â”€ Buttons â”€â”€ */
     .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: none; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; transition: all .2s; text-decoration: none; }
     .btn-primary { background: var(--gold); color: #fff; border-radius: 8px; padding: 10px 20px; font-size: 14px; white-space: nowrap; }
     .btn-primary:hover { background: var(--gold-dark); }
     .btn-outline { background: #fff; color: #444; border: 1.5px solid #ccc; border-radius: 6px; padding: 5px 12px; font-size: 11px; }
     .btn-outline:hover { border-color: #999; }
 
-    /* ── Table ── */
+    /* â”€â”€ Table â”€â”€ */
     .table-wrap { background: #fff; border-radius: 14px; overflow-x: auto; }
     table.dt { width: 100%; border-collapse: collapse; min-width: 700px; }
     table.dt th {
@@ -80,22 +80,22 @@
     }
     table.dt tr:last-child td { border-bottom: none; }
 
-    /* ── Badges ── */
+    /* â”€â”€ Badges â”€â”€ */
     .badge { display: inline-block; border-radius: 6px; padding: 4px 12px; font-size: 11px; font-family: 'Poppins', sans-serif; font-weight: 500; }
     .badge-claimed  { background: #0B77DC; color: #fff; }
     .badge-pending  { background: var(--gold); color: #fff; }
     .badge-received { background: var(--green); color: #fff; }
 
-    /* ── Action buttons ── */
+    /* â”€â”€ Action buttons â”€â”€ */
     .action-btns { display: flex; gap: 6px; flex-wrap: wrap; }
   </style>
 </head>
 <body>
 
 <!--
-  ════════════════════════════════════════════════════
-  CONTENT BLOCK — this is all that goes inside {% block content %}
-  ════════════════════════════════════════════════════
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  CONTENT BLOCK â€” this is all that goes inside {% block content %}
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 -->
 
 <p style="font-family:'Poppins',sans-serif;font-weight:300;font-size:13px;color:#666;margin-bottom:10px" id="don-count">3 Donation Requests</p>
@@ -130,7 +130,7 @@
       <!-- Django: {% for donation in donations %} -->
       <tr>
         <td style="white-space:nowrap">02-10-2026</td>
-        <td style="white-space:nowrap">4:02 AM – 5:50 PM</td>
+        <td style="white-space:nowrap">4:02 AM â€“ 5:50 PM</td>
         <td style="max-width:140px">Escoda Street, Barangay 675, Ermita, Manila...</td>
         <td style="max-width:160px">Pants - Levi's Denim, Shirt - Uniqlo Cotton</td>
         <td><span class="badge badge-claimed">Claimed</span></td>
@@ -145,11 +145,11 @@
       </tr>
       <tr>
         <td style="white-space:nowrap">1-25-2026</td>
-        <td style="white-space:nowrap">9:00 AM – 12:00 PM</td>
+        <td style="white-space:nowrap">9:00 AM â€“ 12:00 PM</td>
         <td style="max-width:140px">7421 Taft Avenue, Barangay 39, Malate, Manila...</td>
         <td style="max-width:160px">Jacket - H&M Cotton, Jeans - Zara Polyester</td>
         <td><span class="badge badge-pending">Pending</span></td>
-        <td>—</td>
+        <td>â€”</td>
         <td>
           <div class="action-btns">
             <a href="view_donation.html" class="btn btn-outline">View</a>
@@ -163,7 +163,7 @@
       </tr>
       <tr>
         <td style="white-space:nowrap">1-10-2026</td>
-        <td style="white-space:nowrap">2:00 PM – 6:00 PM</td>
+        <td style="white-space:nowrap">2:00 PM â€“ 6:00 PM</td>
         <td style="max-width:140px">Barangay 76, Pasay City, Metro Manila</td>
         <td style="max-width:160px">Jacket, Jeans, T-Shirt, Shorts, Dress, Blouse</td>
         <td><span class="badge badge-received">Received</span></td>
@@ -195,3 +195,4 @@
 </script>
 </body>
 </html>
+

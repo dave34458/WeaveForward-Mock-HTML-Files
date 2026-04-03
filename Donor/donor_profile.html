@@ -1,22 +1,22 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!--
-  WeaveForward — Account Profile  (profile.html)
-  ══════════════════════════════════════════════════
+  WeaveForward â€” Account Profile  (profile.html)
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   PURPOSE
-  ───────
+  â”€â”€â”€â”€â”€â”€â”€
   Standalone reference for the Account Profile page content.
   Shows only what goes inside {% block content %} of base.html.
 
   When converting to a Django template:
-    • {% extends 'base.html' %}
-    • {% block content %} ... {% endblock %}
-    • Set context: page_title = 'Account Profile', sidebar_variant = 'donor'
-    • Update button: href="{% url 'edit_profile' %}"
+    â€¢ {% extends 'base.html' %}
+    â€¢ {% block content %} ... {% endblock %}
+    â€¢ Set context: page_title = 'Account Profile', sidebar_variant = 'donor'
+    â€¢ Update button: href="{% url 'edit_profile' %}"
 
   Context variables expected:
-    page_title      → 'Account Profile'
-    sidebar_variant → 'donor'
-    user            → user object with fields:
+    page_title      â†’ 'Account Profile'
+    sidebar_variant â†’ 'donor'
+    user            â†’ user object with fields:
                         get_initials, get_full_name, email,
                         role, is_active, date_joined,
                         first_name, middle_name, last_name, phone,
@@ -29,7 +29,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Account Profile — Reference</title>
+  <title>Account Profile â€” Reference</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
@@ -37,7 +37,7 @@
     :root {
       --gold:      #e8a020;
       --gold-dark: #c8881a;
-      --bg:        #f5f2eb;
+      --bg:        #f5f4f0;
       --border:    #e0dbd4;
       --text:      #222222;
       --muted:     #888888;
@@ -46,16 +46,16 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); }
 
-    /* ── Cards ── */
+    /* â”€â”€ Cards â”€â”€ */
     .card { background: #fff; border-radius: 14px; padding: 24px; margin-bottom: 16px; }
     .card-title { font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 15px; margin-bottom: 16px; }
 
-    /* ── Button ── */
+    /* â”€â”€ Button â”€â”€ */
     .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; border: none; cursor: pointer; font-family: 'Poppins', sans-serif; font-weight: 500; transition: all .2s; text-decoration: none; }
     .btn-primary { background: var(--gold); color: #fff; border-radius: 8px; padding: 10px 20px; font-size: 14px; white-space: nowrap; }
     .btn-primary:hover { background: var(--gold-dark); }
 
-    /* ── Profile hero ── */
+    /* â”€â”€ Profile hero â”€â”€ */
     .profile-hero { display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
     .profile-avatar-lg {
       width: 68px; height: 68px; border-radius: 50%;
@@ -70,11 +70,11 @@
     .chip-filled  { background: var(--gold); color: #fff; border-radius: 20px; padding: 3px 12px; font-size: 12px; font-family: 'Poppins', sans-serif; }
     .chip-grey    { border: 1.5px solid #ccc; color: #888; border-radius: 20px; padding: 3px 12px; font-size: 12px; font-family: 'Poppins', sans-serif; }
 
-    /* ── Info grid ── */
+    /* â”€â”€ Info grid â”€â”€ */
     .form-label-upper { font-family: 'Poppins', sans-serif; font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; display: block; margin-bottom: 5px; }
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
-    /* ── Mobile ── */
+    /* â”€â”€ Mobile â”€â”€ */
     @media (max-width: 768px) {
       .profile-hero { gap: 14px; }
       .grid-2 { grid-template-columns: 1fr; }
@@ -85,9 +85,9 @@
 <body>
 
 <!--
-  ════════════════════════════════════════════════════
-  CONTENT BLOCK — this is all that goes inside {% block content %}
-  ════════════════════════════════════════════════════
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  CONTENT BLOCK â€” this is all that goes inside {% block content %}
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 -->
 
 <!-- Hero card -->
@@ -128,8 +128,8 @@
     </div>
     <div>
       <label class="form-label-upper">Middle Name</label>
-      <!-- Django: {{ user.middle_name|default:"—" }} -->
-      <p style="font-size:14px;margin-top:2px">—</p>
+      <!-- Django: {{ user.middle_name|default:"â€”" }} -->
+      <p style="font-size:14px;margin-top:2px">â€”</p>
     </div>
     <div>
       <label class="form-label-upper">Last Name</label>
@@ -168,3 +168,4 @@
 
 </body>
 </html>
+

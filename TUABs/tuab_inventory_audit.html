@@ -1,45 +1,45 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <!--
-  WeaveForward TUAB — Inventory Audit History  (tuab_inventory_audit.html)
-  ══════════════════════════════════════════════════════════════════════════
+  WeaveForward TUAB â€” Inventory Audit History  (tuab_inventory_audit.html)
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   PURPOSE
-  ───────
+  â”€â”€â”€â”€â”€â”€â”€
   Standalone reference for the Inventory Audit History page content.
   Shows only what goes inside {% block content %} of base.html.
 
   When converting to a Django template:
-    • {% extends 'base.html' %}
-    • {% block content %} ... {% endblock %}
-    • Set context: page_title = 'Inventory Snapshot', sidebar_variant = 'tuab'
-    • Replace table rows with {% for audit in audit_records %}...{% endfor %}
-    • Add a back link: <a href="{% url 'tuab_inventory' %}">← Back</a>
+    â€¢ {% extends 'base.html' %}
+    â€¢ {% block content %} ... {% endblock %}
+    â€¢ Set context: page_title = 'Inventory Snapshot', sidebar_variant = 'tuab'
+    â€¢ Replace table rows with {% for audit in audit_records %}...{% endfor %}
+    â€¢ Add a back link: <a href="{% url 'tuab_inventory' %}">â† Back</a>
       (The back button is handled by the topbar in navbar.html via page_title context;
        for a sub-page, pass back_url = 'tuab_inventory' in context and add to topbar.)
 
   Context variables expected:
-    page_title     → 'Inventory Snapshot'
-    sidebar_variant → 'tuab'
-    audit_records  → list of {inventory_id, before_kg, used_kg, after_kg, last_audited}
+    page_title     â†’ 'Inventory Snapshot'
+    sidebar_variant â†’ 'tuab'
+    audit_records  â†’ list of {inventory_id, before_kg, used_kg, after_kg, last_audited}
 -->
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Inventory Audit History — Reference</title>
+  <title>Inventory Audit History â€” Reference</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
     :root {
       --gold:  #e8a020;
-      --bg:    #f5f2eb;
+      --bg:    #f5f4f0;
       --text:  #222222;
       --muted: #888888;
     }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); }
 
-    /* ── Table ── */
+    /* â”€â”€ Table â”€â”€ */
     .tbl-wrap { background: #fff; border-radius: 14px; overflow: hidden; }
     .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .audit-table { width: 100%; border-collapse: collapse; }
@@ -52,9 +52,9 @@
 <body>
 
 <!--
-  ═══════════════════════════════════════════════════════════════
-  CONTENT BLOCK — this is all that goes inside {% block content %}
-  ═══════════════════════════════════════════════════════════════
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  CONTENT BLOCK â€” this is all that goes inside {% block content %}
+  â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 -->
 
   <div class="tbl-wrap">
@@ -88,3 +88,4 @@
 
 </body>
 </html>
+
