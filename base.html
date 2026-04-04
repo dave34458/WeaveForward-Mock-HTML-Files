@@ -32,29 +32,37 @@
   Example in view:  return render(request, 'browse.html', {'page_title': 'Browse Businesses'})
 -->
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet" />
   <style>
     /* ── Design tokens ── */
     :root {
-      --gold:           #e8a020;
-      --gold-dark:      #c8881a;
-      --green:          #4a7c59;
-      --green-dark:     #3d6849;
-      --sidebar-bg:     #3d6849;
-      --sidebar-text:   rgba(255, 255, 255, 0.65);
-      --sidebar-hover:  rgba(255, 255, 255, 0.12);
+      --gold: #e8a020;
+      --gold-dark: #c8881a;
+      --green: #4a7c59;
+      --green-dark: #3d6849;
+      --sidebar-bg: #3d6849;
+      --sidebar-text: rgba(255, 255, 255, 0.65);
+      --sidebar-hover: rgba(255, 255, 255, 0.12);
       --sidebar-active: rgba(255, 255, 255, 0.18);
-      --text-white:     #ffffff;
-      --bg:             #f5f4f0;
+      --text-white: #ffffff;
+      --bg: #f5f4f0;
     }
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Poppins', sans-serif; background: var(--bg); }
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
     /* ── Full-page shell ── */
     .wf-layout {
@@ -89,17 +97,25 @@
       gap: 12px;
       text-decoration: none;
     }
+
     .wf-sidebar__logo-icon {
-      width: 36px; height: 36px;
+      width: 36px;
+      height: 36px;
       border-radius: 10px;
       overflow: hidden;
       flex-shrink: 0;
-      display: flex; align-items: center; justify-content: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
+
     .wf-sidebar__logo-icon img {
-      width: 36px; height: 36px;
-      object-fit: contain; display: block;
+      width: 36px;
+      height: 36px;
+      object-fit: contain;
+      display: block;
     }
+
     .wf-sidebar__logo-text {
       font-family: 'Pixelify Sans', monospace;
       font-size: 18px;
@@ -111,16 +127,24 @@
     .wf-sidebar__nav {
       flex: 1;
       padding: 12px;
-      display: flex; flex-direction: column; gap: 3px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
     }
+
     .wf-sidebar__bottom {
       padding: 12px 12px 24px;
-      display: flex; flex-direction: column; gap: 3px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
       border-top: 1px solid rgba(255, 255, 255, 0.08);
       margin-top: auto;
     }
+
     .wf-nav-item {
-      display: flex; align-items: center; gap: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
       padding: 12px 16px;
       border-radius: 10px;
       color: var(--sidebar-text);
@@ -135,9 +159,20 @@
       width: 100%;
       text-align: left;
     }
-    .wf-nav-item:hover  { background: var(--sidebar-hover);  color: var(--text-white); }
-    .wf-nav-item.active { background: var(--sidebar-active); color: var(--text-white); }
-    .wf-nav-item svg    { flex-shrink: 0; }
+
+    .wf-nav-item:hover {
+      background: var(--sidebar-hover);
+      color: var(--text-white);
+    }
+
+    .wf-nav-item.active {
+      background: var(--sidebar-active);
+      color: var(--text-white);
+    }
+
+    .wf-nav-item svg {
+      flex-shrink: 0;
+    }
 
     /* ═══════════════════════════════
        MAIN AREA (right of sidebar)
@@ -164,24 +199,31 @@
       border-bottom: 1px solid rgba(0, 0, 0, 0.06);
       flex-shrink: 0;
     }
+
     .wf-topbar__left {
       display: flex;
       align-items: center;
       gap: 14px;
     }
+
     .wf-topbar__title {
       font-family: 'Pixelify Sans', monospace;
       font-size: 20px;
       color: #1a1a1a;
     }
+
     .wf-topbar__avatar {
-      width: 38px; height: 38px;
+      width: 38px;
+      height: 38px;
       border-radius: 50%;
       background: var(--gold);
       color: #fff;
       font-family: 'Poppins', sans-serif;
-      font-size: 13px; font-weight: 600;
-      display: flex; align-items: center; justify-content: center;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
       flex-shrink: 0;
     }
@@ -189,9 +231,13 @@
     /* ── Hamburger (mobile only) ── */
     .wf-hamburger {
       display: none;
-      background: none; border: none; cursor: pointer;
-      padding: 4px; color: #1a1a1a;
-      align-items: center; justify-content: center;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      color: #1a1a1a;
+      align-items: center;
+      justify-content: center;
       flex-shrink: 0;
     }
 
@@ -205,11 +251,15 @@
     /* ── Mobile overlay ── */
     .wf-overlay {
       display: none;
-      position: fixed; inset: 0;
+      position: fixed;
+      inset: 0;
       background: rgba(0, 0, 0, 0.4);
       z-index: 99;
     }
-    .wf-overlay.open { display: block; }
+
+    .wf-overlay.open {
+      display: block;
+    }
 
     /* ══════════════════════════════
        MOBILE  (≤ 768 px)
@@ -221,248 +271,271 @@
         top: 0;
         height: 100vh;
       }
-      .wf-sidebar.open { left: 0; }
 
-      .wf-hamburger { display: flex; }
+      .wf-sidebar.open {
+        left: 0;
+      }
 
-      .wf-topbar { padding: 0 16px; }
-      .wf-content { padding: 16px; }
+      .wf-hamburger {
+        display: flex;
+      }
+
+      .wf-topbar {
+        padding: 0 16px;
+      }
+
+      .wf-content {
+        padding: 16px;
+      }
     }
   </style>
 </head>
+
 <body>
 
-<!-- Mobile overlay — closes sidebar when tapped -->
-<div class="wf-overlay" id="wf-overlay"></div>
+  <!-- Mobile overlay — closes sidebar when tapped -->
+  <div class="wf-overlay" id="wf-overlay"></div>
 
-<div class="wf-layout">
+  <div class="wf-layout">
 
-  <!-- ═══════════════════════════════════════════════════
+    <!-- ═══════════════════════════════════════════════════
        DONOR SIDEBAR
        (shown when user is a donor / regular visitor)
   ═══════════════════════════════════════════════════ -->
-  <aside class="wf-sidebar" id="wf-sidebar">
+    <aside class="wf-sidebar" id="wf-sidebar">
 
-    <a class="wf-sidebar__logo" href="/browse">
-      <div class="wf-sidebar__logo-icon">
-        <img src="https://i.imgur.com/Dg9FmRA.png" alt="WeaveForward logo"/>
+      <a class="wf-sidebar__logo" href="/browse">
+        <div class="wf-sidebar__logo-icon">
+          <img src="https://i.imgur.com/Dg9FmRA.png" alt="WeaveForward logo" />
+        </div>
+        <span class="wf-sidebar__logo-text">WeaveForward</span>
+      </a>
+
+      <nav class="wf-sidebar__nav">
+
+        <a class="wf-nav-item {% if '/browse' in request.path %}active{% endif %}" id="nav-browse" href="/browse">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="9" cy="7" r="4" />
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+          </svg>
+          <span>Browse Businesses</span>
+        </a>
+
+        <a class="wf-nav-item {% if '/donations' in request.path %}active{% endif %}" id="nav-donations"
+          href="/donations">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path
+              d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+            <line x1="12" y1="22.08" x2="12" y2="12" />
+          </svg>
+          <span>My Donations</span>
+        </a>
+
+        <a class="wf-nav-item {% if '/dashboard' in request.path and not '/tuab' in request.path %}active{% endif %}"
+          id="nav-dashboard" href="/dashboard">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <path d="M3 9h18" />
+            <path d="M9 21V9" />
+          </svg>
+          <span>Donation Impact Dashboard</span>
+        </a>
+
+      </nav>
+
+      <div class="wf-sidebar__bottom">
+
+        <a class="wf-nav-item {% if '/profile' in request.path and not '/tuab' in request.path %}active{% endif %}"
+          id="nav-profile" href="/profile">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          <span>Account Profile</span>
+        </a>
+
+        <a class="wf-nav-item" href="/logout">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16,17 21,12 16,7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          <span>Logout</span>
+        </a>
+
       </div>
-      <span class="wf-sidebar__logo-text">WeaveForward</span>
-    </a>
-
-    <nav class="wf-sidebar__nav">
-
-      <a class="wf-nav-item {% if '/browse' in request.path %}active{% endif %}" id="nav-browse" href="/browse">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-          <circle cx="9" cy="7" r="4"/>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
-        </svg>
-        <span>Browse Businesses</span>
-      </a>
-
-      <a class="wf-nav-item {% if '/donations' in request.path %}active{% endif %}" id="nav-donations" href="/donations">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-          <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-          <line x1="12" y1="22.08" x2="12" y2="12"/>
-        </svg>
-        <span>My Donations</span>
-      </a>
-
-      <a class="wf-nav-item {% if '/dashboard' in request.path and not '/tuab' in request.path %}active{% endif %}" id="nav-dashboard" href="/dashboard">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <rect x="3" y="3" width="18" height="18" rx="2"/>
-          <path d="M3 9h18"/>
-          <path d="M9 21V9"/>
-        </svg>
-        <span>Donation Impact Dashboard</span>
-      </a>
-
-    </nav>
-
-    <div class="wf-sidebar__bottom">
-
-      <a class="wf-nav-item {% if '/profile' in request.path and not '/tuab' in request.path %}active{% endif %}" id="nav-profile" href="/profile">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-          <circle cx="12" cy="7" r="4"/>
-        </svg>
-        <span>Account Profile</span>
-      </a>
-
-      <a class="wf-nav-item" href="/logout">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-          <polyline points="16,17 21,12 16,7"/>
-          <line x1="21" y1="12" x2="9" y2="12"/>
-        </svg>
-        <span>Logout</span>
-      </a>
-
-    </div>
-  </aside>
+    </aside>
 
 
-  <!-- ═══════════════════════════════════════════════════
+    <!-- ═══════════════════════════════════════════════════
        TUAB / BUSINESS SIDEBAR
        Remove style="display:none" to activate this one,
        or control via Django context (see header comments).
   ═══════════════════════════════════════════════════ -->
-  <aside class="wf-sidebar" id="wf-sidebar-tuab" style="display:none;">
+    <aside class="wf-sidebar" id="wf-sidebar-tuab" style="display:none;">
 
-    <a class="wf-sidebar__logo" href="/tuab/dashboard">
-      <div class="wf-sidebar__logo-icon">
-        <img src="https://i.imgur.com/Dg9FmRA.png" alt="WeaveForward logo"/>
+      <a class="wf-sidebar__logo" href="/tuab/dashboard">
+        <div class="wf-sidebar__logo-icon">
+          <img src="https://i.imgur.com/Dg9FmRA.png" alt="WeaveForward logo" />
+        </div>
+        <span class="wf-sidebar__logo-text">WeaveForward</span>
+      </a>
+
+      <nav class="wf-sidebar__nav">
+
+        <a class="wf-nav-item {% if '/tuab/dashboard' in request.path %}active{% endif %}" id="tnav-dashboard"
+          href="/tuab/dashboard">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="7" height="7" rx="1" />
+            <rect x="14" y="3" width="7" height="7" rx="1" />
+            <rect x="3" y="14" width="7" height="7" rx="1" />
+            <rect x="14" y="14" width="7" height="7" rx="1" />
+          </svg>
+          <span>Dashboard</span>
+        </a>
+
+        <a class="wf-nav-item {% if '/tuab/fiber' in request.path %}active{% endif %}" id="tnav-fiber"
+          href="/tuab/fiber">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <polygon points="12,2 20.5,7 20.5,17 12,22 3.5,17 3.5,7" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+          <span>Fiber-Match Recommendations</span>
+        </a>
+
+        <a class="wf-nav-item {% if '/tuab/inventory' in request.path %}active{% endif %}" id="tnav-inventory"
+          href="/tuab/inventory">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <line x1="3" y1="9" x2="21" y2="9" />
+            <line x1="3" y1="15" x2="21" y2="15" />
+            <line x1="9" y1="9" x2="9" y2="21" />
+          </svg>
+          <span>Inventory Snapshots</span>
+        </a>
+
+        <a class="wf-nav-item {% if '/tuab/circular' in request.path %}active{% endif %}" id="tnav-circular"
+          href="/tuab/circular">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="2" y1="12" x2="22" y2="12" />
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+          </svg>
+          <span>Circular Economy</span>
+        </a>
+
+        <a class="wf-nav-item {% if '/tuab/premium' in request.path %}active{% endif %}" id="tnav-premium"
+          href="/tuab/premium">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M12 3v4M12 17v4M3 12h4M17 12h4" />
+            <path d="M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8" />
+            <circle cx="12" cy="12" r="2.5" />
+          </svg>
+          <span>Premium Subscription</span>
+        </a>
+
+        <a class="wf-nav-item {% if '/tuab/payments' in request.path %}active{% endif %}" id="tnav-payments"
+          href="/tuab/payments">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <line x1="12" y1="1" x2="12" y2="23" />
+            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+          </svg>
+          <span>View Payment History</span>
+        </a>
+
+      </nav>
+
+      <div class="wf-sidebar__bottom">
+
+        <a class="wf-nav-item {% if '/tuab/profile' in request.path %}active{% endif %}" id="tnav-profile"
+          href="/tuab/profile">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+          </svg>
+          <span>Account Profile</span>
+        </a>
+
+        <a class="wf-nav-item" href="/logout">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16,17 21,12 16,7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          <span>Logout</span>
+        </a>
+
       </div>
-      <span class="wf-sidebar__logo-text">WeaveForward</span>
-    </a>
-
-    <nav class="wf-sidebar__nav">
-
-      <a class="wf-nav-item {% if '/tuab/dashboard' in request.path %}active{% endif %}" id="tnav-dashboard" href="/tuab/dashboard">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <rect x="3" y="3" width="7" height="7" rx="1"/>
-          <rect x="14" y="3" width="7" height="7" rx="1"/>
-          <rect x="3" y="14" width="7" height="7" rx="1"/>
-          <rect x="14" y="14" width="7" height="7" rx="1"/>
-        </svg>
-        <span>Dashboard</span>
-      </a>
-
-      <a class="wf-nav-item {% if '/tuab/fiber' in request.path %}active{% endif %}" id="tnav-fiber" href="/tuab/fiber">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <polygon points="12,2 20.5,7 20.5,17 12,22 3.5,17 3.5,7"/>
-          <circle cx="12" cy="12" r="3"/>
-        </svg>
-        <span>Fiber-Match Recommendations</span>
-      </a>
-
-      <a class="wf-nav-item {% if '/tuab/inventory' in request.path %}active{% endif %}" id="tnav-inventory" href="/tuab/inventory">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <rect x="3" y="3" width="18" height="18" rx="2"/>
-          <line x1="3" y1="9" x2="21" y2="9"/>
-          <line x1="3" y1="15" x2="21" y2="15"/>
-          <line x1="9" y1="9" x2="9" y2="21"/>
-        </svg>
-        <span>Inventory Snapshots</span>
-      </a>
-
-      <a class="wf-nav-item {% if '/tuab/circular' in request.path %}active{% endif %}" id="tnav-circular" href="/tuab/circular">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="2" y1="12" x2="22" y2="12"/>
-          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-        </svg>
-        <span>Circular Economy</span>
-      </a>
-
-      <a class="wf-nav-item {% if '/tuab/premium' in request.path %}active{% endif %}" id="tnav-premium" href="/tuab/premium">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M12 3v4M12 17v4M3 12h4M17 12h4"/>
-          <path d="M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/>
-          <circle cx="12" cy="12" r="2.5"/>
-        </svg>
-        <span>Premium Subscription</span>
-      </a>
-
-      <a class="wf-nav-item {% if '/tuab/payments' in request.path %}active{% endif %}" id="tnav-payments" href="/tuab/payments">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <line x1="12" y1="1" x2="12" y2="23"/>
-          <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-        </svg>
-        <span>View Payment History</span>
-      </a>
-
-    </nav>
-
-    <div class="wf-sidebar__bottom">
-
-      <a class="wf-nav-item {% if '/tuab/profile' in request.path %}active{% endif %}" id="tnav-profile" href="/tuab/profile">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-          <circle cx="12" cy="7" r="4"/>
-        </svg>
-        <span>Account Profile</span>
-      </a>
-
-      <a class="wf-nav-item" href="/logout">
-        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-          <polyline points="16,17 21,12 16,7"/>
-          <line x1="21" y1="12" x2="9" y2="12"/>
-        </svg>
-        <span>Logout</span>
-      </a>
-
-    </div>
-  </aside>
+    </aside>
 
 
-  <!-- ═══════════════════════════════════════════════════
+    <!-- ═══════════════════════════════════════════════════
        MAIN CONTENT WRAPPER
        Everything to the right of the sidebar.
   ═══════════════════════════════════════════════════ -->
-  <div class="wf-main">
+    <div class="wf-main">
 
-    <!-- Top navbar -->
-    <header class="wf-topbar">
-      <div class="wf-topbar__left">
-        <button class="wf-hamburger" id="wf-hamburger" aria-label="Open menu">
-          <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <line x1="3" y1="6" x2="21" y2="6"/>
-            <line x1="3" y1="12" x2="21" y2="12"/>
-            <line x1="3" y1="18" x2="21" y2="18"/>
-          </svg>
-        </button>
-        <!-- Replace {{ page_title }} with your Django context variable -->
-        <span class="wf-topbar__title" id="wf-page-title">{{ page_title }}</span>
+      <!-- Top navbar -->
+      <header class="wf-topbar">
+        <div class="wf-topbar__left">
+          <button class="wf-hamburger" id="wf-hamburger" aria-label="Open menu">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+          <!-- Replace {{ page_title }} with your Django context variable -->
+          <span class="wf-topbar__title" id="wf-page-title">{{ page_title }}</span>
+        </div>
+        <!-- Replace with {{ user.get_initials }} or your own tag -->
+        <div class="wf-topbar__avatar" title="Account">{{ user_initials }}</div>
+      </header>
+
+      <!-- Page content — filled by {% block content %} in child templates -->
+      <div class="wf-content">
+        {% block content %}{% endblock %}
       </div>
-      <!-- Replace with {{ user.get_initials }} or your own tag -->
-      <div class="wf-topbar__avatar" title="Account">{{ user_initials }}</div>
-    </header>
 
-    <!-- Page content — filled by {% block content %} in child templates -->
-    <div class="wf-content">
-      {% block content %}{% endblock %}
-    </div>
-
-  </div><!-- /.wf-main -->
-</div><!-- /.wf-layout -->
+    </div><!-- /.wf-main -->
+  </div><!-- /.wf-layout -->
 
 
-<script>
-(function () {
-  /* ── Mobile hamburger ── */
-  const hamburger = document.getElementById('wf-hamburger');
-  const overlay   = document.getElementById('wf-overlay');
+  <script>
+    (function () {
+      /* ── Mobile hamburger ── */
+      const hamburger = document.getElementById('wf-hamburger');
+      const overlay = document.getElementById('wf-overlay');
 
-  // target whichever sidebar is currently visible
-  function getActiveSidebar() {
-    return Array.from(document.querySelectorAll('.wf-sidebar'))
-      .find(s => s.style.display !== 'none') || document.getElementById('wf-sidebar');
-  }
+      // target whichever sidebar is currently visible
+      function getActiveSidebar() {
+        return Array.from(document.querySelectorAll('.wf-sidebar'))
+          .find(s => s.style.display !== 'none') || document.getElementById('wf-sidebar');
+      }
 
-  function openSidebar()  {
-    getActiveSidebar()?.classList.add('open');
-    overlay?.classList.add('open');
-  }
-  function closeSidebar() {
-    document.querySelectorAll('.wf-sidebar').forEach(s => s.classList.remove('open'));
-    overlay?.classList.remove('open');
-  }
+      function openSidebar() {
+        getActiveSidebar()?.classList.add('open');
+        overlay?.classList.add('open');
+      }
+      function closeSidebar() {
+        document.querySelectorAll('.wf-sidebar').forEach(s => s.classList.remove('open'));
+        overlay?.classList.remove('open');
+      }
 
-  hamburger?.addEventListener('click', openSidebar);
-  overlay?.addEventListener('click', closeSidebar);
+      hamburger?.addEventListener('click', openSidebar);
+      overlay?.addEventListener('click', closeSidebar);
 
-  /* Close sidebar when any nav link is tapped on mobile */
-  document.querySelectorAll('.wf-nav-item').forEach(el => {
-    el.addEventListener('click', () => {
-      if (window.innerWidth <= 768) closeSidebar();
-    });
-  });
-})();
-</script>
+      /* Close sidebar when any nav link is tapped on mobile */
+      document.querySelectorAll('.wf-nav-item').forEach(el => {
+        el.addEventListener('click', () => {
+          if (window.innerWidth <= 768) closeSidebar();
+        });
+      });
+    })();
+  </script>
 
 </body>
+
 </html>

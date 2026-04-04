@@ -73,9 +73,9 @@ body{background:var(--bg);color:var(--tx);min-height:100vh;display:flex}
 <button type="submit" class="btn" onclick="event.preventDefault();alert('Success');location.href='login.html'">Register</button>
 </div>
 <div class="step-nav">
-<button type="button" class="step-btn" onclick="go(1,-1)">❮</button>
+<button type="button" class="step-btn" onclick="go(-1)">❮</button>
 <div style="display:flex;gap:8px"><div id="d1" class="step-dot" style="background:var(--g)"></div><div id="d2" class="step-dot"></div></div>
-<button type="button" id="next-btn" class="step-btn" onclick="go(1,1)">❯</button>
+<button type="button" id="next-btn" class="step-btn" onclick="go(1)">❯</button>
 </div>
 </div>
 </div>
@@ -86,7 +86,7 @@ body{background:var(--bg);color:var(--tx);min-height:100vh;display:flex}
 <script>
 const gE=i=>document.getElementById(i),hdAc=()=>setTimeout(()=>gE('ac')?.classList.add('hidden'),200);
 let cS=1,aT,aR=[],m,mk,tLt=14.589,tLg=120.982;
-function go(t,d){if(cS==2&&d==-1)cS=1;else if(cS==1&&d==1)cS=2;else if(cS==1&&d==-1)return location.href='login.html';gE('step1').classList.toggle('hidden',cS!=1);gE('step2').classList.toggle('hidden',cS!=2);gE('d1').style.background=cS==1?'var(--g)':'#ccc';gE('d2').style.background=cS==2?'var(--g)':'#ccc';gE('next-btn').style.visibility=cS==1?'visible':'hidden'}
+function go(d){if(cS==2&&d==-1)cS=1;else if(cS==1&&d==1)cS=2;gE('step1').classList.toggle('hidden',cS!=1);gE('step2').classList.toggle('hidden',cS!=2);gE('d1').style.background=cS==1?'var(--g)':'#ccc';gE('d2').style.background=cS==2?'var(--g)':'#ccc';gE('next-btn').style.visibility=cS==1?'visible':'hidden'}
 function srAddr(v){const ac=gE('ac');if(v.length<3)return ac.classList.add('hidden');clearTimeout(aT);aT=setTimeout(async()=>{try{const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${v}, Philippines&limit=5&countrycodes=ph`);aR=await r.json();ac.innerHTML=aR.map((r,i)=>`<div class="ac-item" onmousedown="slAddr(${i})">${r.display_name}</div>`).join('');ac.classList.remove('hidden')}catch{}},350)}
 function slAddr(i){gE('addr').value=aR[i].display_name;gE('lat').value=aR[i].lat;gE('lng').value=aR[i].lon;fLD(aR[i].lat,aR[i].lon)}
 async function fLD(lt,lg){try{const r=await fetch(`/api/get-location-details/?lat=${lt}&lng=${lg}`);if(r.ok){const d=await r.json();gE('city').value=d.city||'';gE('brgy').value=d.barangay||''}}catch{}}
