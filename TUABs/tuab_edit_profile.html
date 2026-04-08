@@ -536,6 +536,10 @@
     const rawLat = parseFloat(getElement('lat').value);
     const rawLng = parseFloat(getElement('lng').value);
     const hasValidLocation = !isNaN(rawLat) && !isNaN(rawLng);
+    if (hasValidLocation) {
+      getElement('lat').value = rawLat.toFixed(7);
+      getElement('lng').value = rawLng.toFixed(7);
+    }
 
     // Default for map picker if user doesn't have a location set
     const INIT_LAT = hasValidLocation ? rawLat : 14.6335;
@@ -583,10 +587,10 @@
 
     function selectAutocompleteAddress(index) {
       getElement('addr').value = addressResults[index].display_name;
-      getElement('lat').value = addressResults[index].lat;
-      getElement('lng').value = addressResults[index].lon;
+      getElement('lat').value = (+addressResults[index].lat).toFixed(7);
+      getElement('lng').value = (+addressResults[index].lon).toFixed(7);
       getElement('addr-ac').classList.add('hidden');
-      fetchLocationDetails(addressResults[index].lat, addressResults[index].lon);
+      fetchLocationDetails(getElement('lat').value, getElement('lng').value);
     }
 
     // ── Map picker ──
@@ -629,10 +633,10 @@
     }
 
     async function confirmMapLocation() {
-      getElement('lat').value = mapLat;
-      getElement('lng').value = mapLng;
-      await reverseGeocode(mapLat, mapLng);
-      fetchLocationDetails(mapLat, mapLng);
+      getElement('lat').value = (+mapLat).toFixed(7);
+      getElement('lng').value = (+mapLng).toFixed(7);
+      await reverseGeocode(getElement('lat').value, getElement('lng').value);
+      fetchLocationDetails(getElement('lat').value, getElement('lng').value);
       closeMapPicker();
     }
 

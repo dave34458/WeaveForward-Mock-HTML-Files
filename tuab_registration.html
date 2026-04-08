@@ -659,10 +659,11 @@
     }
 
     function slAddr(i) {
+      const lt = (+aR[i].lat).toFixed(7), lg = (+aR[i].lon).toFixed(7);
       gE('addr').value = aR[i].display_name;
-      gE('lat').value = aR[i].lat; gE('lng').value = aR[i].lon;
+      gE('lat').value = lt; gE('lng').value = lg;
       gE('ac').classList.add('hidden');
-      fLD(aR[i].lat, aR[i].lon);
+      fLD(lt, lg);
     }
 
     async function fLD(lt, lg) {
@@ -686,12 +687,14 @@
     }
 
     async function cfMap() {
-      gE('lat').value = tLt; gE('lng').value = tLg; clMap();
+      gE('lat').value = (+tLt).toFixed(7); gE('lng').value = (+tLg).toFixed(7);
+      const lt = gE('lat').value, lg = gE('lng').value;
+      clMap();
       try {
-        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${tLt}&lon=${tLg}`);
-        gE('addr').value = (await r.json()).display_name || `${tLt}, ${tLg}`;
-      } catch { gE('addr').value = `${tLt}, ${tLg}` }
-      fLD(tLt, tLg);
+        const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lt}&lon=${lg}`);
+        gE('addr').value = (await r.json()).display_name || `${lt}, ${lg}`;
+      } catch { gE('addr').value = `${lt}, ${lg}` }
+      fLD(lt, lg);
     }
 
     function clMap() { gE('map-modal').classList.add('hidden') }

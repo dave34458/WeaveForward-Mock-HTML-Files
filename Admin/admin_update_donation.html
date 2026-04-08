@@ -229,6 +229,8 @@
   const allBrands = getUnq('brand');
 
   let map, mrk, tmpLat, tmpLng;
+  if (getEl('pickup-latitude').value) getEl('pickup-latitude').value = (+getEl('pickup-latitude').value).toFixed(7);
+  if (getEl('pickup-longitude').value) getEl('pickup-longitude').value = (+getEl('pickup-longitude').value).toFixed(7);
 
   const isTransitLocked = () => "{{ donation.status|default:''|escapejs }}".trim().toUpperCase() === 'IN_TRANSIT';
 
@@ -357,8 +359,8 @@
   }
 
   function confirmMapPicker() {
-    getEl('pickup-latitude').value = Number(tmpLat).toFixed(15);
-    getEl('pickup-longitude').value = Number(tmpLng).toFixed(15);
+    getEl('pickup-latitude').value = Number(tmpLat).toFixed(7);
+    getEl('pickup-longitude').value = Number(tmpLng).toFixed(7);
     updateCoordDisplays();
     closeMapPicker();
   }

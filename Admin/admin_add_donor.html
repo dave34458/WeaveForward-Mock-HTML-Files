@@ -146,9 +146,10 @@
     }
 
     function selAddr(i) {
+      const lat = (+acRes[i].lat).toFixed(7), lng = (+acRes[i].lon).toFixed(7);
       getEl('addr').value = acRes[i].display_name;
-      getEl('lat').value = acRes[i].lat;
-      getEl('lng').value = acRes[i].lon;
+      getEl('lat').value = lat;
+      getEl('lng').value = lng;
     }
 
     function openMap() {
@@ -167,9 +168,10 @@
     }
 
     async function confirmMap() {
-      getEl('lat').value = tmpLat; getEl('lng').value = tmpLng;
+      getEl('lat').value = (+tmpLat).toFixed(7); getEl('lng').value = (+tmpLng).toFixed(7);
+      const lat = getEl('lat').value, lng = getEl('lng').value;
       closeMap();
-      try { getEl('addr').value = (await (await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${tmpLat}&lon=${tmpLng}`)).json()).display_name || `${tmpLat}, ${tmpLng}`; } catch { }
+      try { getEl('addr').value = (await (await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`)).json()).display_name || `${lat}, ${lng}`; } catch { }
     }
 
     function closeMap() { getEl('map-modal').classList.add('hidden'); }

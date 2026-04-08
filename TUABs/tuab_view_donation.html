@@ -175,6 +175,8 @@
   const defaultLat = Number.isFinite(parseFloat(userLatRaw)) ? parseFloat(userLatRaw) : 14.589;
   const defaultLng = Number.isFinite(parseFloat(userLngRaw)) ? parseFloat(userLngRaw) : 120.9822;
   const buildScheduledAt = (dateValue, timeValue) => (dateValue && timeValue ? `${dateValue} ${timeValue}:00` : '');
+  if (getEl('dropoff-latitude').value) getEl('dropoff-latitude').value = (+getEl('dropoff-latitude').value).toFixed(7);
+  if (getEl('dropoff-longitude').value) getEl('dropoff-longitude').value = (+getEl('dropoff-longitude').value).toFixed(7);
 
   // --- 2. Autocomplete Logic ---
   let acRes = [];
@@ -184,8 +186,8 @@
     const r = acRes[i];
     if (!r) return;
     getEl('dropoff-display-address').value = r.display_name || '';
-    getEl('dropoff-latitude').value = r.lat || '';
-    getEl('dropoff-longitude').value = r.lon || '';
+    getEl('dropoff-latitude').value = r.lat ? (+r.lat).toFixed(7) : '';
+    getEl('dropoff-longitude').value = r.lon ? (+r.lon).toFixed(7) : '';
     getEl('dropoff-ac').classList.add('hidden');
   }
 
@@ -243,33 +245,37 @@
   }
 
   async function confirmMap() {
-    getEl('dropoff-latitude').value = Number(tmpLat).toFixed(15);
-    getEl('dropoff-longitude').value = Number(tmpLng).toFixed(15);
+    getEl('dropoff-latitude').value = Number(tmpLat).toFixed(7);
+    getEl('dropoff-longitude').value = Number(tmpLng).toFixed(7);
+    const lat = getEl('dropoff-latitude').value;
+    const lng = getEl('dropoff-longitude').value;
 
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${tmpLat}&lon=${tmpLng}`);
+      const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
       const j = await res.json();
-      getEl('dropoff-display-address').value = j.display_name || `${tmpLat.toFixed(6)}, ${tmpLng.toFixed(6)}`;
+      getEl('dropoff-display-address').value = j.display_name || `${lat}, ${lng}`;
     } catch {
-      getEl('dropoff-display-address').value = `${tmpLat.toFixed(6)}, ${tmpLng.toFixed(6)}`;
+      getEl('dropoff-display-address').value = `${lat}, ${lng}`;
     }
     closeMap();
   }
 
   // --- 4. Claim Logic ---
   function submitClaim(method) {
-    const scheduledAt = buildScheduledAt(getEl('preferred-date').value, getEl('scheduled-time').value);
-    if (!scheduledAt) return alert('Please provide a scheduled time.');
-
+    getEl('scheduled-at').disabled = method !== 'DELIVERY';
+    getEl('dropoff-latitude').disabled = method !== 'DELIVERY';
+    getEl('dropoff-longitude').disabled = method !== 'DELIVERY';
     if (method === 'DELIVERY') {
+      const scheduledAt = buildScheduledAt(getEl('preferred-date').value, getEl('scheduled-time').value);
+      if (!scheduledAt) return alert('Please provide a scheduled time.');
       const addr = (getEl('dropoff-display-address').value || '').trim();
       const lat = (getEl('dropoff-latitude').value || '').trim();
       const lng = (getEl('dropoff-longitude').value || '').trim();
       if (!addr || !lat || !lng) return alert('Please provide complete drop-off location for delivery.');
+      getEl('scheduled-at').value = scheduledAt;
     }
 
     getEl('delivery-method').value = method;
-    getEl('scheduled-at').value = scheduledAt;
     getEl('claim-form').requestSubmit();
   }
 

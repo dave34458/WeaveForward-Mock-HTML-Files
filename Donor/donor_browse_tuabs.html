@@ -259,8 +259,8 @@
   function selectAC(i, acId, latId, lngId, inputId) {
     const r = _acResults[i];
     document.getElementById(inputId).value = r.display_name;
-    document.getElementById(latId).value   = r.lat;
-    document.getElementById(lngId).value   = r.lon;
+    document.getElementById(latId).value   = (+r.lat).toFixed(7);
+    document.getElementById(lngId).value   = (+r.lon).toFixed(7);
     document.getElementById(acId).classList.add('hidden');
   }
 

@@ -268,8 +268,8 @@
 
   function selAddr(i) {
     getEl('addr').value = acRes[i].display_name;
-    getEl('lat').value = acRes[i].lat;
-    getEl('lng').value = acRes[i].lon;
+    getEl('lat').value = (+acRes[i].lat).toFixed(7);
+    getEl('lng').value = (+acRes[i].lon).toFixed(7);
   }
 
   function openMap() {
@@ -290,8 +290,8 @@
 
   async function confirmMap(isInit = false) {
     if (!isInit) {
-      getEl('lat').value = tmpLat;
-      getEl('lng').value = tmpLng;
+      getEl('lat').value = (+tmpLat).toFixed(7);
+      getEl('lng').value = (+tmpLng).toFixed(7);
       closeMap();
     }
     const l = getEl('lat').value, g = getEl('lng').value;
