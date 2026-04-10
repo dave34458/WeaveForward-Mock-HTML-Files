@@ -665,6 +665,7 @@
         var missing = ['clothing_type', 'brand'].filter(function (k) { return !current[k]; });
         if (current.weight_kg === null) missing.push('weight');
         if (missing.length) throw new Error('New item missing: ' + missing.join(', '));
+        Object.keys(current).forEach(function(k) { if (current[k] === null) delete current[k]; });
         return current;
       }
 
@@ -673,7 +674,9 @@
       ['clothing_type', 'weight_kg', 'condition_rating', 'brand', 'lookup_id'].forEach(function (k) {
         if (JSON.stringify(current[k]) !== JSON.stringify(baseline[k])) patch[k] = current[k];
       });
-      return Object.keys(patch).length > 1 ? patch : null;
+      var obj = patch;
+      Object.keys(obj).forEach(function(k) { if (obj[k] === null) delete obj[k]; });
+    return Object.keys(obj).length > 1 ? obj : null;
     }
 
     document.getElementById('donor-donation-form').onsubmit = function (e) {
