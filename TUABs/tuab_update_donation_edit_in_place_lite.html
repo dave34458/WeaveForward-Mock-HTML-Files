@@ -289,13 +289,18 @@
               donation.pickup_display_address|default:'-' }}</span></div>
           <div class="drow"><span class="lbl">Pickup Preferred Date</span><span class="val">{{
               donation.preferred_pickup_date|default:'-' }}</span></div>
-          <div class="drow"><span class="lbl">Pickup Preferred Window</span><span class="val">{{
-              donation.preferred_pickup_window|default:'-' }}</span></div>
-
-          <div class="sep-line"></div>
-          <div class="upload-wrap">
-            <img id="upload-photo" class="upload-photo{% if not donation.upload.file_path %} hidden{% endif %}"
-              src="{{ donation.upload.file_path|default:'' }}" alt="Donation upload photo">
+          <div class="drop" ondragover="event.preventDefault();this.style.background='#fdf6e8'"
+            ondragleave="this.style.background=''"
+            ondrop="event.preventDefault();this.style.background='';previewImage(event.dataTransfer.files[0], true)"
+            onclick="document.getElementById('img-in').click()">
+            <div id="i-prv-w" class="{% if donation.upload.file_path %}{% else %}hidden{% endif %}">
+              <img id="i-prv" src="{{ donation.upload.file_path|default:'' }}"
+                style="max-width:100%;max-height:130px;border-radius:8px;object-fit:cover">
+            </div>
+            <div id="i-ph" class="{% if donation.upload.file_path %}hidden{% endif %}"
+              style="font-size:13px;color:#999">Click or drop image</div>
+            <input id="img-in" name="donation_image" type="file" accept="image/*" class="hidden"
+              onchange="previewImage(this.files[0])">
           </div>
 
           <div class="sep">
@@ -443,6 +448,31 @@
     // ================================================================
     // --- 2. TUAB Actions ---
     // ================================================================
+
+    function previewImage(file, syncInput) {
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) return;
+
+      if (file.size > 10 * 1024 * 1024) {
+        alert('File is too large. Maximum size is 10MB.');
+        return;
+      }
+
+      if (syncInput) {
+        var dt = new DataTransfer();
+        dt.items.add(file);
+        document.getElementById('img-in').files = dt.files;
+      }
+
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        document.getElementById('i-prv').src = e.target.result;
+        document.getElementById('i-prv-w').classList.remove('hidden');
+        document.getElementById('i-ph').classList.add('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
 
     function openReject() { document.getElementById('reject-modal').classList.remove('hidden'); }
     function closeReject() { document.getElementById('reject-modal').classList.add('hidden'); }

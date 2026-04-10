@@ -1,6 +1,5 @@
-<!DOCTYPE html>
 <!--
-  WeaveForward Admin Update Donation (admin_update_donation.html) - Simplified Base
+  WeaveForward Admin Update Donation (admin_update_donation.html) - Simplified Lite Version
   DJANGO CONVERSION NOTES: Wrap in form, uncomment {% csrf_token %}
 -->
 <html lang="en">
@@ -433,14 +432,17 @@
 
         <div class="panel">
           <label class="sub" style="margin:0">Donation Upload</label>
-          <p style="font-size:12px;color:#999;margin-bottom:12px">Replace the image of this donation here</p>
-          <div class="drop" onclick="document.getElementById('img-in').click()">
+          <p style="font-size:12px;color:#999;margin-bottom:12px">Replace the image of this donation here (Max 10MB)</p>
+          <div class="drop" ondragover="event.preventDefault();this.style.background='#fdf6e8'"
+            ondragleave="this.style.background=''"
+            ondrop="event.preventDefault();this.style.background='';previewImage(event.dataTransfer.files[0], true)"
+            onclick="document.getElementById('img-in').click()">
             <div id="i-prv-w" class="{% if donation.upload.file_path %}{% else %}hidden{% endif %}">
               <img id="i-prv" src="{{ donation.upload.file_path|default:'' }}"
                 style="max-width:100%;max-height:130px;border-radius:8px;object-fit:cover">
             </div>
             <div id="i-ph" class="{% if donation.upload.file_path %}hidden{% endif %}"
-              style="font-size:13px;color:#999">Click to upload image</div>
+              style="font-size:13px;color:#999">Click or drop image</div>
             <input id="img-in" name="donation_image" type="file" accept="image/*" class="hidden"
               onchange="previewImage(this.files[0])">
           </div>
@@ -669,8 +671,22 @@
     // --- 4. Image Upload ---
     // ================================================================
 
-    function previewImage(file) {
-      if (!file || !file.type.startsWith('image/')) return;
+    function previewImage(file, syncInput) {
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) return;
+
+      if (file.size > 10 * 1024 * 1024) {
+        alert('File is too large. Maximum size is 10MB.');
+        return;
+      }
+
+      if (syncInput) {
+        var dt = new DataTransfer();
+        dt.items.add(file);
+        document.getElementById('img-in').files = dt.files;
+      }
+
       var reader = new FileReader();
       reader.onload = function (e) {
         document.getElementById('i-prv').src = e.target.result;
