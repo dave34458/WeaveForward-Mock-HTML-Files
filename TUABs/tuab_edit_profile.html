@@ -502,10 +502,33 @@
 
 
   <script>
+    // --- 1. Helpers & Baselines ---
     const getElement = id => document.getElementById(id);
     const hideAutocompleteWithDelay = id => setTimeout(() => getElement(id)?.classList.add('hidden'), 200);
+    const initialNamedFieldValues = {};
+    const normalizeComparableValue = (name, value, el = null) => {
+      if (el?.type === 'file') return '';
+      if (el?.type === 'checkbox' || el?.type === 'radio') return String(!!el.checked);
+      if (value === '' || value == null) return '';
+      if (['lat', 'lng', 'max_distance_km', 'min_biodegradability'].includes(name) || el?.type === 'number') {
+        const numericValue = Number(value);
+        return Number.isNaN(numericValue) ? '' : String(numericValue);
+      }
+      return String(value);
+    };
+    const snapshotNamedFieldValue = el => {
+      if (!el?.name) return '';
+      return normalizeComparableValue(el.name, el.value ?? '', el);
+    };
+    const syncInitialNamedFieldValue = el => {
+      if (el?.name) initialNamedFieldValues[el.name] = snapshotNamedFieldValue(el);
+    };
+    const syncInitialNamedFields = () => {
+      document.querySelectorAll('#ep-form input[name], #ep-form select[name], #ep-form textarea[name]').forEach(syncInitialNamedFieldValue);
+    };
 
     // ── Fiber tags ──
+    // --- 2. Fiber Tags ---
     // Django: pass as {{ fiber_options|safe }} e.g. ['Cotton','Polyester',...]
     const FIBERS = ['Cotton', 'Polyester', 'Rayon', 'Viscose', 'Wool', 'Linen', 'Silk', 'Denim', 'Nylon', 'Bamboo', 'Acrylic'];
     // Seeded from hidden input value="{{ user.preferred_fiber_types }}" (comma-separated)
@@ -532,34 +555,49 @@
     }
 
     // ── Address init: reverse geocode user.latitude / user.longitude on load ──
+    // --- 3. Location ---
     // Read from hidden inputs to avoid raw Django tags causing JS syntax errors when viewed locally
     const rawLat = parseFloat(getElement('lat').value);
     const rawLng = parseFloat(getElement('lng').value);
     const hasValidLocation = !isNaN(rawLat) && !isNaN(rawLng);
+    const normalizedInitialLat = hasValidLocation ? rawLat.toFixed(7) : '';
+    const normalizedInitialLng = hasValidLocation ? rawLng.toFixed(7) : '';
     if (hasValidLocation) {
-      getElement('lat').value = rawLat.toFixed(7);
-      getElement('lng').value = rawLng.toFixed(7);
+      getElement('lat').value = normalizedInitialLat;
+      getElement('lng').value = normalizedInitialLng;
     }
 
     // Default for map picker if user doesn't have a location set
     const INIT_LAT = hasValidLocation ? rawLat : 14.6335;
     const INIT_LNG = hasValidLocation ? rawLng : 121.0437;
 
-    async function reverseGeocode(latitude, longitude) {
+    async function reverseGeocode(latitude, longitude, syncDefault = false) {
       try {
         const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`, { headers: { 'Accept-Language': 'en-US' } });
         const data = await response.json();
-        if (data.display_name) getElement('addr').value = data.display_name;
+        if (data.display_name) {
+          getElement('addr').value = data.display_name;
+          if (syncDefault) {
+            getElement('addr').defaultValue = data.display_name;
+            syncInitialNamedFieldValue(getElement('addr'));
+          }
+        }
       } catch { }
     }
 
-    async function fetchLocationDetails(latitude, longitude) {
+    async function fetchLocationDetails(latitude, longitude, syncDefault = false) {
       try {
         const response = await fetch(`/api/get-location-details/?lat=${latitude}&lng=${longitude}`);
         if (response.ok) {
           const data = await response.json();
           getElement('city').value = data.city || '';
           getElement('brgy').value = data.barangay || '';
+          if (syncDefault) {
+            getElement('city').defaultValue = getElement('city').value;
+            getElement('brgy').defaultValue = getElement('brgy').value;
+            syncInitialNamedFieldValue(getElement('city'));
+            syncInitialNamedFieldValue(getElement('brgy'));
+          }
         }
       } catch { }
     }
@@ -641,6 +679,7 @@
     }
 
     // ── 2FA ──
+    // --- 4. Two-Factor Authentication ---
     // Read from hidden input to avoid raw Django tags causing JS syntax errors when viewed locally
     const HAS_INITIAL_2FA = getElement('init-2fa')?.value === 'true';
     let is2FAEnabled = HAS_INITIAL_2FA;
@@ -651,6 +690,7 @@
       getElement('tgl').classList.toggle('on', is2FAStaged);
     }
 
+    // --- 5. Submit / PATCH Omit ---
     async function onSave() {
       if (is2FAStaged === true) {
         getElement('twofa-modal').classList.remove('hidden');
@@ -686,15 +726,33 @@
       is2FAStaged = null;
 
       const form = getElement('ep-form');
+      const restoreDisabledStates = [];
+      const setDisabled = (el, disabled) => {
+        if (!el || el.disabled === disabled) return;
+        restoreDisabledStates.push([el, el.disabled]);
+        el.disabled = disabled;
+      };
+      const hasUnchangedValue = el => {
+        if (el.type === 'file') return el.files.length === 0;
+        const previousValue = Object.prototype.hasOwnProperty.call(initialNamedFieldValues, el.name)
+          ? initialNamedFieldValues[el.name]
+          : snapshotNamedFieldValue(el);
+        const currentValue = snapshotNamedFieldValue(el);
+        return currentValue === previousValue;
+      };
 
-      // Omit empty password and file fields from the POST payload to keep it clean for Django
+      // confirm_password is for client-side validation only; never submit it.
       const newPwd = form.querySelector('[name="new_password"]');
       const confPwd = form.querySelector('[name="confirm_password"]');
-      if (newPwd && !newPwd.value) newPwd.disabled = true;
-      if (confPwd && !confPwd.value) confPwd.disabled = true;
+      if (newPwd && newPwd.value && confPwd && newPwd.value !== confPwd.value) {
+        alert('Password and confirm password must match.');
+        return;
+      }
+      if (newPwd && !newPwd.value) setDisabled(newPwd, true);
+      if (confPwd) setDisabled(confPwd, true);
 
       const photoInput = getElement('photo-input');
-      if (photoInput && photoInput.files.length === 0) photoInput.disabled = true;
+      if (photoInput && photoInput.files.length === 0) setDisabled(photoInput, true);
 
       // If the user turned 2FA OFF during this session, inject a flag so Django knows to delete it
       if (HAS_INITIAL_2FA === true && is2FAEnabled === false) {
@@ -720,6 +778,14 @@
         form.appendChild(hiddenInput);
       }
 
+      // PATCH-style omit: temporarily disable unchanged fields while payload is generated.
+      form.querySelectorAll('input[name], select[name], textarea[name]').forEach(el => {
+        if (el.disabled) return;
+        if (el.name === 'csrfmiddlewaretoken') return;
+        if (el.id === 'hidden-totp' || el.name === 'is_2fa_enabled') return;
+        if (hasUnchangedValue(el)) setDisabled(el, true);
+      });
+
       // Build a readable payload string using FormData
       const formData = new FormData(form);
       let payloadObj = {};
@@ -736,6 +802,8 @@
 
       const payloadString = JSON.stringify(payloadObj, null, 2);
       alert("RAW POST PAYLOAD:\n\n" + payloadString);
+
+      restoreDisabledStates.forEach(([el, wasDisabled]) => { el.disabled = wasDisabled; });
 
       // TEMPORARILY DISABLED while testing payload:
       // form.submit(); 
@@ -757,6 +825,7 @@
     }
 
     // ── Unsubscribe ──
+    // --- 6. Subscription ---
     function stageUnsub() {
       const unsubButton = getElement('unsub-btn');
       unsubButton.textContent = 'Unsubscription staged — will apply on Save';
@@ -770,6 +839,7 @@
     }
 
     // ── Click-away ──
+    // --- 7. Global Events & Init ---
     document.addEventListener('click', event => {
       if (!getElement('tbox').contains(event.target)) getElement('f-ac').classList.add('hidden');
       if (!event.target.closest('.addr-wrap')) getElement('addr-ac').classList.add('hidden');
@@ -780,10 +850,17 @@
     // ── Init ──
     window.addEventListener('load', () => {
       renderTags();
+      syncInitialNamedFields();
+      initialNamedFieldValues.lat = normalizedInitialLat;
+      initialNamedFieldValues.lng = normalizedInitialLng;
       if (is2FAEnabled) getElement('tgl').classList.add('on');
       if (hasValidLocation) {
-        reverseGeocode(rawLat, rawLng);
-        fetchLocationDetails(rawLat, rawLng); // Only populate if Django provided a valid user.latitude
+        getElement('lat').defaultValue = getElement('lat').value;
+        getElement('lng').defaultValue = getElement('lng').value;
+        reverseGeocode(rawLat, rawLng, true);
+        fetchLocationDetails(rawLat, rawLng, true); // Only populate if Django provided a valid user.latitude
+        syncInitialNamedFieldValue(getElement('lat'));
+        syncInitialNamedFieldValue(getElement('lng'));
       }
     });
   </script>

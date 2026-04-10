@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<!--
+  WeaveForward Admin Update Donation (admin_update_donation.html) - Simplified Base
+  DJANGO CONVERSION NOTES: Wrap in form, uncomment {% csrf_token %}
+-->
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Update Donation</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lato:wght@600&family=Poppins:wght@400;600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    :root {
+      --g: #e8a020;
+      --bg: #f5f4f0;
+      --brd: #e0dbd4;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Poppins, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: #222;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .layout {
+      display: flex;
+      gap: 24px;
+      align-items: flex-start;
+      width: 100%;
+    }
+
+    .left {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .right {
+      width: 360px;
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        flex-direction: column;
+      }
+
+      .left,
+      .right {
+        width: 100%;
+      }
+    }
+
+    .card,
+    .panel {
+      background: #fff;
+      border: 1.5px solid var(--brd);
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 14px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
+    }
+
+    .row,
+    .time {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    @media (max-width: 768px) {
+
+      .row,
+      .time {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+
+    .head b {
+      font-weight: 400;
+      font-size: 15px;
+    }
+
+    .up {
+      font-size: 10px;
+      font-weight: 400;
+      color: #888;
+      text-transform: uppercase;
+    }
+
+    .sub {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--g);
+      color: #fff;
+      font-size: 13px;
+      font-family: 'Lato', sans-serif;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .in,
+    .sel {
+      width: 100%;
+      border: 1.5px solid #d5d5d5;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 14px;
+      outline: none;
+      background: #fff;
+    }
+
+    .in,
+    .sel {
+      height: 44px;
+    }
+
+    .sel {
+      appearance: none;
+      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23e8a020' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E") no-repeat right 12px center;
+      padding-right: 34px;
+    }
+
+    .in:focus,
+    .sel:focus {
+      border-color: var(--g);
+    }
+
+    .in:disabled,
+    .sel:disabled {
+      background: #f4f4f4;
+      color: #aaa;
+    }
+
+    .btn-add,
+    .btn-submit {
+      width: 100%;
+      padding: 12px;
+      border-radius: 30px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    .btn-add {
+      border: 2px dashed var(--g);
+      color: var(--g);
+      background: transparent;
+    }
+
+    .btn-submit {
+      border: none;
+      background: var(--g);
+      color: #fff;
+      margin-top: 10px;
+    }
+
+    .trash {
+      background: none;
+      border: none;
+      color: var(--g);
+      cursor: pointer;
+    }
+
+    .drop {
+      border: 2px dashed #f0c060;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .btn-add:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    .mini-note {
+      font-size: 11px;
+      color: #888;
+      line-height: 1.35;
+      margin-top: 4px;
+    }
+
+    .lock-note {
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: #fff8e8;
+      border: 1px solid #f1dcac;
+      font-size: 12px;
+      color: #8f6a1a;
+    }
+
+    .map-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .map-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border: 1.5px solid var(--brd);
+      background: #fff;
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: #333;
+      cursor: pointer;
+      font: 500 12px Poppins, sans-serif;
+    }
+
+    .map-btn:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+
+    .modal-box {
+      background: #f3f3f3;
+      border-radius: 16px;
+      overflow: hidden;
+      width: min(640px, 95vw);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, .22);
+    }
+
+    .map-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 14px 16px 10px;
+      background: #f3f3f3;
+    }
+
+    .map-head-left {
+      min-width: 0;
+    }
+
+    .map-title {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 24px;
+      color: var(--g);
+    }
+
+    .map-title-text {
+      font: 400 24px Poppins, sans-serif;
+      color: #1f1f1f;
+      line-height: 1.1;
+    }
+
+    .map-caption {
+      margin-top: 4px;
+      font: 400 12px Poppins, sans-serif;
+      color: #7a7a7a;
+    }
+
+    .map-close {
+      border: none;
+      background: none;
+      color: #333;
+      cursor: pointer;
+      line-height: 1;
+      padding: 2px;
+    }
+
+    .map-close svg {
+      display: block;
+    }
+
+    #picker-map {
+      width: 100%;
+      height: 300px;
+      border-radius: 8px;
+    }
+
+    .map-actions {
+      display: flex;
+      justify-content: center;
+      padding: 12px 16px 16px;
+      background: #f3f3f3;
+    }
+
+    .map-confirm {
+      width: min(220px, 100%);
+      margin: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <form id="admin-donation-form" method="post" action="/donations/{{ donation.id|default:'' }}"
+    enctype="multipart/form-data">
+    <!-- {% csrf_token %} -->
+    <input type="hidden" id="pickup-latitude" name="pickup_latitude"
+      value="{{ donation.pickup_latitude|default:'' }}" />
+    <input type="hidden" id="pickup-longitude" name="pickup_longitude"
+      value="{{ donation.pickup_longitude|default:'' }}" />
+    <input type="hidden" id="donation-id" name="donation_id" value="{{ donation.id|default:'' }}" />
+    <input type="hidden" id="patch-method" name="_method" value="PATCH" />
+    <input type="hidden" id="patch-items" name="items" value="" />
+
+    <div class="layout">
+      <div class="left">
+        <div id="transit-lock-note" class="lock-note hidden">
+          This donation is <strong>IN_TRANSIT</strong>. Donation items and pickup schedule/coordinates are locked.
+        </div>
+
+        <div id="cards"></div>
+        <button type="button" id="add-card-btn" class="btn-add" onclick="addCard(null)">+ Add Another Clothing
+          Group</button>
+      </div>
+
+      <div class="right">
+        <div class="panel">
+          <p style="font-size:12px;margin-bottom:6px;"><strong>Donation ID:</strong> <span>{{ donation.id|default:''
+              }}</span></p>
+          <p style="font-size:12px;margin-bottom:6px;"><strong>Donor:</strong> <span>{{
+              donation.donor_id.first_name|default:'' }} {{ donation.donor_id.last_name|default:'' }}</span></p>
+          <p style="font-size:12px;margin-bottom:10px;"><strong>Flag Reason:</strong> <span>{{
+              donation.flag_reason|default:'' }}</span></p>
+
+          <p style="font-size:12px;margin-bottom:6px;">
+            <strong>Is Flagged:</strong>
+            <input id="is-flagged-patch" name="is_flagged" type="hidden" disabled />
+            <input id="is-flagged" type="checkbox" {% if donation.is_flagged %}checked{% endif %}
+              style="vertical-align:middle; margin-left:6px;" />
+          </p>
+
+          <p style="font-size:12px;margin-bottom:6px;"><strong>Current Status:</strong> <span>{{
+              donation.status|default:'' }}</span></p>
+          <p style="font-size:12px;margin-bottom:6px;"><strong>Claimed By TUAB:</strong> <span>{{
+              donation.claimed_by_tuab|default:'' }}</span></p>
+          <p style="font-size:12px;margin-bottom:10px;"><strong>Delivery Method:</strong> <span>{{
+              donation.delivery_method|default:'' }}</span></p>
+
+          <p style="font-size:12px;margin-bottom:6px;"><strong>Pickup Barangay:</strong> <span>{{
+              donation.pickup_barangay|default:'' }}</span></p>
+          <p style="font-size:12px;margin-bottom:6px;"><strong>Pickup City:</strong> <span>{{
+              donation.pickup_city|default:'' }}</span></p>
+          <p style="font-size:12px;margin-bottom:10px;"><strong>Pickup Display Address:</strong> <span>{{
+              donation.pickup_display_address|default:'' }}</span></p>
+
+          <p style="font-size:12px;margin-bottom:6px;"><strong>Change Status:</strong></p>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
+            <button type="submit" form="status-pending-form" class="map-btn"
+              style="flex:1 1 90px;justify-content:center;">PENDING</button>
+            <button type="submit" form="status-cancelled-form" class="map-btn"
+              style="flex:1 1 90px;justify-content:center;">CANCELLED</button>
+            <button type="submit" form="status-archived-form" class="map-btn"
+              style="flex:1 1 90px;justify-content:center;">ARCHIVED</button>
+          </div>
+
+          <p style="font-size:12px;margin-bottom:6px;"><strong>Preferred Pick-Up Date:</strong></p>
+          <input id="preferred-pickup-date" name="preferred_pickup_date" class="in" type="date"
+            value="{{ donation.preferred_pickup_date|default:'' }}" style="margin-bottom:10px;" />
+
+          <p style="font-size:12px;margin-bottom:6px;"><strong>Preferred Pick-Up Window:</strong></p>
+          <div class="time" style="margin-bottom:10px;">
+            <div class="group">
+              <label class="up">Start</label>
+              <input id="preferred-window-start" name="preferred_pickup_window_start" class="in" type="time"
+                value="{{ donation.preferred_pickup_window_start|default:'' }}" />
+            </div>
+            <div class="group">
+              <label class="up">End</label>
+              <input id="preferred-window-end" name="preferred_pickup_window_end" class="in" type="time"
+                value="{{ donation.preferred_pickup_window_end|default:'' }}" />
+            </div>
+          </div>
+
+          <div class="map-row" style="margin-bottom:6px;">
+            <p style="font-size:12px;"><strong>Coordinates:</strong> <span id="lat-display">{{
+                donation.pickup_latitude|default:'' }}</span>, <span id="lng-display">{{
+                donation.pickup_longitude|default:'' }}</span></p>
+            <button type="button" id="map-pick-btn" class="map-btn" onclick="openMapPicker()">Pick on Map</button>
+          </div>
+          <div class="mini-note">Coordinates and pickup schedule are editable only when current record status is not
+            IN_TRANSIT.</div>
+
+          <button type="submit" class="btn-submit">Save Changes</button>
+        </div>
+
+        <div class="panel">
+          <label class="sub" style="margin:0">Donation Upload</label>
+          <p style="font-size:12px;color:#999;margin-bottom:12px">Replace the image of this donation here</p>
+          <div class="drop" onclick="document.getElementById('img-in').click()">
+            <div id="i-prv-w" class="{% if donation.upload.file_path %}{% else %}hidden{% endif %}">
+              <img id="i-prv" src="{{ donation.upload.file_path|default:'' }}"
+                style="max-width:100%;max-height:130px;border-radius:8px;object-fit:cover">
+            </div>
+            <div id="i-ph" class="{% if donation.upload.file_path %}hidden{% endif %}"
+              style="font-size:13px;color:#999">Click to upload image</div>
+            <input id="img-in" name="donation_image" type="file" accept="image/*" class="hidden"
+              onchange="previewImage(this.files[0])">
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+
+  <form id="status-pending-form" method="post" action="/admin/update_donation/" class="hidden">
+    <!-- {% csrf_token %} -->
+    <input type="hidden" name="donation_id" value="{{ donation.id|default:'' }}" />
+    <input type="hidden" name="status" value="PENDING" />
+  </form>
+  <form id="status-cancelled-form" method="post" action="/admin/update_donation/" class="hidden">
+    <!-- {% csrf_token %} -->
+    <input type="hidden" name="donation_id" value="{{ donation.id|default:'' }}" />
+    <input type="hidden" name="status" value="CANCELLED" />
+  </form>
+  <form id="status-archived-form" method="post" action="/admin/update_donation/" class="hidden">
+    <!-- {% csrf_token %} -->
+    <input type="hidden" name="donation_id" value="{{ donation.id|default:'' }}" />
+    <input type="hidden" name="status" value="ARCHIVED" />
+  </form>
+
+  <datalist id="clothing-options"></datalist>
+  <datalist id="brand-options"></datalist>
+
+  <template id="card-tpl">
+    <div class="card">
+      <div class="head">
+        <div style="display:flex;gap:10px;align-items:center">
+          <div class="num"></div>
+          <b></b>
+        </div>
+        <button type="button" class="trash" onclick="removeCard(this.closest('.card'))">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M3 6h18M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m4 5v6m4-6v6M9 6V4h6v2" />
+          </svg>
+        </button>
+      </div>
+      <div class="row">
+        <div class="group">
+          <label class="up">Clothing *</label>
+          <input name="clothing" class="in" list="clothing-options" autocomplete="off"
+            oninput="checkMaterial(this.closest('.card'))">
+        </div>
+        <div class="group">
+          <label class="up">Weight (kg)</label>
+          <input name="estimated_weight_kg" type="number" step="0.1" class="in">
+        </div>
+      </div>
+      <div class="group" style="margin-bottom:14px">
+        <label class="up">Condition</label>
+        <select name="condition" class="sel"></select>
+      </div>
+      <div class="row" style="margin-bottom:0">
+        <div class="group">
+          <label class="up">Brand</label>
+          <input name="brand" class="in" list="brand-options" autocomplete="off"
+            oninput="checkMaterial(this.closest('.card'))">
+        </div>
+        <div class="group">
+          <label class="up">Material</label>
+          <select name="lookup_id" class="sel hidden">
+            <option value=""></option>
+          </select>
+          <input class="in approx-note" value="Will be approximated" disabled>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <div id="map-modal" class="modal hidden">
+    <div class="modal-box">
+      <div class="map-head">
+        <div class="map-head-left">
+          <div class="map-title">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            <span class="map-title-text">Pick on Map</span>
+          </div>
+          <div class="map-caption">Click anywhere or drag the marker to set your pickup location.</div>
+        </div>
+        <button type="button" class="map-close" onclick="closeMapPicker()" aria-label="Close map">
+          <svg width="34" height="34" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div id="picker-map"></div>
+      <div class="map-actions">
+        <button type="button" class="btn-submit map-confirm" onclick="confirmMapPicker()">Confirm Location</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+
+    var INITIAL_TOP = {};
+    var REMOVED_IDS = [];
+
+
+    // ================================================================
+    // --- 1. Cards ---
+    // ================================================================
+
+    function addCard(data) {
+      var isLocked = CURRENT_STATUS === 'IN_TRANSIT';
+      var n = document.querySelectorAll('#cards .card').length + 1;
+
+      var card = document.getElementById('card-tpl').content.firstElementChild.cloneNode(true);
+
+      card.querySelector('.num').textContent = n;
+      card.querySelector('b').textContent = 'Clothing ' + n;
+
+      card.querySelector('[name=condition]').innerHTML =
+        CONDITIONS.map(function (c) { return '<option>' + c + '</option>'; }).join('');
+
+      if (data) {
+        var baseline = {
+          item_id: Number(data.item_id),
+          clothing_type: data.clothing_type || '',
+          weight_kg: data.weight_kg != null ? Number(data.weight_kg) : null,
+          condition_rating: data.condition_rating || 'Good',
+          brand: data.brand || '',
+          lookup_id: data.lookup_id != null ? Number(data.lookup_id) : null
+        };
+        card.dataset.itemId = baseline.item_id;
+        card.dataset.initial = JSON.stringify(baseline);
+
+        card.querySelector('[name=clothing]').value = baseline.clothing_type;
+        card.querySelector('[name=estimated_weight_kg]').value = baseline.weight_kg != null ? baseline.weight_kg : '';
+        card.querySelector('[name=condition]').value = baseline.condition_rating;
+        card.querySelector('[name=brand]').value = baseline.brand;
+      }
+
+      document.getElementById('cards').appendChild(card);
+      checkMaterial(card);
+      if (data && data.lookup_id != null) card.querySelector('[name=lookup_id]').value = String(data.lookup_id);
+
+      if (isLocked) {
+        card.querySelectorAll('input:not(.approx-note), select').forEach(function (el) { el.disabled = true; });
+        card.querySelector('.trash').disabled = true;
+      }
+    }
+
+    function removeCard(card) {
+      if (CURRENT_STATUS === 'IN_TRANSIT') return;
+      if (card.dataset.itemId) REMOVED_IDS.push(Number(card.dataset.itemId));
+      card.remove();
+      document.querySelectorAll('#cards .card').forEach(function (c, i) {
+        c.querySelector('.num').textContent = i + 1;
+        c.querySelector('b').textContent = 'Clothing ' + (i + 1);
+      });
+    }
+
+    function checkMaterial(card) {
+      var clothing = card.querySelector('[name=clothing]').value;
+      var brand = card.querySelector('[name=brand]').value;
+      var sel = card.querySelector('[name=lookup_id]');
+      var fallback = sel.nextElementSibling;
+      var matches = LOOKUP_TABLE.filter(function (r) { return r.clothing === clothing && r.brand === brand; });
+      var prev = sel.value;
+
+      sel.classList.toggle('hidden', !matches.length);
+      fallback.classList.toggle('hidden', !!matches.length);
+      sel.innerHTML = '<option value="">- select material -</option>' +
+        matches.map(function (r) { return '<option value="' + r.id + '">' + r.material + '</option>'; }).join('');
+
+      if (matches.some(function (r) { return String(r.id) === prev; })) sel.value = prev;
+    }
+
+
+    // ================================================================
+    // --- 2. Transit Lock ---
+    // ================================================================
+
+    function applyTransitLocks() {
+      var isLocked = CURRENT_STATUS === 'IN_TRANSIT';
+      ['preferred-pickup-date', 'preferred-window-start', 'preferred-window-end', 'map-pick-btn', 'add-card-btn'].forEach(function (id) {
+        document.getElementById(id).disabled = isLocked;
+      });
+      document.getElementById('transit-lock-note').classList.toggle('hidden', !isLocked);
+    }
+
+
+    // ================================================================
+    // --- 3. Map ---
+    // ================================================================
+
+    var mapInstance = null, mapMarker = null, tmpLat = null, tmpLng = null;
+
+    function openMapPicker() {
+      if (CURRENT_STATUS === 'IN_TRANSIT') return;
+      tmpLat = parseFloat(document.getElementById('pickup-latitude').value) || 14.58076;
+      tmpLng = parseFloat(document.getElementById('pickup-longitude').value) || 120.98012;
+      document.getElementById('map-modal').classList.remove('hidden');
+      setTimeout(function () {
+        if (!mapInstance) {
+          mapInstance = L.map('picker-map').setView([tmpLat, tmpLng], 15);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInstance);
+          mapMarker = L.marker([tmpLat, tmpLng], { draggable: true }).addTo(mapInstance);
+          mapMarker.on('dragend', function (e) { tmpLat = e.target.getLatLng().lat; tmpLng = e.target.getLatLng().lng; });
+          mapInstance.on('click', function (e) { tmpLat = e.latlng.lat; tmpLng = e.latlng.lng; mapMarker.setLatLng(e.latlng); });
+        } else {
+          mapInstance.setView([tmpLat, tmpLng], 15);
+          mapMarker.setLatLng([tmpLat, tmpLng]);
+        }
+      }, 100);
+    }
+
+    function closeMapPicker() { document.getElementById('map-modal').classList.add('hidden'); }
+
+    function confirmMapPicker() {
+      document.getElementById('pickup-latitude').value = Number(tmpLat).toFixed(7);
+      document.getElementById('pickup-longitude').value = Number(tmpLng).toFixed(7);
+      document.getElementById('lat-display').textContent = document.getElementById('pickup-latitude').value;
+      document.getElementById('lng-display').textContent = document.getElementById('pickup-longitude').value;
+      closeMapPicker();
+    }
+
+
+    // ================================================================
+    // --- 4. Image Upload ---
+    // ================================================================
+
+    function previewImage(file) {
+      if (!file || !file.type.startsWith('image/')) return;
+      var reader = new FileReader();
+      reader.onload = function (e) {
+        document.getElementById('i-prv').src = e.target.result;
+        document.getElementById('i-prv-w').classList.remove('hidden');
+        document.getElementById('i-ph').classList.add('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+
+    // ================================================================
+    // --- 5. Payload / Submit ---
+    // ================================================================
+
+    function buildItemChange(card) {
+      var current = {
+        item_id: card.dataset.itemId ? Number(card.dataset.itemId) : null,
+        clothing_type: card.querySelector('[name=clothing]').value.trim(),
+        weight_kg: card.querySelector('[name=estimated_weight_kg]').value !== '' ? Number(card.querySelector('[name=estimated_weight_kg]').value) : null,
+        condition_rating: card.querySelector('[name=condition]').value,
+        brand: card.querySelector('[name=brand]').value.trim(),
+        lookup_id: card.querySelector('[name=lookup_id]').value !== '' ? Number(card.querySelector('[name=lookup_id]').value) : null
+      };
+
+      if (!current.item_id) {
+        var missing = ['clothing_type', 'brand', 'condition_rating'].filter(function (k) { return !current[k]; });
+        if (current.weight_kg === null) missing.push('weight');
+        if (missing.length) throw new Error('New item is missing: ' + missing.join(', '));
+        return current;
+      }
+
+      var baseline = JSON.parse(card.dataset.initial);
+      var patch = { item_id: current.item_id };
+      ['clothing_type', 'weight_kg', 'condition_rating', 'brand', 'lookup_id'].forEach(function (k) {
+        if (JSON.stringify(current[k]) !== JSON.stringify(baseline[k])) patch[k] = current[k];
+      });
+      return Object.keys(patch).length > 1 ? patch : null;
+    }
+
+    document.getElementById('admin-donation-form').onsubmit = function (e) {
+      e.preventDefault();
+      try {
+        // is_flagged
+        var isFlaggedEl = document.getElementById('is-flagged');
+        var isFlaggedPatch = document.getElementById('is-flagged-patch');
+        isFlaggedPatch.disabled = (isFlaggedEl.checked === INITIAL_TOP.is_flagged);
+        isFlaggedPatch.value = isFlaggedEl.checked ? 'true' : 'false';
+
+        // Top-level fields — exclude if unchanged
+        [
+          { id: 'preferred-pickup-date', key: 'preferred_pickup_date' },
+          { id: 'preferred-window-start', key: 'preferred_pickup_window_start' },
+          { id: 'preferred-window-end', key: 'preferred_pickup_window_end' },
+          { id: 'pickup-latitude', key: 'pickup_latitude' },
+          { id: 'pickup-longitude', key: 'pickup_longitude' }
+        ].forEach(function (f) {
+          var el = document.getElementById(f.id);
+          if (el && !el.disabled) el.disabled = (el.value === INITIAL_TOP[f.key]);
+        });
+
+        // Image — exclude if no new file
+        var imgInput = document.getElementById('img-in');
+        if (imgInput && !imgInput.disabled) imgInput.disabled = imgInput.files.length === 0;
+
+        // Cards — removals from REMOVED_IDS, then changed/new from DOM
+        var changes = [];
+        REMOVED_IDS.forEach(function (id) { changes.push({ item_id: id, is_archived: true }); });
+        document.querySelectorAll('#cards .card').forEach(function (card) {
+          var change = buildItemChange(card);
+          if (change) changes.push(change);
+        });
+        var patchItemsEl = document.getElementById('patch-items');
+        patchItemsEl.disabled = changes.length === 0;
+        if (changes.length) patchItemsEl.value = JSON.stringify(changes);
+        e.target.querySelectorAll('#cards [name]').forEach(function (el) { el.disabled = true; });
+
+        var preview = 'POST Preview Data:\n-----------------\n';
+        new FormData(e.target).forEach(function (value, key) { preview += key + ': ' + (value.name || value) + '\n'; });
+        if (confirm(preview + '\nProceed with Submission?')) e.target.submit();
+
+      } catch (err) { alert(err.message); }
+    };
+
+    document.addEventListener('click', function (e) { if (e.target === document.getElementById('map-modal')) closeMapPicker(); });
+
+
+    // ================================================================
+    // --- 6. Init ---
+    // ================================================================
+
+    var CONDITIONS = ['New', 'Like New', 'Good', 'Fair', 'Poor'];
+
+    var LOOKUP_TABLE = [
+      { id: 1, clothing: 'Pants', brand: "Levi's", material: '80% Cotton, 20% Polyester' },
+      { id: 2, clothing: 'Shirt', brand: 'Uniqlo', material: '100% Cotton' },
+      { id: 3, clothing: 'Jacket', brand: 'Nike', material: '100% Polyester' },
+      { id: 4, clothing: 'Jeans', brand: "Levi's", material: '99% Cotton, 1% Elastane' },
+      { id: 21, clothing: 'Jacket', brand: 'H&M', material: '65% Cotton, 35% Polyester' },
+      { id: 22, clothing: 'Jeans', brand: 'Zara', material: '98% Cotton, 2% Elastane' }
+    ];
+
+    // Django: replace with {{ donation_items_json|safe }}
+    var INITIAL_CARDS = [
+      { item_id: 501, clothing_type: 'Jacket', weight_kg: 1.2, condition_rating: 'Good', brand: 'H&M', lookup_id: 21 },
+      { item_id: 502, clothing_type: 'Jeans', weight_kg: 0.9, condition_rating: 'Fair', brand: 'Zara', lookup_id: 22 }
+    ];
+
+    var CURRENT_STATUS = "{{ donation.status|default:''|escapejs }}".trim().toUpperCase();
+
+    // Normalize saved coordinates
+    ['pickup-latitude', 'pickup-longitude'].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el.value) el.value = (+el.value).toFixed(7);
+    });
+
+    // Snapshot top-level fields for change detection
+    INITIAL_TOP = {
+      is_flagged: document.getElementById('is-flagged').defaultChecked,
+      preferred_pickup_date: document.getElementById('preferred-pickup-date').value,
+      preferred_pickup_window_start: document.getElementById('preferred-window-start').value,
+      preferred_pickup_window_end: document.getElementById('preferred-window-end').value,
+      pickup_latitude: document.getElementById('pickup-latitude').value,
+      pickup_longitude: document.getElementById('pickup-longitude').value
+    };
+
+    // Populate datalists
+    document.getElementById('clothing-options').innerHTML =
+      [...new Set(LOOKUP_TABLE.map(function (r) { return r.clothing; }))].map(function (v) { return '<option value="' + v + '">'; }).join('');
+    document.getElementById('brand-options').innerHTML =
+      [...new Set(LOOKUP_TABLE.map(function (r) { return r.brand; }))].map(function (v) { return '<option value="' + v + '">'; }).join('');
+
+    (INITIAL_CARDS.length ? INITIAL_CARDS : [null]).forEach(addCard);
+    applyTransitLocks();
+
+  </script>
+</body>
+
+</html>

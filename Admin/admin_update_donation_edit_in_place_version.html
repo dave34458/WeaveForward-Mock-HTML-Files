@@ -43,6 +43,10 @@
     .btn-add { border: 2px dashed var(--g); color: var(--g); background: transparent; }
     .btn-submit { border: none; background: var(--g); color: #fff; margin-top: 10px; }
     .trash { background: none; border: none; color: var(--g); cursor: pointer; }
+    .trash.undo-state { font: 600 12px Poppins, sans-serif; }
+    .removed-tag { font-size: 11px; color: #b25b29; background: #fff2e8; border: 1px solid #f1c9ae; border-radius: 999px; padding: 4px 8px; }
+    .card.is-archived { background: #fffaf4; border-color: #f0c9ab; }
+    .card.is-archived .num { background: #c88a49; }
 
     .drop { border: 2px dashed #f0c060; border-radius: 12px; padding: 16px; text-align: center; cursor: pointer; transition: .2s; }
     .drop:hover { background: var(--lt); }
@@ -68,11 +72,13 @@
   </style>
 </head>
 <body>
-<form id="admin-donation-form" method="post" action="/admin/update_donation/" enctype="multipart/form-data">
+<form id="admin-donation-form" method="post" action="/donations/{{ donation.id|default:'' }}" enctype="multipart/form-data">
   <!-- {% csrf_token %} -->
   <input type="hidden" id="pickup-latitude" name="pickup_latitude" value="{{ donation.pickup_latitude|default:'' }}" />
   <input type="hidden" id="pickup-longitude" name="pickup_longitude" value="{{ donation.pickup_longitude|default:'' }}" />
   <input type="hidden" id="donation-id" name="donation_id" value="{{ donation.id|default:'' }}" />
+  <input type="hidden" id="patch-method" name="_method" value="PATCH" />
+  <input type="hidden" id="patch-items" name="items" value="" />
 
   <div class="layout">
     <div class="left">
@@ -170,8 +176,8 @@
 <template id="card-template">
   <div class="card">
     <div class="head">
-      <div style="display:flex;gap:10px;align-items:center"><div class="num"></div><b></b></div>
-      <button type="button" class="trash" onclick="this.closest('.card').remove();updateNumbering()">
+      <div style="display:flex;gap:10px;align-items:center"><div class="num"></div><b></b><span class="removed-tag hidden">Pending removal</span></div>
+      <button type="button" class="trash" onclick="removeCard(this.closest('.card'))">
         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m4 5v6m4-6v6M9 6V4h6v2"/></svg>
       </button>
     </div>
@@ -224,7 +230,7 @@
 <script>
   // --- 1. Data & Utils ---
   const data = {
-    cond: ['Good', 'Like New', 'Fair', 'Poor'],
+    cond: ['New', 'Like New', 'Good', 'Fair', 'Poor'],
     lup: [
       { id: 1, clothing: 'Pants', brand: "Levi\'s", material: '80% Cotton, 20% Polyester' },
       { id: 2, clothing: 'Shirt', brand: 'Uniqlo', material: '100% Cotton' },
@@ -235,82 +241,141 @@
     ]
   };
 
+  // Django: replace with {{ donation_items_json|safe }} using item_id, clothing_type, weight_kg,
+  // condition_rating, brand, and lookup_id for each existing donation item.
   const initialCards = [
-    { c: 'Jacket', w: '1.2', d: 'Good', b: 'H&M', id: '21' },
-    { c: 'Jeans', w: '0.9', d: 'Fair', b: 'Zara', id: '22' }
+    { item_id: 501, clothing_type: 'Jacket', weight_kg: 1.2, condition_rating: 'good', brand: 'H&M', lookup_id: 21 },
+    { item_id: 502, clothing_type: 'Jeans', weight_kg: 0.9, condition_rating: 'fair', brand: 'Zara', lookup_id: 22 }
   ];
 
   const getEl = id => document.getElementById(id);
-  const getUnq = key => [...new Set(data.lup.map(x => x[key]))];
-  const allClothing = getUnq('clothing');
-  const allBrands = getUnq('brand');
+  const cardInput = (card, name) => card.querySelector(`[name=${name}]`);
+  const uniq = key => [...new Set(data.lup.map(x => x[key]))];
+  const allClothing = uniq('clothing');
+  const allBrands = uniq('brand');
+  const trashIcon = '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 6h18M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m4 5v6m4-6v6M9 6V4h6v2"/></svg>';
+  const conditionToApi = { New: 'new', 'Like New': 'like_new', Good: 'good', Fair: 'fair', Poor: 'poor' };
+  const apiToCondition = { new: 'New', like_new: 'Like New', good: 'Good', fair: 'Fair', poor: 'Poor' };
+  const toNumber = value => value === '' || value == null ? null : Number(value);
+  const sameValue = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const cardFields = {
+    clothing_type: ['clothing', value => value.trim()],
+    weight_kg: ['estimated_weight_kg', toNumber],
+    condition_rating: ['condition', value => conditionToApi[value] || 'good'],
+    brand: ['brand', value => value.trim()],
+    lookup_id: ['lookup_id', toNumber]
+  };
+  const requiredAddFields = {
+    clothing_type: 'clothing',
+    brand: 'brand',
+    condition_rating: 'condition',
+    weight_kg: 'weight'
+  };
   const initialIsFlagged = getEl('is-flagged').defaultChecked;
+  const currentStatus = "{{ donation.status|default:''|escapejs }}".trim().toUpperCase();
+  const isTransitLocked = () => currentStatus === 'IN_TRANSIT';
 
   let map, mrk, tmpLat, tmpLng;
   if (getEl('pickup-latitude').value) getEl('pickup-latitude').value = (+getEl('pickup-latitude').value).toFixed(7);
   if (getEl('pickup-longitude').value) getEl('pickup-longitude').value = (+getEl('pickup-longitude').value).toFixed(7);
-
-  const isTransitLocked = () => "{{ donation.status|default:''|escapejs }}".trim().toUpperCase() === 'IN_TRANSIT';
+  const initialTopFieldValues = {
+    preferred_pickup_date: getEl('preferred-pickup-date').value,
+    preferred_pickup_window_start: getEl('preferred-window-start').value,
+    preferred_pickup_window_end: getEl('preferred-window-end').value,
+    pickup_latitude: getEl('pickup-latitude').value,
+    pickup_longitude: getEl('pickup-longitude').value
+  };
 
   function updateCoordDisplays() {
     getEl('lat-display').textContent = getEl('pickup-latitude').value || 'NULL';
     getEl('lng-display').textContent = getEl('pickup-longitude').value || 'NULL';
   }
 
+  function readCard(card) {
+    return {
+      item_id: card.dataset.itemId ? Number(card.dataset.itemId) : null,
+      ...Object.fromEntries(
+        Object.entries(cardFields).map(([key, [name, format]]) => [key, format(cardInput(card, name).value)])
+      )
+    };
+  }
+
+  function cardBaseline(card) {
+    return card.dataset.initial ? JSON.parse(card.dataset.initial) : null;
+  }
+
+  function syncCardState(card) {
+    const removed = card.dataset.removed === 'true';
+    const locked = isTransitLocked();
+    card.classList.toggle('is-archived', removed);
+    card.querySelector('.removed-tag').classList.toggle('hidden', !removed);
+    const trashBtn = card.querySelector('.trash');
+    trashBtn.disabled = locked;
+    trashBtn.classList.toggle('undo-state', removed);
+    trashBtn.innerHTML = removed ? 'Undo' : trashIcon;
+    trashBtn.title = removed ? 'Undo removal' : 'Remove item';
+    trashBtn.setAttribute('aria-label', removed ? 'Undo removal' : 'Remove item');
+
+    card.querySelectorAll('input, select').forEach(el => {
+      if (!el.classList.contains('approx-note')) el.disabled = locked || removed;
+    });
+  }
+
   // --- 2. Dynamic Form Logic ---
   function updateNumbering() {
-    document.querySelectorAll('#cards .card').forEach((c, i) => {
-      c.querySelector('.num').innerText = i + 1;
-      c.querySelector('b').innerText = `Clothing ${i + 1}`;
-      c.querySelector('.trash').style.display = i === 0 ? 'none' : 'block';
+    document.querySelectorAll('#cards .card').forEach((card, i) => {
+      card.querySelector('.num').textContent = i + 1;
+      card.querySelector('b').textContent = `Clothing ${i + 1}`;
     });
   }
 
   function applyTransitLocks() {
     const locked = isTransitLocked();
-    ['preferred-pickup-date', 'preferred-window-start', 'preferred-window-end'].forEach(id => {
-      const el = getEl(id);
-      if (el) el.disabled = locked;
-    });
-
-    const mapBtn = getEl('map-pick-btn');
-    if (mapBtn) mapBtn.disabled = locked;
-
-    const lockNote = getEl('transit-lock-note');
-    if (lockNote) lockNote.classList.toggle('hidden', !locked);
-
+    ['preferred-pickup-date', 'preferred-window-start', 'preferred-window-end', 'map-pick-btn']
+      .map(getEl)
+      .filter(Boolean)
+      .forEach(el => { el.disabled = locked; });
     const addBtn = getEl('add-card-btn');
-    if (addBtn) {
-      addBtn.disabled = locked;
-      addBtn.style.opacity = locked ? '0.6' : '1';
-      addBtn.style.cursor = locked ? 'not-allowed' : 'pointer';
-    }
-
-    document.querySelectorAll('#cards input, #cards select, #cards button').forEach(el => {
-      if (el.classList.contains('approx-note')) return;
-      el.disabled = locked;
-    });
+    addBtn.disabled = locked;
+    addBtn.style.opacity = locked ? '0.6' : '1';
+    addBtn.style.cursor = locked ? 'not-allowed' : 'pointer';
+    getEl('transit-lock-note').classList.toggle('hidden', !locked);
+    document.querySelectorAll('#cards .card').forEach(syncCardState);
   }
 
   function addCard(cardData = null) {
-    const template = getEl('card-template');
-    const card = template.content.firstElementChild.cloneNode(true);
-    const conditionSelect = card.querySelector('.condition-select');
-    conditionSelect.innerHTML = data.cond.map(c => `<option>${c}</option>`).join('');
+    const card = getEl('card-template').content.firstElementChild.cloneNode(true);
+    card.querySelector('.condition-select').innerHTML = data.cond.map(c => `<option>${c}</option>`).join('');
 
     if (cardData) {
-      card.querySelector('[name=clothing]').value = cardData.c || '';
-      card.querySelector('[name=estimated_weight_kg]').value = cardData.w || '';
-      card.querySelector('[name=condition]').value = cardData.d || 'Good';
-      card.querySelector('[name=brand]').value = cardData.b || '';
-      card.querySelector('[name=lookup_id]').dataset.id = cardData.id || '';
+      const baseline = {
+        item_id: Number(cardData.item_id),
+        clothing_type: cardData.clothing_type || '',
+        weight_kg: toNumber(cardData.weight_kg),
+        condition_rating: (cardData.condition_rating || 'good').toLowerCase(),
+        brand: cardData.brand || '',
+        lookup_id: toNumber(cardData.lookup_id)
+      };
+      card.dataset.itemId = baseline.item_id;
+      card.dataset.initial = JSON.stringify(baseline);
+      cardInput(card, 'clothing').value = baseline.clothing_type;
+      cardInput(card, 'estimated_weight_kg').value = baseline.weight_kg ?? '';
+      cardInput(card, 'condition').value = apiToCondition[baseline.condition_rating] || 'Good';
+      cardInput(card, 'brand').value = baseline.brand;
     }
 
     getEl('cards').appendChild(card);
     checkMaterial(card);
-    if (cardData?.id) card.querySelector('[name=lookup_id]').value = cardData.id;
+    if (cardData?.lookup_id != null) cardInput(card, 'lookup_id').value = String(cardData.lookup_id);
+    syncCardState(card);
     updateNumbering();
-    if (isTransitLocked()) applyTransitLocks();
+  }
+
+  function removeCard(card) {
+    if (isTransitLocked()) return;
+    if (!card.dataset.itemId) return card.remove(), updateNumbering();
+    card.dataset.removed = card.dataset.removed === 'true' ? 'false' : 'true';
+    syncCardState(card);
   }
 
   function handleListFocus(input) {
@@ -333,41 +398,43 @@
   }
 
   function checkMaterial(card) {
-    const cInput = card.querySelector('[name=clothing]');
-    const bInput = card.querySelector('[name=brand]');
-    const select = card.querySelector('[name=lookup_id]');
+    const select = cardInput(card, 'lookup_id');
     const fallback = select.nextElementSibling;
+    const currentValue = select.value;
+    const matches = data.lup.filter(x =>
+      x.clothing === cardInput(card, 'clothing').value && x.brand === cardInput(card, 'brand').value
+    );
 
-    const matches = data.lup.filter(x => x.clothing === cInput.value && x.brand === bInput.value);
-    const isExact = matches.length > 0;
-
-    select.classList.toggle('hidden', !isExact);
-    fallback.classList.toggle('hidden', isExact);
-
-    select.innerHTML = isExact
+    select.classList.toggle('hidden', matches.length === 0);
+    fallback.classList.toggle('hidden', matches.length > 0);
+    select.innerHTML = matches.length
       ? '<option value="">- select material -</option>' + matches.map(x => `<option value="${x.id}">${x.material}</option>`).join('')
       : '<option value=""></option>';
+
+    if ([...select.options].some(opt => opt.value === currentValue)) select.value = currentValue;
   }
 
   // --- 4. Pickup Map Logic ---
   function openPickerFor(latId, lngId) {
     if (isTransitLocked()) return;
-    const lat = parseFloat(getEl(latId).value) || 14.58076;
-    const lng = parseFloat(getEl(lngId).value) || 120.98012;
-    tmpLat = lat;
-    tmpLng = lng;
+    tmpLat = parseFloat(getEl(latId).value) || 14.58076;
+    tmpLng = parseFloat(getEl(lngId).value) || 120.98012;
 
     getEl('map-modal').classList.remove('hidden');
     setTimeout(() => {
       if (!map) {
-        map = L.map('picker-map').setView([lat, lng], 15);
+        map = L.map('picker-map').setView([tmpLat, tmpLng], 15);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        mrk = L.marker([lat, lng], { draggable: true }).addTo(map);
-        mrk.on('dragend', e => { tmpLat = e.target.getLatLng().lat; tmpLng = e.target.getLatLng().lng; });
-        map.on('click', e => { tmpLat = e.latlng.lat; tmpLng = e.latlng.lng; mrk.setLatLng(e.latlng); });
+        mrk = L.marker([tmpLat, tmpLng], { draggable: true }).addTo(map);
+        mrk.on('dragend', e => ({ lat: tmpLat, lng: tmpLng } = e.target.getLatLng()));
+        map.on('click', e => {
+          tmpLat = e.latlng.lat;
+          tmpLng = e.latlng.lng;
+          mrk.setLatLng(e.latlng);
+        });
       } else {
-        map.setView([lat, lng]);
-        mrk.setLatLng([lat, lng]);
+        map.setView([tmpLat, tmpLng], 15);
+        mrk.setLatLng([tmpLat, tmpLng]);
       }
     }, 100);
   }
@@ -399,17 +466,78 @@
     reader.readAsDataURL(file);
   }
 
-  // --- 5. Submit Preview ---
-  getEl('admin-donation-form').onsubmit = e => {
-    e.preventDefault();
+  // --- 5. Payload Building ---
+  function buildItemChange(card) {
+    if (card.dataset.removed === 'true') return { item_id: Number(card.dataset.itemId), is_archived: true };
+
+    const current = readCard(card);
+    if (!current.item_id) {
+      const missing = Object.entries(requiredAddFields)
+        .filter(([key]) => current[key] == null || current[key] === '')
+        .map(([, label]) => label);
+      if (missing.length) throw new Error(`New item is missing: ${missing.join(', ')}`);
+      return { ...current, item_id: null };
+    }
+
+    const patch = { item_id: current.item_id };
+    const initial = cardBaseline(card);
+    Object.keys(cardFields).forEach(key => {
+      if (!sameValue(current[key], initial[key])) patch[key] = current[key];
+    });
+    return Object.keys(patch).length > 1 ? patch : null;
+  }
+
+  function preparePatchSubmit(form) {
+    const restoreDisabledStates = [];
+    const setDisabled = (el, disabled) => {
+      if (!el || el.disabled === disabled) return;
+      restoreDisabledStates.push([el, el.disabled]);
+      el.disabled = disabled;
+    };
+
     const isFlaggedPatch = getEl('is-flagged-patch');
     const isFlaggedChanged = getEl('is-flagged').checked !== initialIsFlagged;
     isFlaggedPatch.disabled = !isFlaggedChanged;
     isFlaggedPatch.value = getEl('is-flagged').checked ? 'true' : 'false';
+
+    const topFieldMap = [
+      ['preferred-pickup-date', 'preferred_pickup_date'],
+      ['preferred-window-start', 'preferred_pickup_window_start'],
+      ['preferred-window-end', 'preferred_pickup_window_end'],
+      ['pickup-latitude', 'pickup_latitude'],
+      ['pickup-longitude', 'pickup_longitude']
+    ];
+    topFieldMap.forEach(([id, key]) => {
+      const el = getEl(id);
+      if (!el || el.disabled) return;
+      setDisabled(el, el.value === initialTopFieldValues[key]);
+    });
+
+    const imgInput = getEl('img-in');
+    if (imgInput && !imgInput.disabled) setDisabled(imgInput, imgInput.files.length === 0);
+
+    getEl('patch-items').value = JSON.stringify(
+      [...document.querySelectorAll('#cards .card')].map(buildItemChange).filter(Boolean)
+    );
+
+    form.querySelectorAll('#cards [name]').forEach(el => { el.disabled = true; });
+    return () => restoreDisabledStates.forEach(([el, wasDisabled]) => { el.disabled = wasDisabled; });
+  }
+
+  // --- 6. Submit ---
+getEl('admin-donation-form').onsubmit = e => {
+  e.preventDefault();
+  try {
+    preparePatchSubmit(e.target);
+
     let str = 'POST Preview Data:\n-----------------\n';
     for (const [k, v] of new FormData(e.target)) str += `${k}: ${v.name || v}\n`;
     if (confirm(str + '\nProceed with Submission?')) e.target.submit();
-  };
+
+  } catch (err) {
+    alert(err.message);
+  }
+};
 
   document.addEventListener('click', e => {
     if (e.target === getEl('map-modal')) closeMapPicker();
@@ -418,16 +546,8 @@
   // --- Init ---
   getEl('clothing-options').innerHTML = allClothing.map(x => `<option value="${x}"></option>`).join('');
   getEl('brand-options').innerHTML = allBrands.map(x => `<option value="${x}"></option>`).join('');
-
-  if (initialCards.length) {
-    initialCards.forEach(c => addCard(c));
-  } else {
-    addCard();
-  }
-
-  const currentStatus = "{{ donation.status|default:''|escapejs }}".trim().toUpperCase();
+  (initialCards.length ? initialCards : [null]).forEach(addCard);
   getEl('current-status-display').textContent = currentStatus;
-
   applyTransitLocks();
   updateCoordDisplays();
 </script>
