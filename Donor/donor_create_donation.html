@@ -182,16 +182,16 @@
   const data = {
     cond: ['Good', 'Like New', 'Fair', 'Poor'],
     lup: [
-      { id: 1, clothing: 'Pants', brand: "Levi's", material: '80% Cotton, 20% Polyester' },
-      { id: 2, clothing: 'Pants', brand: "Levi's", material: '99% Cotton, 1% Elastane' },
-      { id: 3, clothing: 'Shirt', brand: 'Uniqlo', material: '100% Cotton' },
-      { id: 4, clothing: 'Shirt', brand: 'H&M', material: '50% Cotton, 50% Polyester' }
+      { lookup_id: 1, clothing_type: 'Pants', brand: "Levi's", fiber_json: '80% Cotton, 20% Polyester' },
+      { lookup_id: 2, clothing_type: 'Pants', brand: "Levi's", fiber_json: '99% Cotton, 1% Elastane' },
+      { lookup_id: 3, clothing_type: 'Shirt', brand: 'Uniqlo', fiber_json: '100% Cotton' },
+      { lookup_id: 4, clothing_type: 'Shirt', brand: 'H&M', fiber_json: '50% Cotton, 50% Polyester' }
     ]
   };
 
   const getEl = id => document.getElementById(id);
   const getUnq = key => [...new Set(data.lup.map(x => x[key]))];
-  const allClothing = getUnq('clothing');
+  const allClothing = getUnq('clothing_type');
   const allBrands = getUnq('brand');
   const hideAc = () => setTimeout(() => getEl('ac')?.classList.add('hidden'), 200);
 
@@ -220,7 +220,7 @@
     const select = card.querySelector('[name=lookup_id]');
     const fallback = select.nextElementSibling;
     
-    const matches = data.lup.filter(x => x.clothing === cInput.value && x.brand === bInput.value);
+    const matches = data.lup.filter(x => x.clothing_type === cInput.value && x.brand === bInput.value);
     const isExact = matches.length > 0;
 
     select.classList.toggle('hidden', !isExact);
@@ -228,7 +228,7 @@
     
     // Maintain empty option for approximation to align array lengths in Django
     select.innerHTML = isExact 
-      ? '<option value="">- select material -</option>' + matches.map(x => `<option value="${x.id}">${x.material}</option>`).join('')
+      ? '<option value="">- select material -</option>' + matches.map(x => `<option value="${x.lookup_id}">${x.fiber_json}</option>`).join('')
       : '<option value=""></option>';
   }
 

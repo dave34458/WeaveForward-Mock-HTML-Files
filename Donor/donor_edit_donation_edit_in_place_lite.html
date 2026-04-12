@@ -401,11 +401,11 @@
             ondragleave="this.style.background=''"
             ondrop="event.preventDefault();this.style.background='';previewImage(event.dataTransfer.files[0], true)"
             onclick="document.getElementById('img-in').click()">
-            <div id="i-prv-w" class="{% if donation.upload.file_path %}{% else %}hidden{% endif %}">
-              <img id="i-prv" src="{{ donation.upload.file_path|default:'' }}"
+            <div id="i-prv-w" class="{% if donation.upload_id.file_path %}{% else %}hidden{% endif %}">
+              <img id="i-prv" src="{{ donation.upload_id.file_path|default:'' }}"
                 style="max-width:100%;max-height:140px;border-radius:8px;object-fit:cover">
             </div>
-            <div id="i-ph" class="{% if donation.upload.file_path %}hidden{% endif %}"
+            <div id="i-ph" class="{% if donation.upload_id.file_path %}hidden{% endif %}"
               style="font-size:13px;color:#999">Click or drop image</div>
             <input id="img-in" name="donation_image" type="file" accept="image/*" class="hidden"
               onchange="previewImage(this.files[0])">
@@ -544,15 +544,15 @@
       var brand = card.querySelector('[name=brand]').value;
       var sel = card.querySelector('[name=lookup_id]');
       var fallback = sel.nextElementSibling;
-      var matches = LOOKUP_TABLE.filter(function (r) { return r.clothing === clothing && r.brand === brand; });
+      var matches = LOOKUP_TABLE.filter(function (r) { return r.clothing_type === clothing && r.brand === brand; });
       var prev = sel.value;
 
       sel.classList.toggle('hidden', !matches.length);
       fallback.classList.toggle('hidden', !!matches.length);
       sel.innerHTML = '<option value="">- select material -</option>' +
-        matches.map(function (r) { return '<option value="' + r.id + '">' + r.material + '</option>'; }).join('');
+        matches.map(function (r) { return '<option value="' + r.lookup_id + '">' + r.fiber_json + '</option>'; }).join('');
 
-      if (matches.some(function (r) { return String(r.id) === prev; })) sel.value = prev;
+      if (matches.some(function (r) { return String(r.lookup_id) === prev; })) sel.value = prev;
     }
 
     // ================================================================
@@ -664,7 +664,7 @@
         var missing = ['clothing_type', 'brand'].filter(function (k) { return !current[k]; });
         if (current.weight_kg === null) missing.push('weight');
         if (missing.length) throw new Error('New item missing: ' + missing.join(', '));
-        Object.keys(current).forEach(function(k) { if (current[k] === null) delete current[k]; });
+        Object.keys(current).forEach(function (k) { if (current[k] === null) delete current[k]; });
         return current;
       }
 
@@ -674,8 +674,8 @@
         if (JSON.stringify(current[k]) !== JSON.stringify(baseline[k])) patch[k] = current[k];
       });
       var obj = patch;
-      Object.keys(obj).forEach(function(k) { if (obj[k] === null) delete obj[k]; });
-    return Object.keys(obj).length > 1 ? obj : null;
+      Object.keys(obj).forEach(function (k) { if (obj[k] === null) delete obj[k]; });
+      return Object.keys(obj).length > 1 ? obj : null;
     }
 
     document.getElementById('donor-donation-form').onsubmit = function (e) {
@@ -729,12 +729,12 @@
     var apiToCondition = { 'new': 'New', 'like_new': 'Like New', 'good': 'Good', 'fair': 'Fair', 'poor': 'Poor' };
 
     var LOOKUP_TABLE = [
-      { id: 1, clothing: 'Pants', brand: "Levi's", material: '80% Cotton, 20% Polyester' },
-      { id: 2, clothing: 'Shirt', brand: 'Uniqlo', material: '100% Cotton' },
-      { id: 3, clothing: 'Jacket', brand: 'Nike', material: '100% Polyester' },
-      { id: 4, clothing: 'Jeans', brand: "Levi's", material: '99% Cotton, 1% Elastane' },
-      { id: 21, clothing: 'Jacket', brand: 'H&M', material: '65% Cotton, 35% Polyester' },
-      { id: 22, clothing: 'Jeans', brand: 'Zara', material: '98% Cotton, 2% Elastane' }
+      { lookup_id: 1, clothing_type: 'Pants', brand: "Levi's", fiber_json: '80% Cotton, 20% Polyester' },
+      { lookup_id: 2, clothing_type: 'Shirt', brand: 'Uniqlo', fiber_json: '100% Cotton' },
+      { lookup_id: 3, clothing_type: 'Jacket', brand: 'Nike', fiber_json: '100% Polyester' },
+      { lookup_id: 4, clothing_type: 'Jeans', brand: "Levi's", fiber_json: '99% Cotton, 1% Elastane' },
+      { lookup_id: 21, clothing_type: 'Jacket', brand: 'H&M', fiber_json: '65% Cotton, 35% Polyester' },
+      { lookup_id: 22, clothing_type: 'Jeans', brand: 'Zara', fiber_json: '98% Cotton, 2% Elastane' }
     ];
 
     // Django: replace with {{ donation_items_json|safe }}
@@ -761,7 +761,7 @@
 
     // Populate datalists
     document.getElementById('clothing-options').innerHTML =
-      [...new Set(LOOKUP_TABLE.map(function (r) { return r.clothing; }))].map(function (v) { return '<option value="' + v + '">'; }).join('');
+      [...new Set(LOOKUP_TABLE.map(function (r) { return r.clothing_type; }))].map(function (v) { return '<option value="' + v + '">'; }).join('');
     document.getElementById('brand-options').innerHTML =
       [...new Set(LOOKUP_TABLE.map(function (r) { return r.brand; }))].map(function (v) { return '<option value="' + v + '">'; }).join('');
 

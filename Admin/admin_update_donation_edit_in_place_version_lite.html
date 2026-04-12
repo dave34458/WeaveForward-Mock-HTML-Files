@@ -365,7 +365,7 @@
           <p style="font-size:12px;margin-bottom:6px;"><strong>Donation ID:</strong> <span>{{
               donation.donation_id|default:'' }}</span></p>
           <p style="font-size:12px;margin-bottom:6px;"><strong>Donor:</strong> <span>{{
-              donation.donor_id.first_name|default:'' }} {{ donation.donor_id.last_name|default:'' }}</span></p>
+              donation.user_id.first_name|default:'' }} {{ donation.user_id.last_name|default:'' }}</span></p>
           <p style="font-size:12px;margin-bottom:10px;"><strong>Flag Reason:</strong> <span>{{
               donation.flag_reason|default:'' }}</span></p>
 
@@ -379,7 +379,7 @@
           <p style="font-size:12px;margin-bottom:6px;"><strong>Current Status:</strong> <span>{{
               donation.status|default:'' }}</span></p>
           <p style="font-size:12px;margin-bottom:6px;"><strong>Claimed By TUAB:</strong> <span>{{
-              donation.claimed_by_tuab|default:'' }}</span></p>
+              donation.claimed_by_tuab.business_name|default:'' }}</span></p>
           <p style="font-size:12px;margin-bottom:10px;"><strong>Delivery Method:</strong> <span>{{
               donation.delivery_method|default:'' }}</span></p>
 
@@ -434,11 +434,11 @@
           <label class="sub" style="margin:0">Donation Upload</label>
           <p style="font-size:12px;color:#999;margin-bottom:12px">Replace the image of this donation here</p>
           <div class="drop" onclick="document.getElementById('img-in').click()">
-            <div id="i-prv-w" class="{% if donation.upload.file_path %}{% else %}hidden{% endif %}">
-              <img id="i-prv" src="{{ donation.upload.file_path|default:'' }}"
+            <div id="i-prv-w" class="{% if donation.upload_id.file_path %}{% else %}hidden{% endif %}">
+              <img id="i-prv" src="{{ donation.upload_id.file_path|default:'' }}"
                 style="max-width:100%;max-height:130px;border-radius:8px;object-fit:cover">
             </div>
-            <div id="i-ph" class="{% if donation.upload.file_path %}hidden{% endif %}"
+            <div id="i-ph" class="{% if donation.upload_id.file_path %}hidden{% endif %}"
               style="font-size:13px;color:#999">Click to upload image</div>
             <input id="img-in" name="donation_image" type="file" accept="image/*" class="hidden"
               onchange="previewImage(this.files[0])">
@@ -606,15 +606,15 @@
       var brand = card.querySelector('[name=brand]').value;
       var sel = card.querySelector('[name=lookup_id]');
       var fallback = sel.nextElementSibling;
-      var matches = LOOKUP_TABLE.filter(function (r) { return r.clothing === clothing && r.brand === brand; });
+      var matches = LOOKUP_TABLE.filter(function (r) { return r.clothing_type === clothing && r.brand === brand; });
       var prev = sel.value;
 
       sel.classList.toggle('hidden', !matches.length);
       fallback.classList.toggle('hidden', !!matches.length);
       sel.innerHTML = '<option value="">- select material -</option>' +
-        matches.map(function (r) { return '<option value="' + r.id + '">' + r.material + '</option>'; }).join('');
+        matches.map(function (r) { return '<option value="' + r.lookup_id + '">' + r.fiber_json + '</option>'; }).join('');
 
-      if (matches.some(function (r) { return String(r.id) === prev; })) sel.value = prev;
+      if (matches.some(function (r) { return String(r.lookup_id) === prev; })) sel.value = prev;
     }
 
 
@@ -769,12 +769,12 @@
     var CONDITIONS = ['New', 'Like New', 'Good', 'Fair', 'Poor'];
 
     var LOOKUP_TABLE = [
-      { id: 1, clothing: 'Pants', brand: "Levi's", material: '80% Cotton, 20% Polyester' },
-      { id: 2, clothing: 'Shirt', brand: 'Uniqlo', material: '100% Cotton' },
-      { id: 3, clothing: 'Jacket', brand: 'Nike', material: '100% Polyester' },
-      { id: 4, clothing: 'Jeans', brand: "Levi's", material: '99% Cotton, 1% Elastane' },
-      { id: 21, clothing: 'Jacket', brand: 'H&M', material: '65% Cotton, 35% Polyester' },
-      { id: 22, clothing: 'Jeans', brand: 'Zara', material: '98% Cotton, 2% Elastane' }
+      { lookup_id: 1, clothing_type: 'Pants', brand: "Levi's", fiber_json: '80% Cotton, 20% Polyester' },
+      { lookup_id: 2, clothing_type: 'Shirt', brand: 'Uniqlo', fiber_json: '100% Cotton' },
+      { lookup_id: 3, clothing_type: 'Jacket', brand: 'Nike', fiber_json: '100% Polyester' },
+      { lookup_id: 4, clothing_type: 'Jeans', brand: "Levi's", fiber_json: '99% Cotton, 1% Elastane' },
+      { lookup_id: 21, clothing_type: 'Jacket', brand: 'H&M', fiber_json: '65% Cotton, 35% Polyester' },
+      { lookup_id: 22, clothing_type: 'Jeans', brand: 'Zara', fiber_json: '98% Cotton, 2% Elastane' }
     ];
 
     // Django: replace with {{ donation_items_json|safe }}
@@ -803,7 +803,7 @@
 
     // Populate datalists
     document.getElementById('clothing-options').innerHTML =
-      [...new Set(LOOKUP_TABLE.map(function (r) { return r.clothing; }))].map(function (v) { return '<option value="' + v + '">'; }).join('');
+      [...new Set(LOOKUP_TABLE.map(function (r) { return r.clothing_type; }))].map(function (v) { return '<option value="' + v + '">'; }).join('');
     document.getElementById('brand-options').innerHTML =
       [...new Set(LOOKUP_TABLE.map(function (r) { return r.brand; }))].map(function (v) { return '<option value="' + v + '">'; }).join('');
 
