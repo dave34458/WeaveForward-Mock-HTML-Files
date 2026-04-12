@@ -1,4 +1,4 @@
-﻿<!--
+<!--
   WeaveForward Admin Add Donation (admin_add_donation.html) - Clean Refactor
   DJANGO CONVERSION NOTES: Wrap in form, uncomment {% csrf_token %}
 -->
@@ -75,6 +75,7 @@
 <body>
 <form id="frm" method="post" action="/admin/add_donation/" enctype="multipart/form-data">
   <!-- {% csrf_token %} -->
+  <input type="hidden" id="json-items" name="items" value="" />
   <div class="layout">
     <div class="left">
       <div id="cards"></div>
@@ -328,12 +329,58 @@
     reader.readAsDataURL(file);
   }
 
-  // --- 6. Form Submission Preview (Optional: Remove in Prod) ---
+  // --- 6. Payload Aggregation (MANDATORY: Build JSON array & cleanup payload) ---
+  function preparePayload(form) {
+    let items = [];
+    form.querySelectorAll('#cards .card').forEach(card => {
+      let clothing = card.querySelector('[name=clothing]').value.trim();
+      let weight = card.querySelector('[name=estimated_weight_kg]').value;
+      let condRaw = card.querySelector('[name=condition]').value;
+      let brand = card.querySelector('[name=brand]').value.trim();
+      let lookupId = card.querySelector('[name=lookup_id]').value;
+      
+      if (!clothing || !brand) throw new Error("Clothing and Brand are required fields.");
+      
+      let itemObj = {
+        clothing_type: clothing,
+        brand: brand,
+        condition_rating: condRaw
+      };
+      if (weight !== '') itemObj.weight_kg = Number(weight);
+      if (lookupId !== '') itemObj.lookup_id = Number(lookupId);
+      
+      items.push(itemObj);
+    });
+    
+    const itemsInput = getEl('json-items');
+    itemsInput.disabled = items.length === 0;
+    if (items.length) itemsInput.value = JSON.stringify(items);
+    
+    // Disable raw inputs so they don't submit as duplicate query strings
+    form.querySelectorAll('#cards [name]').forEach(el => el.disabled = true);
+    
+    // Image — exclude if no file selected
+    const imgInput = getEl('img-in');
+    if (imgInput && !imgInput.disabled) imgInput.disabled = (imgInput.files.length === 0);
+  }
+
+  // --- 7. Form Submission Preview (OPTIONAL: Remove entirely in Prod) ---
+  function showPreview(form) {
+    let str = 'POST Preview Data:\n-----------------\n';
+    for (let [k, v] of new FormData(form)) str += `${k}: ${v.name || v}\n`;
+    return confirm(str + '\nProceed with Submission?');
+  }
+
+  // --- 8. Submission Controller ---
   getEl('frm').onsubmit = e => {
     e.preventDefault();
-    let str = 'POST Preview Data:\n-----------------\n';
-    for (let [k, v] of new FormData(e.target)) str += `${k}: ${v.name || v}\n`;
-    if (confirm(str + '\nProceed with Submission?')) e.target.submit();
+    try {
+      preparePayload(e.target);                 // 1. Package the DOM to JSON
+      if (!showPreview(e.target)) return;       // 2. Safely preview (Delete me in Prod)
+      e.target.submit();                        // 3. Native execute
+    } catch(err) {
+      alert(err.message);
+    }
   };
 
   // Init

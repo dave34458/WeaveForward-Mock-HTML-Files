@@ -252,11 +252,10 @@
 </head>
 
 <body>
-  <form id="tuab-form" method="post" action="/donations/{{ donation.id|default:'' }}" enctype="multipart/form-data">
+  <form id="tuab-form" method="post" action="/somethingsomething/{{ donation.donation_id|default:'' }}/" enctype="multipart/form-data">
     <!-- {% csrf_token %} -->
     <input type="hidden" id="patch-method" name="_method" value="PATCH">
     <input type="hidden" id="patch-items" name="items" value="">
-    <input type="hidden" id="donation-id" name="donation_id" value="{{ donation.id|default:'' }}">
     <input type="hidden" id="action-status" name="action_status" value="">
     <input type="hidden" id="action-reason" name="action_reason" value="">
     <input type="hidden" id="donation-upload-id" name="upload_id" value="{{ donation.upload_id|default:'' }}">
@@ -537,6 +536,10 @@
           var el = document.getElementById(f.id);
           if (el && !el.disabled) el.disabled = (el.value === INITIAL_TOP[f.key]);
         });
+
+        // Image — exclude if no new file
+        var imgInput = document.getElementById('img-in');
+        if (imgInput && !imgInput.disabled) imgInput.disabled = (imgInput.files.length === 0);
 
         // Cards — removals from REMOVED_IDS, then changed/new from DOM
         var changes = [];

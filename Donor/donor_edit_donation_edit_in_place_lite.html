@@ -337,12 +337,11 @@
 </head>
 
 <body>
-  <form id="donor-donation-form" method="post" action="/donations/{{ donation.id|default:'' }}"
+  <form id="donor-donation-form" method="post" action="/somethingsomething/{{ donation.donation_id|default:'' }}/"
     enctype="multipart/form-data">
     <!-- {% csrf_token %} -->
     <input type="hidden" id="patch-method" name="_method" value="PATCH">
     <input type="hidden" id="patch-items" name="items" value="">
-    <input type="hidden" id="donation-id" name="donation_id" value="{{ donation.id|default:'' }}">
 
     <div class="layout">
       <div class="left">
