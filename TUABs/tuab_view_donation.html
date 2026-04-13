@@ -375,25 +375,35 @@
 
     <div class="layout">
       <div class="left">
-        {% for item in clothing_items %}
+        {% for item in items %}
         <div class="card">
           <div class="head">
             <div class="num">{{ forloop.counter }}</div><span style="font-weight:400;font-size:15px">Clothing {{
               forloop.counter }}</span>
           </div>
           <div class="row">
-            <div class="group"><label class="up">Clothing</label><input class="in"
-                value="{{ item.clothing_type|default:item.brand_fiber_lookup.clothing|default:'' }}" readonly></div>
-            <div class="group"><label class="up">Estimated Weight (kg)</label><input class="in"
-                value="{{ item.weight|default:'' }}" readonly></div>
+            <div class="group">
+              <label class="up">Clothing</label>
+              <input class="in" value="{{ item.lookup.clothing_type|default:'' }}" readonly>
+            </div>
+            <div class="group">
+              <label class="up">Estimated Weight (kg)</label>
+              <input class="in" value="{{ item.weight_kg|default:'' }}" readonly>
+            </div>
           </div>
-          <div class="group" style="margin-bottom:14px"><label class="up">Condition</label><input class="in"
-              value="{{ item.condition|default:'' }}" readonly></div>
+          <div class="group" style="margin-bottom:14px">
+            <label class="up">Condition</label>
+            <input class="in condition-val" value="{{ item.condition_rating|default:'' }}" readonly>
+          </div>
           <div class="row" style="margin-bottom:0">
-            <div class="group"><label class="up">Brand</label><input class="in"
-                value="{{ item.brand_fiber_lookup.brand|default:'' }}" readonly></div>
-            <div class="group"><label class="up">Material</label><input class="in"
-                value="{{ item.brand_fiber_lookup.material|default:'Will be approximated' }}" readonly></div>
+            <div class="group">
+              <label class="up">Brand</label>
+              <input class="in" value="{{ item.lookup.brand|default:'' }}" readonly>
+            </div>
+            <div class="group">
+              <label class="up">Material</label>
+              <input class="in" value="{{ item.lookup.fiber_json|default:'Will be approximated' }}" readonly>
+            </div>
           </div>
         </div>
         {% endfor %}
@@ -420,7 +430,7 @@
           <div class="drow"><span class="lbl">Pickup Preferred Date</span><span class="val">{{
               donation.preferred_pickup_date|date:"n-j-Y" }}</span></div>
           <div class="drow"><span class="lbl">Pickup Preferred Pickup Window</span><span class="val">{{
-              donation.preferred_time_start|default:"-" }} - {{ donation.preferred_time_end|default:"-" }}</span></div>
+              donation.preferred_pickup_window_start|default:"-" }} - {{ donation.preferred_pickup_window_end|default:"-" }}</span></div>
 
           <div class="sep"></div>
           <img src="{{ donation.upload_id.file_path|default:'' }}"
@@ -599,9 +609,26 @@
     }
 
     // --- 5. Init ---
+    // Normalize saved coordinates
+    ['dropoff-latitude', 'dropoff-longitude'].forEach(function (id) {
+      if (getEl(id) && getEl(id).value) getEl(id).value = (+getEl(id).value).toFixed(7);
+    });
+
     document.addEventListener('click', e => {
       if (!getEl('dropoff-ac').closest('.ac').contains(e.target)) getEl('dropoff-ac').classList.add('hidden');
       if (e.target === getEl('map-modal')) closeMap();
+    });
+
+    // --- 6. Standardization: Prettify ENUMs ---
+    document.addEventListener('DOMContentLoaded', function () {
+      document.querySelectorAll('.condition-val').forEach(function (el) {
+        var v = el.value.trim();
+        if (v) {
+          el.value = v.split('_').map(function (w) {
+            return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+          }).join(' ');
+        }
+      });
     });
   </script>
 </body>

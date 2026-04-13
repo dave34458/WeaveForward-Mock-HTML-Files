@@ -18,11 +18,13 @@
 
   CONTEXT VARIABLES EXPECTED
   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  CONTEXT VARIABLES EXPECTED
+  â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   page_title      â†’ 'View Donation'
   sidebar_variant â†’ 'donor'
   donation        â†’ object with pickup_date, time_from, time_to, pickup_address, image_url
-  clothing_items  â†’ list of {clothing_type, weight, condition, brand_fiber_lookup_id,
-                        brand_fiber_lookup: {id, clothing, brand, material, scraped_at}}
+  items           â†’ list of {clothing_type, weight_kg, condition_rating, lookup_id,
+                        lookup: {lookup_id, clothing_type, brand, fiber_json, scraped_at}}
 
   READ-ONLY BRAND/MATERIAL RULE
   â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -31,225 +33,85 @@
   â€¢ Do not recompute approximation logic in this page.
 -->
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>View Donation â€” Reference</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
-    rel="stylesheet" />
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
-    :root {
-      --gold: #e8a020;
-      --bg: #f5f4f0;
-      --border: #e0dbd4;
-      --text: #222;
-      --muted: #888
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0
-    }
-
-    body {
-      font-family: Poppins, sans-serif;
-      background: var(--bg);
-      color: var(--text)
-    }
-
-    .layout {
-      display: flex;
-      gap: 24px;
-      align-items: flex-start
-    }
-
-    .left {
-      flex: 1
-    }
-
-    .right {
-      width: 330px;
-      flex-shrink: 0
-    }
-
-    .card,
-    .panel {
-      background: #fff;
-      border: 1.5px solid var(--border);
-      border-radius: 14px
-    }
-
-    .card {
-      padding: 20px 22px;
-      margin-bottom: 14px
-    }
-
-    .panel {
-      padding: 22px 24px
-    }
-
-    .row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      margin-bottom: 14px
-    }
-
-    .group {
-      display: flex;
-      flex-direction: column;
-      gap: 4px
-    }
-
-    label.up {
-      font-size: 10px;
-      font-weight: 400;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: .5px
-    }
-
-    .sub {
-      font-size: 13px;
-      font-weight: 600;
-      color: #333;
-      margin-bottom: 8px
-    }
-
-    .in {
-      width: 100%;
-      height: 44px;
-      border: 1.5px solid #d5d5d5;
-      border-radius: 8px;
-      padding: 10px 14px;
-      font: 14px Poppins, sans-serif;
-      background: #faf8f5;
-      color: var(--text)
-    }
-
-    .head {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 14px
-    }
-
-    .num {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      background: var(--gold);
-      color: #fff;
-      font-size: 13px;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      justify-content: center
-    }
-
-    .time {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px
-    }
-
-    .img-panel {
-      margin-top: 16px
-    }
-
-    @media (max-width:768px) {
-      .layout {
-        flex-direction: column;
-        align-items: stretch
-      }
-
-      .left,
-      .right {
-        width: 100%
-      }
-
-      .row,
-      .time {
-        grid-template-columns: 1fr
-      }
-    }
+    :root{--gold:#e8a020;--bg:#f5f4f0;--border:#e0dbd4;--text:#222;--muted:#888}
+    *{box-sizing:border-box;margin:0;padding:0} body{font-family:Poppins,sans-serif;background:var(--bg);color:var(--text)}
+    .layout{display:flex;gap:24px;align-items:flex-start}.left{flex:1}.right{width:330px;flex-shrink:0}
+    .card,.panel{background:#fff;border:1.5px solid var(--border);border-radius:14px}.card{padding:20px 22px;margin-bottom:14px}.panel{padding:22px 24px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}.group{display:flex;flex-direction:column;gap:4px}
+    label.up{font-size:10px;font-weight:400;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}.sub{font-size:13px;font-weight:600;color:#333;margin-bottom:8px}
+    .in{width:100%;height:44px;border:1.5px solid #d5d5d5;border-radius:8px;padding:10px 14px;font:14px Poppins,sans-serif;background:#faf8f5;color:var(--text)}
+    .head{display:flex;align-items:center;gap:10px;margin-bottom:14px}.num{width:28px;height:28px;border-radius:50%;background:var(--gold);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+    .time{display:grid;grid-template-columns:1fr 1fr;gap:12px}.img-panel{margin-top:16px}
+    @media (max-width:768px){.layout{flex-direction:column;align-items:stretch}.left,.right{width:100%}.row,.time{grid-template-columns:1fr}}
   </style>
 </head>
-
 <body>
-  <div class="layout">
-    <div class="left">
-      <!-- Django: {% for item in clothing_items %} (each item has brand_fiber_lookup FK data) -->
-      <div class="card">
-        <div class="head">
-          <div class="num">1</div><span style="font-weight:400;font-size:15px">Clothing 1</span>
-        </div>
-        <div class="row">
-          <div class="group"><label class="up">Clothing</label><input class="in" value="Pants" readonly /></div>
-          <div class="group"><label class="up">Estimated Weight (kg)</label><input class="in" value="0.8" readonly />
-          </div>
-        </div>
-        <div class="group" style="margin-bottom:14px"><label class="up">Condition</label><input class="in" value="Fair"
-            readonly /></div>
-        <div class="row" style="margin-bottom:0">
-          <!-- Django: {{ item.brand_fiber_lookup.brand }} -->
-          <div class="group"><label class="up">Brand</label><input class="in" value="Levi's" readonly /></div>
-          <!-- Django: {{ item.brand_fiber_lookup.material }} -->
-          <div class="group"><label class="up">Material</label><input class="in" value="99% Cotton, 1% Elastane"
-              readonly /></div>
-        </div>
+<div class="layout">
+  <div class="left">
+    <!-- Django: {% for item in items %} (each item has lookup FK data) -->
+    <div class="card">
+      <div class="head"><div class="num">1</div><span style="font-weight:400;font-size:15px">Clothing 1</span></div>
+      <div class="row">
+        <div class="group"><label class="up">Clothing</label><input class="in" value="{{ item.lookup.clothing_type }}" readonly/></div>
+        <div class="group"><label class="up">Estimated Weight (kg)</label><input class="in" value="{{ item.weight_kg }}" readonly/></div>
       </div>
-
-      <div class="card">
-        <div class="head">
-          <div class="num">2</div><span style="font-weight:400;font-size:15px">Clothing 2</span>
-        </div>
-        <div class="row">
-          <div class="group"><label class="up">Clothing</label><input class="in" value="Shirt" readonly /></div>
-          <div class="group"><label class="up">Estimated Weight (kg)</label><input class="in" value="2.0" readonly />
-          </div>
-        </div>
-        <div class="group" style="margin-bottom:14px"><label class="up">Condition</label><input class="in" value="Good"
-            readonly /></div>
-        <div class="row" style="margin-bottom:0">
-          <!-- Django: {{ item.brand_fiber_lookup.brand }} -->
-          <div class="group"><label class="up">Brand</label><input class="in" value="Uniqlo" readonly /></div>
-          <!-- Django: {{ item.brand_fiber_lookup.material }} -->
-          <div class="group"><label class="up">Material</label><input class="in" value="100% Cotton" readonly /></div>
-        </div>
+      <div class="group" style="margin-bottom:14px"><label class="up">Condition</label><input class="in condition-val" value="{{ item.condition_rating }}" readonly/></div>
+      <div class="row" style="margin-bottom:0">
+        <!-- Django: {{ item.lookup.brand }} --><div class="group"><label class="up">Brand</label><input class="in" value="{{ item.lookup.brand }}" readonly/></div>
+        <!-- Django: {{ item.lookup.fiber_json }} --><div class="group"><label class="up">Material</label><input class="in" value="{{ item.lookup.fiber_json }}" readonly/></div>
       </div>
-      <!-- Django: {% endfor %} -->
     </div>
 
-    <div class="right">
-      <div class="panel">
-        <div class="group" style="margin-bottom:18px"><label class="sub">Preferred Pick-Up Date</label><input class="in"
-            value="02-10-2026" readonly /></div>
-        <div style="margin-bottom:18px"><label class="sub">Preferred Time Window</label>
-          <div class="time">
-            <div class="group"><label class="up">From</label><input class="in" value="4:02 AM" readonly /></div>
-            <div class="group"><label class="up">To</label><input class="in" value="5:50 PM" readonly /></div>
-          </div>
-        </div>
-        <div class="group"><label class="sub">Pick-Up Location</label><input class="in"
-            value="Escoda Street, Barangay 675, Ermita, Fifth District, Manila, Metro Manila, 1000, Philippines"
-            readonly /></div>
+    <div class="card">
+      <div class="head"><div class="num">2</div><span style="font-weight:400;font-size:15px">Clothing 2</span></div>
+      <div class="row">
+        <div class="group"><label class="up">Clothing</label><input class="in" value="{{ item.lookup.clothing_type }}" readonly/></div>
+        <div class="group"><label class="up">Estimated Weight (kg)</label><input class="in" value="{{ item.weight_kg }}" readonly/></div>
       </div>
+      <div class="group" style="margin-bottom:14px"><label class="up">Condition</label><input class="in condition-val" value="{{ item.condition_rating }}" readonly/></div>
+      <div class="row" style="margin-bottom:0">
+        <!-- Django: {{ item.lookup.brand }} --><div class="group"><label class="up">Brand</label><input class="in" value="{{ item.lookup.brand }}" readonly/></div>
+        <!-- Django: {{ item.lookup.fiber_json }} --><div class="group"><label class="up">Material</label><input class="in" value="{{ item.lookup.fiber_json }}" readonly/></div>
+      </div>
+    </div>
+    <!-- Django: {% endfor %} -->
+  </div>
 
-      <div class="panel img-panel">
-        <div style="font-weight:600;font-size:14px;margin-bottom:12px">Donation Pile Image</div>
-        <img src="{{ donation.upload_id.file_path|default:'' }}"
-          class="{% if not donation.upload_id.file_path %}hidden{% endif %}"
-          style="width:100%;max-height:180px;object-fit:cover;border-radius:10px" alt="Donation" />
-        <div class="{% if donation.upload_id.file_path %}hidden{% endif %}" style="font-size:12px;color:#999">No
-          donation image uploaded.</div>
-      </div>
+  <div class="right">
+    <div class="panel">
+      <div class="group" style="margin-bottom:18px"><label class="sub">Preferred Pick-Up Date</label><input class="in" value="02-10-2026" readonly/></div>
+      <div style="margin-bottom:18px"><label class="sub">Preferred Time Window</label><div class="time"><div class="group"><label class="up">From</label><input class="in" value="{{ donation.preferred_pickup_window_start }}" readonly/></div><div class="group"><label class="up">To</label><input class="in" value="{{ donation.preferred_pickup_window_end }}" readonly/></div></div></div>
+      <div class="group"><label class="sub">Pick-Up Location</label><input class="in" value="Escoda Street, Barangay 675, Ermita, Fifth District, Manila, Metro Manila, 1000, Philippines" readonly/></div>
+    </div>
+
+    <div class="panel img-panel">
+      <div style="font-weight:600;font-size:14px;margin-bottom:12px">Donation Pile Image</div>
+      <img src="{{ donation.upload.file_path|default:'' }}" class="{% if not donation.upload.file_path %}hidden{% endif %}" style="width:100%;max-height:180px;object-fit:cover;border-radius:10px" alt="Donation"/>
+      <div class="{% if donation.upload.file_path %}hidden{% endif %}" style="font-size:12px;color:#999">No donation image uploaded.</div>
     </div>
   </div>
+</div>
+<script>
+  // --- Standardization: Prettify ENUMs ---
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.condition-val').forEach(function (el) {
+      var v = el.value.trim();
+      if (v) {
+        el.value = v.split('_').map(function (w) {
+          return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+        }).join(' ');
+      }
+    });
+  });
+</script>
 </body>
-
 </html>
+

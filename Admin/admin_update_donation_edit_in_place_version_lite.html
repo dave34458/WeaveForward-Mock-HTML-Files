@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-  WeaveForward Admin Update Donation (admin_update_donation.html) - Simplified Base
+  WeaveForward Admin Update Donation (admin_update_donation.html)
   DJANGO CONVERSION NOTES: Wrap in form, uncomment {% csrf_token %}
 -->
 <html lang="en">
@@ -424,8 +424,7 @@
                 donation.pickup_longitude|default:'' }}</span></p>
             <button type="button" id="map-pick-btn" class="map-btn" onclick="openMapPicker()">Pick on Map</button>
           </div>
-          <div class="mini-note">Coordinates and pickup schedule are editable only when current record status is not
-            IN_TRANSIT.</div>
+          <div class="mini-note">Coordinates and pickup schedule are editable only when status is not IN_TRANSIT.</div>
 
           <button type="submit" class="btn-submit">Save Changes</button>
         </div>
@@ -486,17 +485,17 @@
       <div class="row">
         <div class="group">
           <label class="up">Clothing *</label>
-          <input name="clothing" class="in" list="clothing-options" autocomplete="off"
+          <input name="clothing_type" class="in" list="clothing-options" autocomplete="off"
             oninput="checkMaterial(this.closest('.card'))">
         </div>
         <div class="group">
-          <label class="up">Weight (kg)</label>
-          <input name="estimated_weight_kg" type="number" step="0.1" class="in">
+          <label class="up">Estimated Weight (kg)</label>
+          <input name="weight_kg" type="number" step="0.001" class="in">
         </div>
       </div>
       <div class="group" style="margin-bottom:14px">
         <label class="up">Condition</label>
-        <select name="condition" class="sel"></select>
+        <select name="condition_rating" class="sel"></select>
       </div>
       <div class="row" style="margin-bottom:0">
         <div class="group">
@@ -556,34 +555,38 @@
       var n = document.querySelectorAll('#cards .card').length + 1;
 
       var card = document.getElementById('card-tpl').content.firstElementChild.cloneNode(true);
-
       card.querySelector('.num').textContent = n;
       card.querySelector('b').textContent = 'Clothing ' + n;
-
-      card.querySelector('[name=condition]').innerHTML =
-        CONDITIONS.map(function (c) { return '<option>' + c + '</option>'; }).join('');
+      card.querySelector('[name=condition_rating]').innerHTML =
+        CONDITIONS.map(function (c) {
+          var label = c.split('_').map(function (w) { return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(); }).join(' ');
+          return '<option value="' + c + '">' + label + '</option>';
+        }).join('');
 
       if (data) {
+        // data comes from GET response — lookup fields are nested under data.lookup
         var baseline = {
           item_id: Number(data.item_id),
-          clothing_type: data.clothing_type || '',
+          clothing_type: data.lookup ? data.lookup.clothing_type : '',
           weight_kg: data.weight_kg != null ? Number(data.weight_kg) : null,
-          condition_rating: data.condition_rating || 'Good',
-          brand: data.brand || '',
-          lookup_id: data.lookup_id != null ? Number(data.lookup_id) : null
+          condition_rating: data.condition_rating || '',
+          brand: data.lookup ? data.lookup.brand : '',
+          lookup_id: data.lookup ? Number(data.lookup.lookup_id) : null
         };
         card.dataset.itemId = baseline.item_id;
         card.dataset.initial = JSON.stringify(baseline);
 
-        card.querySelector('[name=clothing]').value = baseline.clothing_type;
-        card.querySelector('[name=estimated_weight_kg]').value = baseline.weight_kg != null ? baseline.weight_kg : '';
-        card.querySelector('[name=condition]').value = baseline.condition_rating;
+        card.querySelector('[name=clothing_type]').value = baseline.clothing_type;
+        card.querySelector('[name=weight_kg]').value = baseline.weight_kg != null ? baseline.weight_kg : '';
+        card.querySelector('[name=condition_rating]').value = baseline.condition_rating;
         card.querySelector('[name=brand]').value = baseline.brand;
       }
 
       document.getElementById('cards').appendChild(card);
       checkMaterial(card);
-      if (data && data.lookup_id != null) card.querySelector('[name=lookup_id]').value = String(data.lookup_id);
+      if (data && data.lookup && data.lookup.lookup_id != null) {
+        card.querySelector('[name=lookup_id]').value = String(data.lookup.lookup_id);
+      }
 
       if (isLocked) {
         card.querySelectorAll('input:not(.approx-note), select').forEach(function (el) { el.disabled = true; });
@@ -602,17 +605,21 @@
     }
 
     function checkMaterial(card) {
-      var clothing = card.querySelector('[name=clothing]').value;
+      var clothing_type = card.querySelector('[name=clothing_type]').value;
       var brand = card.querySelector('[name=brand]').value;
       var sel = card.querySelector('[name=lookup_id]');
       var fallback = sel.nextElementSibling;
-      var matches = LOOKUP_TABLE.filter(function (r) { return r.clothing_type === clothing && r.brand === brand; });
+      var matches = LOOKUP_TABLE.filter(function (r) {
+        return r.clothing_type === clothing_type && r.brand === brand;
+      });
       var prev = sel.value;
 
       sel.classList.toggle('hidden', !matches.length);
       fallback.classList.toggle('hidden', !!matches.length);
       sel.innerHTML = '<option value="">- select material -</option>' +
-        matches.map(function (r) { return '<option value="' + r.lookup_id + '">' + r.fiber_json + '</option>'; }).join('');
+        matches.map(function (r) {
+          return '<option value="' + r.lookup_id + '">' + r.fiber_json + '</option>';
+        }).join('');
 
       if (matches.some(function (r) { return String(r.lookup_id) === prev; })) sel.value = prev;
     }
@@ -624,9 +631,10 @@
 
     function applyTransitLocks() {
       var isLocked = CURRENT_STATUS === 'IN_TRANSIT';
-      ['preferred-pickup-date', 'preferred-window-start', 'preferred-window-end', 'map-pick-btn', 'add-card-btn'].forEach(function (id) {
-        document.getElementById(id).disabled = isLocked;
-      });
+      ['preferred-pickup-date', 'preferred-window-start', 'preferred-window-end',
+        'map-pick-btn', 'add-card-btn'].forEach(function (id) {
+          document.getElementById(id).disabled = isLocked;
+        });
       document.getElementById('transit-lock-note').classList.toggle('hidden', !isLocked);
     }
 
@@ -690,29 +698,36 @@
     function buildItemChange(card) {
       var current = {
         item_id: card.dataset.itemId ? Number(card.dataset.itemId) : null,
-        clothing_type: card.querySelector('[name=clothing]').value.trim(),
-        weight_kg: card.querySelector('[name=estimated_weight_kg]').value !== '' ? Number(card.querySelector('[name=estimated_weight_kg]').value) : null,
-        condition_rating: card.querySelector('[name=condition]').value,
+        clothing_type: card.querySelector('[name=clothing_type]').value.trim(),
+        weight_kg: card.querySelector('[name=weight_kg]').value !== ''
+          ? Number(card.querySelector('[name=weight_kg]').value) : null,
+        condition_rating: card.querySelector('[name=condition_rating]').value,
         brand: card.querySelector('[name=brand]').value.trim(),
-        lookup_id: card.querySelector('[name=lookup_id]').value !== '' ? Number(card.querySelector('[name=lookup_id]').value) : null
+        lookup_id: card.querySelector('[name=lookup_id]').value !== ''
+          ? Number(card.querySelector('[name=lookup_id]').value) : null
       };
 
+      // New item — no item_id
       if (!current.item_id) {
         var missing = ['clothing_type', 'brand', 'condition_rating'].filter(function (k) { return !current[k]; });
-        if (current.weight_kg === null) missing.push('weight');
+        if (current.weight_kg === null) missing.push('weight_kg');
         if (missing.length) throw new Error('New item is missing: ' + missing.join(', '));
-        var obj = current; Object.keys(obj).forEach(function (k) { if (obj[k] === null) delete obj[k]; });
+        var obj = {};
+        Object.keys(current).forEach(function (k) {
+          if (k !== 'item_id' && current[k] !== null) obj[k] = current[k];
+        });
         return obj;
       }
 
+      // Existing item — only send changed fields
       var baseline = JSON.parse(card.dataset.initial);
       var patch = { item_id: current.item_id };
       ['clothing_type', 'weight_kg', 'condition_rating', 'brand', 'lookup_id'].forEach(function (k) {
-        if (JSON.stringify(current[k]) !== JSON.stringify(baseline[k])) patch[k] = current[k];
+        if (JSON.stringify(current[k]) !== JSON.stringify(baseline[k])) {
+          if (current[k] !== null) patch[k] = current[k];
+        }
       });
-      var obj = patch;
-      Object.keys(obj).forEach(function (k) { if (obj[k] === null) delete obj[k]; });
-      return Object.keys(obj).length > 1 ? obj : null;
+      return Object.keys(patch).length > 1 ? patch : null;
     }
 
     document.getElementById('admin-donation-form').onsubmit = function (e) {
@@ -740,7 +755,7 @@
         var imgInput = document.getElementById('img-in');
         if (imgInput && !imgInput.disabled) imgInput.disabled = imgInput.files.length === 0;
 
-        // Cards — removals from REMOVED_IDS, then changed/new from DOM
+        // Items — deletions from REMOVED_IDS + changed/new from cards
         var changes = [];
         REMOVED_IDS.forEach(function (id) { changes.push({ item_id: id, is_archived: true }); });
         document.querySelectorAll('#cards .card').forEach(function (card) {
@@ -750,6 +765,8 @@
         var patchItemsEl = document.getElementById('patch-items');
         patchItemsEl.disabled = changes.length === 0;
         if (changes.length) patchItemsEl.value = JSON.stringify(changes);
+
+        // Disable raw card inputs so they don't pollute FormData
         e.target.querySelectorAll('#cards [name]').forEach(function (el) { el.disabled = true; });
 
         var preview = 'POST Preview Data:\n-----------------\n';
@@ -759,15 +776,19 @@
       } catch (err) { alert(err.message); }
     };
 
-    document.addEventListener('click', function (e) { if (e.target === document.getElementById('map-modal')) closeMapPicker(); });
+    document.addEventListener('click', function (e) {
+      if (e.target === document.getElementById('map-modal')) closeMapPicker();
+    });
 
 
     // ================================================================
     // --- 6. Init ---
     // ================================================================
 
-    var CONDITIONS = ['New', 'Like New', 'Good', 'Fair', 'Poor'];
+    // Matches serializer ENUM choices exactly
+    var CONDITIONS = ['NEW', 'LIKE_NEW', 'GOOD', 'FAIR', 'POOR'];
 
+    // Django: replace with {{ lookup_table_json|safe }}
     var LOOKUP_TABLE = [
       { lookup_id: 1, clothing_type: 'Pants', brand: "Levi's", fiber_json: '80% Cotton, 20% Polyester' },
       { lookup_id: 2, clothing_type: 'Shirt', brand: 'Uniqlo', fiber_json: '100% Cotton' },
@@ -778,9 +799,17 @@
     ];
 
     // Django: replace with {{ donation_items_json|safe }}
+    // Shape matches GET response — lookup fields are nested under item.lookup
     var INITIAL_CARDS = [
-      { item_id: 501, clothing_type: 'Jacket', weight_kg: 1.2, condition_rating: 'Good', brand: 'H&M', lookup_id: 21 },
-      { item_id: 502, clothing_type: 'Jeans', weight_kg: 0.9, condition_rating: 'Fair', brand: 'Zara', lookup_id: 22 }
+      {
+        item_id: 1, donation_id: 1, condition_rating: 'GOOD', weight_kg: "0.350",
+        lookup: {
+          lookup_id: 7, category: "Tops", brand: "Uniqlo", clothing_type: "T-Shirt",
+          fiber_json: "{\"cotton\": 100}", dominant_fiber: "cotton",
+          biodeg_score: "88.50", biodeg_tier: "HIGH"
+        },
+        clothing_type: "T-Shirt", brand: "Uniqlo"
+      }
     ];
 
     var CURRENT_STATUS = "{{ donation.status|default:''|escapejs }}".trim().toUpperCase();
@@ -801,11 +830,13 @@
       pickup_longitude: document.getElementById('pickup-longitude').value
     };
 
-    // Populate datalists
+    // Populate datalists from LOOKUP_TABLE
     document.getElementById('clothing-options').innerHTML =
-      [...new Set(LOOKUP_TABLE.map(function (r) { return r.clothing_type; }))].map(function (v) { return '<option value="' + v + '">'; }).join('');
+      [...new Set(LOOKUP_TABLE.map(function (r) { return r.clothing_type; }))]
+        .map(function (v) { return '<option value="' + v + '">'; }).join('');
     document.getElementById('brand-options').innerHTML =
-      [...new Set(LOOKUP_TABLE.map(function (r) { return r.brand; }))].map(function (v) { return '<option value="' + v + '">'; }).join('');
+      [...new Set(LOOKUP_TABLE.map(function (r) { return r.brand; }))]
+        .map(function (v) { return '<option value="' + v + '">'; }).join('');
 
     (INITIAL_CARDS.length ? INITIAL_CARDS : [null]).forEach(addCard);
     applyTransitLocks();

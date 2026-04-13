@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <!--
   WeaveForward - Admin View Donation (admin_view_donation.html)
   ============================================================
@@ -21,7 +21,7 @@
   CONTEXT VARIABLES EXPECTED
   --------------------------
   donation        -> object with status, pickup fields, upload.file_path, etc.
-  clothing_items  -> list of items with brand_fiber_lookup relation
+  items           -> list of items with lookup relation
 -->
 <html lang="en">
 <head>
@@ -49,30 +49,30 @@
 <body>
 <div class="layout">
   <div class="left">
-    <!-- Django: {% for item in clothing_items %} -->
+    <!-- Django: {% for item in items %} -->
     <div class="card">
       <div class="head"><div class="num">1</div><span style="font-weight:400;font-size:15px">Clothing 1</span></div>
       <div class="row">
-        <div class="group"><label class="up">Clothing</label><input class="in" value="Pants" readonly/></div>
-        <div class="group"><label class="up">Estimated Weight (kg)</label><input class="in" value="0.8" readonly/></div>
+        <div class="group"><label class="up">Clothing</label><input class="in" value="{{ item.lookup.clothing_type }}" readonly/></div>
+        <div class="group"><label class="up">Estimated Weight (kg)</label><input class="in" value="{{ item.weight_kg }}" readonly/></div>
       </div>
-      <div class="group" style="margin-bottom:14px"><label class="up">Condition</label><input class="in" value="Fair" readonly/></div>
+      <div class="group" style="margin-bottom:14px"><label class="up">Condition</label><input class="in condition-val" value="{{ item.condition_rating }}" readonly/></div>
       <div class="row" style="margin-bottom:0">
-        <div class="group"><label class="up">Brand</label><input class="in" value="Levi's" readonly/></div>
-        <div class="group"><label class="up">Material</label><input class="in" value="99% Cotton, 1% Elastane" readonly/></div>
+        <div class="group"><label class="up">Brand</label><input class="in" value="{{ item.lookup.brand }}" readonly/></div>
+        <div class="group"><label class="up">Material</label><input class="in" value="{{ item.lookup.fiber_json }}" readonly/></div>
       </div>
     </div>
 
     <div class="card">
       <div class="head"><div class="num">2</div><span style="font-weight:400;font-size:15px">Clothing 2</span></div>
       <div class="row">
-        <div class="group"><label class="up">Clothing</label><input class="in" value="Shirt" readonly/></div>
-        <div class="group"><label class="up">Estimated Weight (kg)</label><input class="in" value="2.0" readonly/></div>
+        <div class="group"><label class="up">Clothing</label><input class="in" value="{{ item.lookup.clothing_type }}" readonly/></div>
+        <div class="group"><label class="up">Estimated Weight (kg)</label><input class="in" value="{{ item.weight_kg }}" readonly/></div>
       </div>
-      <div class="group" style="margin-bottom:14px"><label class="up">Condition</label><input class="in" value="Good" readonly/></div>
+      <div class="group" style="margin-bottom:14px"><label class="up">Condition</label><input class="in condition-val" value="{{ item.condition_rating }}" readonly/></div>
       <div class="row" style="margin-bottom:0">
-        <div class="group"><label class="up">Brand</label><input class="in" value="Uniqlo" readonly/></div>
-        <div class="group"><label class="up">Material</label><input class="in" value="100% Cotton" readonly/></div>
+        <div class="group"><label class="up">Brand</label><input class="in" value="{{ item.lookup.brand }}" readonly/></div>
+        <div class="group"><label class="up">Material</label><input class="in" value="{{ item.lookup.fiber_json }}" readonly/></div>
       </div>
     </div>
     <!-- Django: {% endfor %} -->
@@ -82,7 +82,7 @@
     <div class="panel">
       <div class="meta">
                 <p><strong>Donation ID:</strong> {{ donation.id }}</p>
-                <p><strong>Donor:</strong> {{ donation.donor_id.first_name|default:'' }} {{ donation.donor_id.last_name|default:'' }}</p>
+                <p><strong>Donor:</strong> {{ donation.user_id.first_name|default:'' }} {{ donation.user_id.last_name|default:'' }}</p>
         <p><strong>Current Record Status:</strong> {{ donation.status }}</p>
         <p><strong>Claimed By TUAB:</strong> {{ donation.claimed_by_tuab }}</p>
         <p><strong>Delivery Method:</strong> {{ donation.delivery_method }}</p>
@@ -102,6 +102,20 @@
     </div>
   </div>
 </div>
+
+<script>
+  // --- Standardization: Prettify ENUMs ---
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.condition-val').forEach(function (el) {
+      var v = el.value.trim();
+      if (v) {
+        el.value = v.split('_').map(function (w) {
+          return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+        }).join(' ');
+      }
+    });
+  });
+</script>
 </body>
 </html>
 
