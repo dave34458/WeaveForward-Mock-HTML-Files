@@ -430,8 +430,7 @@
             <button type="button" id="drop-map-btn" class="map-btn" onclick="openMapPicker('dropoff')">Pick on
               Map</button>
           </div>
-          <div class="mini-note">Coordinates and pickup schedule are editable only when status is not IN_TRANSIT. Items
-            can be edited but require a status transition.</div>
+          <div class="mini-note">Donation items and pickup details are editable only when the status is PENDING or CLAIMED.</div>
 
           <button type="submit" id="save-changes-btn" class="btn-submit">Save Changes</button>
         </div>
@@ -887,7 +886,7 @@
     document.addEventListener('click', function (e) {
       if (e.target === document.getElementById('map-modal')) closeMapPicker();
       if (e.target === document.getElementById('claim-modal')) document.getElementById('claim-modal').classList.add('hidden');
-      if (e.target === document.getElementById('reject-admin-modal')) closeRejectAdmin();
+
     });
 
 
