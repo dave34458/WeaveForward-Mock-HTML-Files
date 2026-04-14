@@ -346,13 +346,20 @@
       value="{{ donation.pickup_latitude|default:'' }}" />
     <input type="hidden" id="pickup-longitude" name="pickup_longitude"
       value="{{ donation.pickup_longitude|default:'' }}" />
+    <input type="hidden" id="dropoff-latitude" name="dropoff_latitude"
+      value="{{ donation.orders.dropoff_latitude|default:'' }}" />
+    <input type="hidden" id="dropoff-longitude" name="dropoff_longitude"
+      value="{{ donation.orders.dropoff_longitude|default:'' }}" />
     <input type="hidden" id="patch-method" name="_method" value="PATCH" />
     <input type="hidden" id="patch-items" name="items" value="" />
+    <input type="hidden" id="action-status" name="status" value="" disabled />
+    <input type="hidden" id="action-reason" name="reject_reason" value="" disabled />
 
     <div class="layout">
       <div class="left">
         <div id="transit-lock-note" class="lock-note hidden">
-          This donation is <strong>IN_TRANSIT</strong>. Donation items and pickup schedule/coordinates are locked.
+          This donation is <strong>IN_TRANSIT</strong>. Pickup schedule and coordinates are locked. Editing items will
+          require marking the donation as <strong>RECEIVED</strong> or <strong>REJECTED</strong>.
         </div>
 
         <div id="cards"></div>
@@ -390,16 +397,25 @@
           <p style="font-size:12px;margin-bottom:10px;"><strong>Pickup Display Address:</strong> <span>{{
               donation.pickup_display_address|default:'' }}</span></p>
 
-          <p style="font-size:12px;margin-bottom:6px;"><strong>Change Status:</strong></p>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
-            <button type="submit" form="status-pending-form" class="map-btn"
-              style="flex:1 1 90px;justify-content:center;">PENDING</button>
+          <p style="font-size:12px;margin-bottom:6px;"><strong>Change Status To:</strong></p>
+          <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:10px;">
             <button type="button" id="claim-btn" class="map-btn" onclick="openClaimModal()"
-              style="flex:1 1 90px;justify-content:center;">CLAIM</button>
-            <button type="submit" form="status-cancelled-form" class="map-btn"
-              style="flex:1 1 90px;justify-content:center;">CANCELLED</button>
-            <button type="submit" form="status-archived-form" class="map-btn"
-              style="flex:1 1 90px;justify-content:center;">ARCHIVED</button>
+              style="justify-content:center;">Claimed (Pickup Only)</button>
+            <button type="submit" form="status-intransit-form" class="map-btn" style="justify-content:center;">In
+              Transit</button>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+              <button type="button" class="map-btn" onclick="submitReceivedAdmin()"
+                style="justify-content:center; background:#e8f5e9; border-color:#c8e6c9;">Received</button>
+              <button type="button" class="map-btn" onclick="openRejectAdmin()"
+                style="justify-content:center; background:#ffebee; border-color:#ffcdd2;">Rejected</button>
+            </div>
+            <div style="height:4px;"></div>
+            <button type="submit" form="status-pending-form" class="map-btn" style="justify-content:center;">Unclaim
+              (Available If Claimed)</button>
+            <button type="submit" form="status-cancelled-form" class="map-btn" style="justify-content:center;">Cancelled
+              (Available If Pending, Claimed, In Transit)</button>
+            <button type="submit" form="status-archived-form" class="map-btn" style="justify-content:center;">Archived
+              (Available Unless In Transit and Delivery On Going)</button>
           </div>
 
           <p style="font-size:12px;margin-bottom:6px;"><strong>Preferred Pick-Up Date:</strong></p>
@@ -424,11 +440,20 @@
             <p style="font-size:12px;"><strong>Coordinates:</strong> <span id="lat-display">{{
                 donation.pickup_latitude|default:'' }}</span>, <span id="lng-display">{{
                 donation.pickup_longitude|default:'' }}</span></p>
-            <button type="button" id="map-pick-btn" class="map-btn" onclick="openMapPicker()">Pick on Map</button>
+            <button type="button" id="map-pick-btn" class="map-btn" onclick="openMapPicker('pickup')">Pick on
+              Map</button>
           </div>
-          <div class="mini-note">Coordinates and pickup schedule are editable only when status is not IN_TRANSIT.</div>
+          <div id="dropoff-row" class="map-row hidden" style="margin-bottom:6px;">
+            <p style="font-size:12px;"><strong>Dropoff:</strong> <span id="drop-lat-display">{{
+                donation.orders.dropoff_latitude|default:'' }}</span>, <span id="drop-lng-display">{{
+                donation.orders.dropoff_longitude|default:'' }}</span></p>
+            <button type="button" id="drop-map-btn" class="map-btn" onclick="openMapPicker('dropoff')">Pick on
+              Map</button>
+          </div>
+          <div class="mini-note">Coordinates and pickup schedule are editable only when status is not IN_TRANSIT. Items
+            can be edited but require a status transition.</div>
 
-          <button type="submit" class="btn-submit">Save Changes</button>
+          <button type="submit" id="save-changes-btn" class="btn-submit">Save Changes</button>
         </div>
 
         <div class="panel">
@@ -463,9 +488,13 @@
   </form>
   <form id="status-archived-form" method="post" action="/somethingsomething/{{ donation.donation_id|default:'' }}/"
     class="hidden">
+    <input type="hidden" name="status" value="ARCHIVED" />
+  </form>
+  <form id="status-intransit-form" method="post" action="/somethingsomething/{{ donation.donation_id|default:'' }}/"
+    class="hidden">
     <!-- {% csrf_token %} -->
     <input type="hidden" name="_method" value="PATCH" />
-    <input type="hidden" name="status" value="ARCHIVED" />
+    <input type="hidden" name="status" value="IN_TRANSIT" />
   </form>
   <form id="status-claimed-form" method="post" action="/somethingsomething/{{ donation.donation_id|default:'' }}/"
     class="hidden">
@@ -584,6 +613,19 @@
     </div>
   </div>
 
+  <div id="reject-admin-modal" class="modal hidden">
+    <div class="modal-box" style="padding:20px; background:#fff; width:min(400px, 90vw);">
+      <h3 style="margin-bottom:10px;">Reason for Rejection</h3>
+      <textarea id="reject-admin-reason" class="in" style="height:100px; margin-bottom:15px; resize:none;"
+        placeholder="Enter reason..."></textarea>
+      <div style="display:flex; gap:10px; justify-content:flex-end;">
+        <button type="button" class="map-btn" onclick="closeRejectAdmin()">Cancel</button>
+        <button type="button" class="btn-submit" style="width:auto; padding:8px 20px; margin:0;"
+          onclick="submitRejectedAdmin()">Confirm Reject</button>
+      </div>
+    </div>
+  </div>
+
   <script>
 
     var INITIAL_TOP = {};
@@ -633,13 +675,12 @@
       }
 
       if (isLocked) {
-        card.querySelectorAll('input:not(.approx-note), select').forEach(function (el) { el.disabled = true; });
-        card.querySelector('.trash').disabled = true;
+        // Items are editable in IN_TRANSIT but require status change upon save.
+        // We only lock pickup schedule fields. Item cards remain enabled.
       }
     }
 
     function removeCard(card) {
-      if (CURRENT_STATUS === 'IN_TRANSIT') return;
       if (card.dataset.itemId) REMOVED_IDS.push(Number(card.dataset.itemId));
       card.remove();
       document.querySelectorAll('#cards .card').forEach(function (c, i) {
@@ -676,10 +717,11 @@
     function applyTransitLocks() {
       var isLocked = CURRENT_STATUS === 'IN_TRANSIT';
       ['preferred-pickup-date', 'preferred-window-start', 'preferred-window-end',
-        'map-pick-btn', 'add-card-btn'].forEach(function (id) {
+        'map-pick-btn'].forEach(function (id) {
           document.getElementById(id).disabled = isLocked;
         });
       document.getElementById('transit-lock-note').classList.toggle('hidden', !isLocked);
+      document.getElementById('dropoff-row').classList.toggle('hidden', !isLocked);
     }
 
 
@@ -687,12 +729,16 @@
     // --- 3. Map ---
     // ================================================================
 
-    var mapInstance = null, mapMarker = null, tmpLat = null, tmpLng = null;
+    var mapInstance = null, mapMarker = null, tmpLat = null, tmpLng = null, mapTarget = 'pickup';
 
-    function openMapPicker() {
-      if (CURRENT_STATUS === 'IN_TRANSIT') return;
-      tmpLat = parseFloat(document.getElementById('pickup-latitude').value) || 14.58076;
-      tmpLng = parseFloat(document.getElementById('pickup-longitude').value) || 120.98012;
+    function openMapPicker(type) {
+      mapTarget = type || 'pickup';
+      if (CURRENT_STATUS === 'IN_TRANSIT' && mapTarget === 'pickup') return;
+
+      var prefix = mapTarget === 'pickup' ? 'pickup' : 'dropoff';
+      tmpLat = parseFloat(document.getElementById(prefix + '-latitude').value) || 14.58076;
+      tmpLng = parseFloat(document.getElementById(prefix + '-longitude').value) || 120.98012;
+
       document.getElementById('map-modal').classList.remove('hidden');
       setTimeout(function () {
         if (!mapInstance) {
@@ -711,10 +757,14 @@
     function closeMapPicker() { document.getElementById('map-modal').classList.add('hidden'); }
 
     function confirmMapPicker() {
-      document.getElementById('pickup-latitude').value = Number(tmpLat).toFixed(7);
-      document.getElementById('pickup-longitude').value = Number(tmpLng).toFixed(7);
-      document.getElementById('lat-display').textContent = document.getElementById('pickup-latitude').value;
-      document.getElementById('lng-display').textContent = document.getElementById('pickup-longitude').value;
+      var prefix = mapTarget === 'pickup' ? 'pickup' : 'dropoff';
+      var displayLat = mapTarget === 'pickup' ? 'lat-display' : 'drop-lat-display';
+      var displayLng = mapTarget === 'pickup' ? 'lng-display' : 'drop-lng-display';
+
+      document.getElementById(prefix + '-latitude').value = Number(tmpLat).toFixed(7);
+      document.getElementById(prefix + '-longitude').value = Number(tmpLng).toFixed(7);
+      document.getElementById(displayLat).textContent = document.getElementById(prefix + '-latitude').value;
+      document.getElementById(displayLng).textContent = document.getElementById(prefix + '-longitude').value;
       closeMapPicker();
     }
 
@@ -745,6 +795,38 @@
     function selectTUAB(user_id) {
       document.getElementById('claimed-tuab-id').value = user_id;
       document.getElementById('status-claimed-form').submit();
+    }
+
+    // ================================================================
+    // --- 3.7 Admin Transitions (Received/Rejected) ---
+    // ================================================================
+
+    function submitReceivedAdmin() {
+      var s = document.getElementById('action-status');
+      s.disabled = false;
+      s.value = 'RECEIVED';
+      document.getElementById('admin-donation-form').requestSubmit();
+    }
+
+    function openRejectAdmin() {
+      document.getElementById('reject-admin-modal').classList.remove('hidden');
+    }
+
+    function closeRejectAdmin() {
+      document.getElementById('reject-admin-modal').classList.add('hidden');
+    }
+
+    function submitRejectedAdmin() {
+      var r = document.getElementById('reject-admin-reason').value.trim();
+      if (!r) return alert('Please enter a rejection reason.');
+      var s = document.getElementById('action-status');
+      var re = document.getElementById('action-reason');
+      s.disabled = false;
+      re.disabled = false;
+      s.value = 'REJECTED';
+      re.value = r;
+      closeRejectAdmin();
+      document.getElementById('admin-donation-form').requestSubmit();
     }
 
 
@@ -818,7 +900,9 @@
           { id: 'preferred-window-start', key: 'preferred_pickup_window_start' },
           { id: 'preferred-window-end', key: 'preferred_pickup_window_end' },
           { id: 'pickup-latitude', key: 'pickup_latitude' },
-          { id: 'pickup-longitude', key: 'pickup_longitude' }
+          { id: 'pickup-longitude', key: 'pickup_longitude' },
+          { id: 'dropoff-latitude', key: 'dropoff_latitude' },
+          { id: 'dropoff-longitude', key: 'dropoff_longitude' }
         ].forEach(function (f) {
           var el = document.getElementById(f.id);
           if (el && !el.disabled) el.disabled = (el.value === INITIAL_TOP[f.key]);
@@ -845,6 +929,10 @@
         var preview = 'POST Preview Data:\n-----------------\n';
         new FormData(e.target).forEach(function (value, key) { preview += key + ': ' + (value.name || value) + '\n'; });
         if (confirm(preview + '\nProceed with Submission?')) e.target.submit();
+        else {
+          // Re-enable if cancelled
+          e.target.querySelectorAll('#cards [name]').forEach(function (el) { el.disabled = false; });
+        }
 
       } catch (err) { alert(err.message); }
     };
@@ -852,6 +940,7 @@
     document.addEventListener('click', function (e) {
       if (e.target === document.getElementById('map-modal')) closeMapPicker();
       if (e.target === document.getElementById('claim-modal')) document.getElementById('claim-modal').classList.add('hidden');
+      if (e.target === document.getElementById('reject-admin-modal')) closeRejectAdmin();
     });
 
 
@@ -861,7 +950,6 @@
 
     // 6.1 State & Constants
     var CURRENT_STATUS = "{{ donation.status|default:''|escapejs }}".trim().toUpperCase();
-    var DELIVERY_METHOD = "{{ donation.delivery_method|default:''|escapejs }}".trim().toUpperCase();
     var CONDITIONS = ['NEW', 'LIKE_NEW', 'GOOD', 'FAIR', 'POOR'];
 
     // 6.2 Mock Data
@@ -893,9 +981,9 @@
     ];
 
     // 6.3 Field Setup & Normalization
-    ['pickup-latitude', 'pickup-longitude'].forEach(function (id) {
+    ['pickup-latitude', 'pickup-longitude', 'dropoff-latitude', 'dropoff-longitude'].forEach(function (id) {
       var el = document.getElementById(id);
-      if (el.value) el.value = (+el.value).toFixed(7);
+      if (el && el.value) el.value = (+el.value).toFixed(7);
     });
 
     INITIAL_TOP = {
@@ -904,7 +992,9 @@
       preferred_pickup_window_start: document.getElementById('preferred-window-start').value,
       preferred_pickup_window_end: document.getElementById('preferred-window-end').value,
       pickup_latitude: document.getElementById('pickup-latitude').value,
-      pickup_longitude: document.getElementById('pickup-longitude').value
+      pickup_longitude: document.getElementById('pickup-longitude').value,
+      dropoff_latitude: document.getElementById('dropoff-latitude').value,
+      dropoff_longitude: document.getElementById('dropoff-longitude').value
     };
 
     // 6.4 UI Population
@@ -916,6 +1006,11 @@
         .map(function (v) { return '<option value="' + v + '">'; }).join('');
 
     (INITIAL_CARDS.length ? INITIAL_CARDS : [null]).forEach(addCard);
+
+    // Initial Dropoff Display setup
+    document.getElementById('drop-lat-display').textContent = document.getElementById('dropoff-latitude').value;
+    document.getElementById('drop-lng-display').textContent = document.getElementById('dropoff-longitude').value;
+
     applyTransitLocks();
 
   </script>
