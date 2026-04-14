@@ -394,6 +394,8 @@
           <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;">
             <button type="submit" form="status-pending-form" class="map-btn"
               style="flex:1 1 90px;justify-content:center;">PENDING</button>
+            <button type="button" id="claim-btn" class="map-btn" onclick="openClaimModal()"
+              style="flex:1 1 90px;justify-content:center;">CLAIM</button>
             <button type="submit" form="status-cancelled-form" class="map-btn"
               style="flex:1 1 90px;justify-content:center;">CANCELLED</button>
             <button type="submit" form="status-archived-form" class="map-btn"
@@ -464,6 +466,13 @@
     <!-- {% csrf_token %} -->
     <input type="hidden" name="_method" value="PATCH" />
     <input type="hidden" name="status" value="ARCHIVED" />
+  </form>
+  <form id="status-claimed-form" method="post" action="/somethingsomething/{{ donation.donation_id|default:'' }}/"
+    class="hidden">
+    <input type="hidden" name="_method" value="PATCH" />
+    <input type="hidden" name="status" value="CLAIMED" />
+    <input type="hidden" name="delivery_method" value="PICKUP" />
+    <input type="hidden" id="claimed-tuab-id" name="claimed_by_tuab" value="" />
   </form>
 
   <datalist id="clothing-options"></datalist>
@@ -536,6 +545,41 @@
       <div id="picker-map"></div>
       <div class="map-actions">
         <button type="button" class="btn-submit map-confirm" onclick="confirmMapPicker()">Confirm Location</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="claim-modal" class="modal hidden">
+    <div class="modal-box" style="width:min(900px,95vw); max-height:90vh; display:flex; flex-direction:column">
+      <div class="map-head">
+        <div class="map-head-left">
+          <div class="map-title"><span class="map-title-text">Claim for TUAB</span></div>
+          <div class="map-caption">Assign this donation for pickup.</div>
+        </div>
+        <button type="button" class="map-close"
+          onclick="document.getElementById('claim-modal').classList.add('hidden')">
+          <svg width="34" height="34" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <input type="text" id="tuab-search" class="in" placeholder="Search businesses..." oninput="filterTUABs()"
+        style="border-radius:0; border:none; border-bottom:1.5px solid var(--brd)">
+      <div style="overflow-y:auto">
+        <table style="width:100%; border-collapse:collapse; background:#fff; font-size:11px">
+          <thead
+            style="background:#f9f9f9; text-align:left; border-bottom:1.5px solid var(--brd); position:sticky; top:0">
+            <tr>
+              <th style="padding:10px 8px">Business Name</th>
+              <th style="padding:10px 8px">Address</th>
+              <th style="padding:10px 8px">Contact</th>
+              <th style="padding:10px 8px">Max Dist</th>
+              <th style="padding:10px 8px">Min Biodeg</th>
+              <th style="padding:10px 8px">Action</th>
+            </tr>
+          </thead>
+          <tbody id="tuab-list"></tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -676,6 +720,35 @@
 
 
     // ================================================================
+    // --- 3.5 Claim ---
+    // ================================================================
+
+    function openClaimModal() {
+      if (!document.getElementById('pickup-latitude').value) return alert('Set coordinates first.');
+      document.getElementById('claim-modal').classList.remove('hidden');
+      filterTUABs();
+    }
+    function filterTUABs() {
+      var q = document.getElementById('tuab-search').value.toLowerCase();
+      var rows = TUABS.filter(t => t.name.toLowerCase().includes(q) || t.display_address.toLowerCase().includes(q));
+      document.getElementById('tuab-list').innerHTML = rows.map(t => `
+        <tr style="border-bottom:1px solid var(--brd)">
+          <td style="padding:8px"><b>${t.name}</b></td>
+          <td style="padding:8px">${t.display_address}</td>
+          <td style="padding:8px">${t.contact_no}</td>
+          <td style="padding:8px">${t.max_distance_km}km</td>
+          <td style="padding:8px">${Math.round(t.min_biodeg_score * 100)}</td>
+          <td style="padding:8px"><button class="map-btn" style="padding:4px 8px; font-size:10px" onclick="selectTUAB(${t.user_id})">Select</button></td>
+        </tr>
+      `).join('') || '<tr><td colspan="6" style="text-align:center;padding:20px;color:#999">No results found</td></tr>';
+    }
+    function selectTUAB(user_id) {
+      document.getElementById('claimed-tuab-id').value = user_id;
+      document.getElementById('status-claimed-form').submit();
+    }
+
+
+    // ================================================================
     // --- 4. Image Upload ---
     // ================================================================
 
@@ -778,6 +851,7 @@
 
     document.addEventListener('click', function (e) {
       if (e.target === document.getElementById('map-modal')) closeMapPicker();
+      if (e.target === document.getElementById('claim-modal')) document.getElementById('claim-modal').classList.add('hidden');
     });
 
 
@@ -785,10 +859,12 @@
     // --- 6. Init ---
     // ================================================================
 
-    // Matches serializer ENUM choices exactly
+    // 6.1 State & Constants
+    var CURRENT_STATUS = "{{ donation.status|default:''|escapejs }}".trim().toUpperCase();
+    var DELIVERY_METHOD = "{{ donation.delivery_method|default:''|escapejs }}".trim().toUpperCase();
     var CONDITIONS = ['NEW', 'LIKE_NEW', 'GOOD', 'FAIR', 'POOR'];
 
-    // Django: replace with {{ lookup_table_json|safe }}
+    // 6.2 Mock Data
     var LOOKUP_TABLE = [
       { lookup_id: 1, clothing_type: 'Pants', brand: "Levi's", fiber_json: '80% Cotton, 20% Polyester' },
       { lookup_id: 2, clothing_type: 'Shirt', brand: 'Uniqlo', fiber_json: '100% Cotton' },
@@ -798,8 +874,6 @@
       { lookup_id: 22, clothing_type: 'Jeans', brand: 'Zara', fiber_json: '98% Cotton, 2% Elastane' }
     ];
 
-    // Django: replace with {{ donation_items_json|safe }}
-    // Shape matches GET response — lookup fields are nested under item.lookup
     var INITIAL_CARDS = [
       {
         item_id: 1, donation_id: 1, condition_rating: 'GOOD', weight_kg: "0.350",
@@ -812,15 +886,18 @@
       }
     ];
 
-    var CURRENT_STATUS = "{{ donation.status|default:''|escapejs }}".trim().toUpperCase();
+    var TUABS = [
+      { user_id: 101, name: "Green Threads", display_address: "123 Makati Ave, Makati", contact_no: "+639150814396", max_distance_km: 15, min_biodeg_score: 0.85 },
+      { user_id: 102, name: "Eco-Weave", display_address: "456 Ayala Ave, Makati", contact_no: "+639170001234", max_distance_km: 10, min_biodeg_score: 0.90 },
+      { user_id: 103, name: "Stitch It", display_address: "789 Jupiter St, Makati", contact_no: "+639198887766", max_distance_km: 5, min_biodeg_score: 0.75 }
+    ];
 
-    // Normalize saved coordinates
+    // 6.3 Field Setup & Normalization
     ['pickup-latitude', 'pickup-longitude'].forEach(function (id) {
       var el = document.getElementById(id);
       if (el.value) el.value = (+el.value).toFixed(7);
     });
 
-    // Snapshot top-level fields for change detection
     INITIAL_TOP = {
       is_flagged: document.getElementById('is-flagged').defaultChecked,
       preferred_pickup_date: document.getElementById('preferred-pickup-date').value,
@@ -830,7 +907,7 @@
       pickup_longitude: document.getElementById('pickup-longitude').value
     };
 
-    // Populate datalists from LOOKUP_TABLE
+    // 6.4 UI Population
     document.getElementById('clothing-options').innerHTML =
       [...new Set(LOOKUP_TABLE.map(function (r) { return r.clothing_type; }))]
         .map(function (v) { return '<option value="' + v + '">'; }).join('');
