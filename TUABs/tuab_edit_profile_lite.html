@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<!--
+  WeaveForward TUAB – Edit Profile
+  Django: {% extends 'base.html' %} {% block content %} … {% endblock %}
+  Context: user, is_premium, totp_secret
+  Action: POST {% url 'tuab_edit_profile' %}
+-->
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Edit Profile</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    :root {
+      --gold: #e8a020;
+      --tuab: #c0410e;
+      --border: #d5d5d5;
+      --muted: #888;
+      --bg: #f5f4f0
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: var(--bg);
+      color: #222
+    }
+
+    .hidden {
+      display: none !important
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
+      overflow: hidden
+    }
+
+    .sec {
+      padding: 22px 28px
+    }
+
+    .sep {
+      height: 1px;
+      background: #f0ede8
+    }
+
+    .sec-lbl {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      margin-bottom: 18px
+    }
+
+    .g2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-bottom: 14px
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px
+    }
+
+    label {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .5px
+    }
+
+    input,
+    select {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 11px 16px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 14px;
+      outline: none;
+      transition: border-color .2s;
+    }
+
+    input:focus,
+    select:focus {
+      border-color: var(--gold)
+    }
+
+    select {
+      appearance: none;
+      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23e8a020' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E") no-repeat right 12px center
+    }
+
+    .t-box {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      min-height: 44px;
+      position: relative;
+      cursor: text
+    }
+
+    .t-box:focus-within {
+      border-color: var(--gold)
+    }
+
+    .t-chip {
+      background: var(--gold);
+      color: #fff;
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: transform 0.1s
+    }
+
+    .t-chip:hover {
+      transform: translateY(-1px)
+    }
+
+    .t-chip span {
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      margin-left: 2px
+    }
+
+    #ti {
+      border: none !important;
+      outline: none !important;
+      font-size: 13px;
+      background: transparent;
+      min-width: 80px;
+      flex: 1;
+      padding: 0 !important;
+      height: auto
+    }
+
+    .dropdown {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(100% + 2px);
+      background: #fff;
+      border: 1.5px solid #e0dbd4;
+      border-radius: 8px;
+      z-index: 400;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+      max-height: 200px;
+      overflow-y: auto
+    }
+
+    .dropdown div {
+      padding: 10px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      border-bottom: 1px solid #f5f5f5
+    }
+
+    .dropdown div:hover {
+      background: #fdf6e8
+    }
+
+    .addr-wrap {
+      position: relative
+    }
+
+    .pin-btn {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--gold)
+    }
+
+    .toggle {
+      width: 44px;
+      height: 24px;
+      border-radius: 12px;
+      background: #ccc;
+      cursor: pointer;
+      position: relative;
+      transition: background .2s;
+      flex-shrink: 0
+    }
+
+    .toggle.on {
+      background: var(--gold)
+    }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #fff;
+      transition: all .2s
+    }
+
+    .toggle.on::after {
+      left: auto;
+      right: 3px
+    }
+
+    .btn-gold {
+      background: var(--gold);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer
+    }
+
+    .btn-outline {
+      background: #fff;
+      color: #444;
+      border: 1.5px solid #ccc;
+      border-radius: 8px;
+      padding: 9px 18px;
+      font-size: 13px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px
+    }
+
+    .modal-bg,
+    .map-bg {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9000
+    }
+
+    .map-box {
+      background: #f3f3f3;
+      border-radius: 16px;
+      overflow: hidden;
+      width: min(640px, 95vw);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, .22)
+    }
+
+    #picker-map {
+      width: 100%;
+      height: 300px
+    }
+
+    .f-row {
+      display: flex;
+      align-items: center;
+      gap: 16px
+    }
+
+    @media (max-width: 768px) {
+      .g2 {
+        grid-template-columns: 1fr
+      }
+
+      .sec {
+        padding: 18px 16px
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <form id="ep-form" method="post" action="{% url 'tuab_edit_profile' %}" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="card">
+
+      <!-- Profile Photo -->
+      <div class="sec">
+        <div class="sec-lbl">Profile Photo</div>
+        <div class="sep" style="margin-bottom:18px"></div>
+        <div class="f-row">
+          <div id="photo-pvw">
+            {% if user.upload.file_path %}
+            <img src="{{ user.upload.file_path }}" style="width:60px;height:60px;border-radius:50%;object-fit:cover" />
+            {% else %}
+            <div
+              style="width:60px;height:60px;border-radius:50%;background:#f0e8d8;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:var(--tuab)">
+              {{ user.initials }}
+            </div>
+            {% endif %}
+          </div>
+          <input type="file" name="photo" accept="image/*" id="photo-input" class="hidden"
+            onchange="previewPhoto(this)" />
+          <button type="button" class="btn-outline" onclick="$('photo-input').click()">Choose file</button>
+        </div>
+      </div>
+      <div class="sep"></div>
+
+      <!-- Personal Information -->
+      <div class="sec">
+        <div class="sec-lbl">Personal Information</div>
+        <div class="g2">
+          <div class="field"><label>Business Name</label><input name="business_name" value="{{ user.business_name }}" />
+          </div>
+          <div class="field"><label>Description</label><input name="description" value="{{ user.description }}" /></div>
+        </div>
+        <div class="g2">
+          <div class="field"><label>Social / Website Link</label><input name="social_link"
+              value="{{ user.social_link }}" /></div>
+          <div class="field" style="position:relative">
+            <label>Target Fiber Types</label>
+            <!-- Seeded from {{ user.preferred_fiber_types }} e.g. "Cotton,Viscose,Rayon" -->
+            <div class="t-box" id="tbox" onclick="$('ti').focus()">
+              <div id="tags" style="display:flex;flex-wrap:wrap;gap:6px"></div>
+              <input id="ti" placeholder="Add fiber…" autocomplete="off" oninput="handleFiberInput(this.value)"
+                onblur="hideDropdown('f-ac')" />
+              <div id="f-ac" class="dropdown hidden"></div>
+            </div>
+            <input type="hidden" id="fibs" name="target_fibers" value="{{ user.preferred_fiber_types }}" />
+          </div>
+        </div>
+        <div class="g2">
+          <div class="field"><label>Max Distance (km)</label><input type="number" name="max_distance_km"
+              value="{{ user.max_distance_km }}" /></div>
+          <div class="field"><label>Min. Biodegradability Score</label><input type="number" step="0.001" min="0" max="1"
+              name="min_biodegradability" value="{{ user.min_biodegradability_score }}" /></div>
+        </div>
+        <div class="field">
+          <label>Operational Status</label>
+          <select name="operational_status">
+            <option value="active" {% if user.operational_status=='active' %}selected{% endif %}>Active</option>
+            <option value="hibernating" {% if user.operational_status=='hibernating' %}selected{% endif %}>Hibernating
+            </option>
+          </select>
+        </div>
+      </div>
+      <div class="sep"></div>
+
+      <!-- Location & Contact -->
+      <div class="sec">
+        <div class="sec-lbl">Location &amp; Contact</div>
+        <div class="g2">
+          <div class="field"><label>Barangay</label><input id="brgy" name="barangay" readonly /></div>
+          <div class="field"><label>City</label><input id="city" name="city" readonly /></div>
+        </div>
+        <div class="sep" style="margin-bottom:14px"></div>
+        <div class="field" style="margin-bottom:14px">
+          <label>Display Address</label>
+          <!-- Populated on init via reverse geocode; editable -->
+          <div class="addr-wrap">
+            <input id="addr" name="display_address" oninput="searchAddress(this.value)"
+              onblur="hideDropdown('addr-ac')" />
+            <button type="button" class="pin-btn" onclick="openMap()">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+            </button>
+            <div id="addr-ac" class="dropdown hidden"></div>
+          </div>
+          <input type="hidden" id="lat" name="lat" value="{{ user.latitude|default:14.6335 }}" />
+          <input type="hidden" id="lng" name="lng" value="{{ user.longitude|default:121.0437 }}" />
+        </div>
+        <div class="g2" style="margin-bottom:0">
+          <div class="field">
+            <label>Contact Number</label>
+            <div style="display:grid;grid-template-columns:60px 1fr;gap:8px">
+              <input value="+63" style="pointer-events:none" />
+              <input name="contact_number" value="{{ user.contact_number }}" />
+            </div>
+          </div>
+          <div></div>
+        </div>
+      </div>
+      <div class="sep"></div>
+
+      <!-- Security & Actions -->
+      <div class="sec">
+        <div class="g2" style="margin-bottom:16px">
+          <div class="field"><label>New Password (leave blank to keep current)</label><input type="password"
+              name="new_password" autocomplete="new-password" /></div>
+          <div class="field"><label>Confirm Password</label><input type="password" name="confirm_password"
+              autocomplete="new-password" /></div>
+        </div>
+
+        <!-- Pre-filled with user's current tier; disabled by default so it isn't sent unless modified -->
+        <input type="hidden" name="subscription_tier" id="sub-tier" value="{{ user.subscription_tier }}" disabled />
+        <input type="hidden" id="init-2fa" value="{{ user.is_2fa_enabled|yesno:'true,false'|default:'false' }}" />
+
+        {% if user.subscription_tier == 'PRO' %}
+        <button type="button" id="unsub-btn" onclick="stageUnsub()" class="btn-gold" style="margin-bottom:16px">
+          Unsubscribe from Premium Features
+        </button>
+        {% endif %}
+
+        <div class="f-row" style="margin-bottom:20px">
+          <div class="toggle" id="tgl" onclick="onToggle2FA()"></div>
+          <span style="font-size:14px;color:#333">Two-Factor Authentication</span>
+        </div>
+        <div class="f-row" style="flex-wrap:wrap;gap:12px">
+          <button type="button" class="btn-gold" onclick="onSave()">Save Changes</button>
+          <a href="{% url 'tuab_profile' %}" class="btn-outline">Cancel</a>
+        </div>
+      </div>
+
+    </div>
+  </form>
+
+
+  <!-- Map Modal -->
+  <div id="map-modal" class="map-bg hidden">
+    <div class="map-box">
+      <div
+        style="display:flex;justify-content:space-between;align-items:flex-start;padding:14px 16px 10px;background:#f3f3f3">
+        <div>
+          <div style="display:flex;align-items:center;gap:7px">
+            <svg width="18" height="18" fill="none" stroke="var(--gold)" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            <span style="font-size:20px;color:#1f1f1f">Pick on Map</span>
+          </div>
+          <div style="font-size:12px;color:#7a7a7a;margin-top:4px">Click anywhere or drag the marker to set your
+            location.</div>
+        </div>
+        <button type="button" onclick="closeMap()"
+          style="background:none;border:none;cursor:pointer;color:#333;padding:2px">
+          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div style="padding:0 12px">
+        <div id="picker-map"></div>
+      </div>
+      <div style="display:flex;justify-content:center;padding:12px 16px 16px;background:#f3f3f3">
+        <button type="button" onclick="confirmMap()"
+          style="width:min(220px,100%);background:var(--gold);color:#fff;border:none;border-radius:30px;padding:12px;font-size:14px;font-family:'Poppins',sans-serif;cursor:pointer">
+          Confirm Location
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 2FA Modal -->
+  <div id="twofa-modal" class="modal-bg hidden">
+    <div style="background:#fff;border-radius:20px;padding:36px 40px 32px;width:440px;max-width:95vw">
+      <h3 style="font-weight:400;font-size:18px;margin-bottom:8px;color:#1a1a1a">Set Up Two-Factor Authentication</h3>
+      <p style="font-size:12px;color:#1a1a1a;margin-bottom:18px;line-height:1.5">Enter the secret key in an
+        authenticator, then enter the TOTP to confirm.</p>
+      <div id="totp-secret-display"
+        style="background:#fef7ea;border-radius:12px;padding:15px 20px;font-size:13px;font-weight:500;color:var(--gold);text-align:center;letter-spacing:.5px;margin-bottom:16px;word-break:break-all">
+        Loading secret key...
+      </div>
+      <input id="totp-in" type="text" inputmode="numeric" maxlength="6" placeholder="______"
+        style="width:100%;border:none;border-bottom:1.5px solid var(--gold);border-radius:0;padding:10px 4px;font-size:28px;letter-spacing:16px;text-align:center;background:transparent;color:#E8A020;outline:none;margin-bottom:28px;caret-color:var(--gold)" />
+      <div style="display:flex;gap:12px;justify-content:flex-end">
+        <button type="button" onclick="cancel2FA()"
+          style="background:none;border:none;font-family:'Poppins',sans-serif;font-weight:300;font-size:14px;color:#E8A020;cursor:pointer;padding:10px 20px">Cancel</button>
+        <button type="button" onclick="verify2FA()"
+          style="background:#E8A020;border:none;border-radius:30px;padding:11px 32px;font-size:14px;font-family:'Poppins',sans-serif;font-weight:300;color:#FFE495;cursor:pointer">Verify
+          &amp; Enable</button>
+      </div>
+    </div>
+  </div>
+
+
+  <script>
+    // ── Configuration ──
+    // These blocks are designed to work both as a Django Template and as a local Mock file.
+    const UID = '{{ user.id }}'.includes('{{') ? '1' : '{{ user.id }}';
+    const API_VERIFY_2FA = '/api/verify-2fa/';
+    const API_GENERATE_2FA = '/api/generate-2fa-secret/';
+    const API_LOCATION_DETAILS = '/api/get-location-details/';
+
+    // Target Fibers: Uses mock list if server context is missing
+    const FIBERS = (function (raw) {
+      if (raw.includes('{{') || !raw.trim()) return ['Cotton', 'Polyester', 'Rayon', 'Viscose', 'Wool', 'Linen', 'Silk', 'Denim', 'Nylon', 'Bamboo', 'Acrylic'];
+      try { return raw.startsWith('[') ? JSON.parse(raw.replace(/'/g, '"')) : raw.split(',').map(s => s.trim()); } catch (e) { return []; }
+    })('{{ fiber_options|safe }}');
+
+    // ── Helpers & Forms ──
+    const $ = id => document.getElementById(id);
+    const hideDropdown = id => setTimeout(() => $(id)?.classList.add('hidden'), 200);
+    const initial = {};
+    const normalize = el => {
+      if (el.type === 'file') return el.files[0]?.name || '';
+      if (el.type === 'checkbox' || el.type === 'radio') return String(!!el.checked);
+      const v = el.value?.trim() || '';
+      if (['lat', 'lng'].includes(el.name)) return (Number.isNaN(parseFloat(v)) ? '' : (+v).toFixed(7));
+      return ['max_distance_km', 'min_biodegradability'].includes(el.name) || el.type === 'number'
+        ? (Number.isNaN(parseFloat(v)) ? '' : String(Number(v))) : v;
+    };
+    const syncAll = () => document.querySelectorAll('#ep-form [name]').forEach(el => initial[el.name] = normalize(el));
+
+    // ── Photo Preview ──
+    function previewPhoto(el) {
+      const file = el.files[0];
+      if (file) {
+        $('photo-pvw').innerHTML = `<img src="${URL.createObjectURL(file)}" style="width:60px;height:60px;border-radius:50%;object-fit:cover" />`;
+      }
+    }
+
+    // ── Fiber Tags ──
+    let tags = ($('fibs').value || '').split(',').map(s => s.trim()).filter(Boolean);
+
+    function renderTags() {
+      $('tags').innerHTML = tags.map(t => `<div class="t-chip">${t}<span onclick="toggleTag('${t}')">×</span></div>`).join('');
+      $('fibs').value = tags.join(',');
+    }
+    function handleFiberInput(val) {
+      const matches = FIBERS.filter(f => f.toLowerCase().includes(val.toLowerCase()) && !tags.includes(f));
+      $('f-ac').innerHTML = matches.map(f => `<div onmousedown="toggleTag('${f}')">${f}</div>`).join('');
+      $('f-ac').classList.toggle('hidden', !val || !matches.length);
+    }
+    function toggleTag(fiber) {
+      tags = tags.includes(fiber) ? tags.filter(t => t !== fiber) : [...tags, fiber];
+      renderTags();
+      $('ti').value = '';
+      $('f-ac').classList.add('hidden');
+    }
+
+    // ── Location ──
+    async function syncLocationMetadata(lat, lng, skipAddr = false) {
+      if (!lat || !lng) return;
+      try {
+        if (!skipAddr) {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, { headers: { 'Accept-Language': 'en-US' } });
+          const data = await res.json();
+          if (data.display_name) $('addr').value = data.display_name;
+        }
+      } catch { }
+      try {
+        const res = await fetch(`${API_LOCATION_DETAILS}?lat=${lat}&lng=${lng}`);
+        if (res.ok) {
+          const data = await res.json();
+          $('city').value = data.city || '';
+          $('brgy').value = data.barangay || '';
+        }
+      } catch { }
+    }
+
+    let addrTimer, addrResults = [];
+    function searchAddress(query) {
+      if (query.length < 3) return $('addr-ac').classList.add('hidden');
+      clearTimeout(addrTimer);
+      addrTimer = setTimeout(async () => {
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Philippines')}&limit=5&countrycodes=ph`, { headers: { 'Accept-Language': 'en-US' } });
+          addrResults = await res.json();
+          $('addr-ac').innerHTML = addrResults.map((r, i) => `<div onclick="selectAddress(${i})">${r.display_name}</div>`).join('');
+          $('addr-ac').classList.toggle('hidden', !addrResults.length);
+        } catch { $('addr-ac').classList.add('hidden') }
+      }, 400);
+    }
+    function selectAddress(i) {
+      const r = addrResults[i];
+      $('addr').value = r.display_name;
+      $('lat').value = (+r.lat).toFixed(7);
+      $('lng').value = (+r.lon).toFixed(7);
+      $('addr-ac').classList.add('hidden');
+      syncLocationMetadata($('lat').value, $('lng').value, true);
+    }
+
+    // ── Map Picker ──
+    let mapInst = null, mapMarker = null, mapLat, mapLng;
+    function openMap() {
+      const lat = parseFloat($('lat').value) || 14.6335;
+      const lng = parseFloat($('lng').value) || 121.0437;
+      $('map-modal').classList.remove('hidden');
+      setTimeout(() => {
+        if (mapInst) { mapInst.remove(); mapInst = null; }
+        mapInst = L.map('picker-map').setView([lat, lng], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapInst);
+        mapMarker = L.marker([lat, lng], { draggable: true }).addTo(mapInst);
+        mapMarker.on('dragend', e => { const ll = e.target.getLatLng(); mapLat = ll.lat; mapLng = ll.lng; });
+        mapInst.on('click', e => { mapLat = e.latlng.lat; mapLng = e.latlng.lng; mapMarker.setLatLng(e.latlng); });
+        mapLat = lat; mapLng = lng;
+      }, 120);
+    }
+    function closeMap() {
+      $('map-modal').classList.add('hidden');
+      if (mapInst) { mapInst.remove(); mapInst = null; }
+    }
+    async function confirmMap() {
+      $('lat').value = (+mapLat).toFixed(7);
+      $('lng').value = (+mapLng).toFixed(7);
+      await syncLocationMetadata($('lat').value, $('lng').value);
+      closeMap();
+    }
+
+    // ── 2FA ──
+    const INIT_2FA = $('init-2fa')?.value === 'true';
+    let is2FA = INIT_2FA, staged2FA = null;
+
+    function onToggle2FA() {
+      const current = (staged2FA !== null) ? staged2FA : is2FA;
+      staged2FA = !current;
+      $('tgl').classList.toggle('on', staged2FA);
+    }
+    function cancel2FA() {
+      $('tgl').classList.toggle('on', is2FA);
+      staged2FA = null;
+      $('twofa-modal').classList.add('hidden');
+    }
+    function verify2FA() {
+      const totp = $('totp-in').value;
+      if (totp.length < 6) return;
+
+      const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+      fetch(API_VERIFY_2FA, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ totp, user_id: UID })
+      })
+        .then(res => res.ok ? res.json() : Promise.reject())
+        .then(data => {
+          if (data.status === 'success') {
+            $('twofa-modal').classList.add('hidden');
+            commitSave();
+          }
+        })
+        .catch(() => { });
+    }
+
+    // ── Subscription ──
+    function stageUnsub() {
+      const btn = $('unsub-btn');
+      btn.textContent = 'Unsubscription staged — will apply on Save';
+      Object.assign(btn.style, { background: '#fce8e0', border: '1.5px solid #f5c0a0', color: '#c0410e', cursor: 'default' });
+      btn.disabled = true;
+      $('sub-tier').value = 'FREE';
+      $('sub-tier').disabled = false;
+    }
+
+    // ── Save ──
+    async function onSave() {
+      if (staged2FA === true && !is2FA) {
+        $('twofa-modal').classList.remove('hidden');
+        $('totp-secret-display').textContent = 'Loading secret key...';
+        $('totp-in').value = '';
+        try {
+          const csrf = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+          const res = await fetch(API_GENERATE_2FA, { method: 'POST', headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' } });
+          const data = res.ok ? await res.json() : null;
+          $('totp-secret-display').textContent = data?.secret || (res.ok ? 'Error: Missing secret' : 'Server error. Please try again.');
+        } catch {
+          $('totp-secret-display').textContent = 'Network error. Please try again.';
+        }
+      } else {
+        commitSave();
+      }
+    }
+
+    function commitSave() {
+      const form = $('ep-form');
+      const newPwd = form.querySelector('[name="new_password"]');
+      const confPwd = form.querySelector('[name="confirm_password"]');
+      if (newPwd?.value && newPwd.value !== confPwd.value) return;
+
+      if (staged2FA !== null) is2FA = staged2FA;
+      if (INIT_2FA && !is2FA) form.appendChild(Object.assign(document.createElement('input'), { type: 'hidden', name: 'is_2fa_enabled', value: 'false' }));
+
+      form.querySelectorAll('[name]').forEach(el => {
+        if (el.name === 'csrfmiddlewaretoken' || el.name === 'is_2fa_enabled') return;
+        if (normalize(el) === (initial[el.name] ?? normalize(el))) {
+          el.disabled = true;
+          setTimeout(() => el.disabled = false, 400);
+        }
+      });
+
+      alert(JSON.stringify(Object.fromEntries(new FormData(form)), null, 2));
+      // form.submit();
+    }
+
+
+
+    // ── Init ──
+    window.addEventListener('load', () => {
+      renderTags();
+      const l = $('lat'), n = $('lng');
+      if (l.value && !isNaN(parseFloat(l.value))) l.value = (+l.value).toFixed(7);
+      if (n.value && !isNaN(parseFloat(n.value))) n.value = (+n.value).toFixed(7);
+      syncAll();
+      if (is2FA) $('tgl').classList.add('on');
+    });
+  </script>
+</body>
+
+</html>

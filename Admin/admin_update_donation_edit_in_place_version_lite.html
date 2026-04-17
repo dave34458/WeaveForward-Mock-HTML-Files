@@ -388,14 +388,14 @@
           <p style="font-size:12px;margin-bottom:6px;"><strong>Change Status To:</strong></p>
           <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:10px;">
             <button type="button" id="claim-btn" class="map-btn" onclick="openClaimModal()"
-              style="justify-content:center;">Claimed (Pickup Only)</button>
+              style="justify-content:center;">Claimed (Allowed when Pending)</button>
 
             <button type="submit" form="status-pending-form" class="map-btn" style="justify-content:center;">Unclaim
-              (Available If Claimed)</button>
+              (Available when Claimed)</button>
             <button type="submit" form="status-cancelled-form" class="map-btn" style="justify-content:center;">Cancelled
-              (Available If Pending, Claimed, In Transit)</button>
+              (Available when Pending, Claimed, In-Transit)</button>
             <button type="submit" form="status-archived-form" class="map-btn" style="justify-content:center;">Archived
-              (Available Unless In Transit and Delivery On Going)</button>
+              (Always Available)</button>
           </div>
 
           <p style="font-size:12px;margin-bottom:6px;"><strong>Preferred Pick-Up Date:</strong></p>
@@ -430,7 +430,8 @@
             <button type="button" id="drop-map-btn" class="map-btn" onclick="openMapPicker('dropoff')">Pick on
               Map</button>
           </div>
-          <div class="mini-note">Donation items and pickup details are editable only when the status is PENDING or CLAIMED.</div>
+          <div class="mini-note">Donation items and pickup details are editable only when the status is PENDING or
+            CLAIMED.</div>
 
           <button type="submit" id="save-changes-btn" class="btn-submit">Save Changes</button>
         </div>
