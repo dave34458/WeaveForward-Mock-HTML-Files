@@ -1,0 +1,646 @@
+<!--
+  WeaveForward Admin Edit TUAB (admin_edit_tuab.html)
+  PATCH  /admin/tuab/{{ user.id }}/
+  DJANGO CONVERSION NOTES: uncomment {% csrf_token %}
+-->
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Edit TUAB</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    :root {
+      --g: #e8a020;
+      --bg: #f5f4f0;
+      --brd: #e0dbd4;
+      --lt: #fdf6e8;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Poppins, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: #222;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .panel {
+      background: #fff;
+      border: 1.5px solid var(--brd);
+      border-radius: 14px;
+      padding: 24px;
+      width: 100%;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
+    }
+
+    .group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 14px;
+    }
+
+    .group:last-of-type {
+      margin-bottom: 0;
+    }
+
+    .up {
+      font-size: 10px;
+      color: #888;
+      text-transform: uppercase;
+    }
+
+    .in {
+      width: 100%;
+      height: 44px;
+      border: 1.5px solid #d5d5d5;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 14px;
+      outline: none;
+      background: #fff;
+    }
+
+    .in:focus {
+      border-color: var(--g);
+    }
+
+    select.in {
+      appearance: none;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23e8a020' stroke-width='2' viewBox='0 0 24 24'%3E%3Cpolyline points='6,9 12,15 18,9'/%3E%3C/svg%3E") no-repeat right 14px center;
+      padding-right: 34px;
+    }
+
+    .g2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .g2 .group {
+      margin-bottom: 0;
+    }
+
+    hr {
+      border: none;
+      border-top: 1px solid var(--brd);
+      margin: 20px 0;
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 12px;
+      border-radius: 30px;
+      border: none;
+      background: var(--g);
+      color: #fff;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+
+    .pfp-area {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .pfp-img {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--brd);
+    }
+
+    .pfp-change {
+      font-size: 12px;
+      color: var(--g);
+      cursor: pointer;
+      font-weight: 600;
+      border: none;
+      background: none;
+    }
+
+    .tfa-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      border: 1.5px solid #d5d5d5;
+      border-radius: 8px;
+      height: 44px;
+    }
+
+    .tfa-status {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .btn-disable {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 6px;
+      border: 1px solid #e2e2e2;
+      background: #f4f4f4;
+      color: #c0392b;
+      cursor: pointer;
+    }
+
+    .pin-wrap {
+      position: relative;
+    }
+
+    .pin-wrap .in {
+      padding-right: 42px;
+    }
+
+    .pin {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--g);
+      cursor: pointer;
+    }
+
+    .ac-list,
+    .f-dd {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      background: #fff;
+      border: 1.5px solid var(--brd);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .1);
+      overflow-y: auto;
+    }
+
+    .ac-list {
+      z-index: 50;
+      top: 100%;
+      max-height: 180px;
+    }
+
+    .f-dd {
+      z-index: 400;
+      right: 0;
+      top: calc(100% + 2px);
+      max-height: 200px;
+    }
+
+    .ac-item,
+    .f-dd div {
+      padding: 10px 14px;
+      font-size: 13px;
+      cursor: pointer;
+      border-bottom: 1px solid #f5f5f5;
+    }
+
+    .ac-item:hover,
+    .f-dd div:hover {
+      background: var(--lt);
+    }
+
+    .t-box {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      border: 1.5px solid #d5d5d5;
+      border-radius: 8px;
+      padding: 8px 10px;
+      min-height: 44px;
+      position: relative;
+      cursor: text;
+    }
+
+    .t-box:focus-within {
+      border-color: var(--g);
+    }
+
+    #tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .t-chip {
+      background: var(--g);
+      color: #fff;
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .t-chip:hover {
+      transform: translateY(-1px);
+    }
+
+    .t-chip span {
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1;
+      margin-left: 2px;
+    }
+
+    #ti {
+      border: none !important;
+      outline: none !important;
+      font-size: 13px;
+      background: transparent;
+      min-width: 80px;
+      flex: 1;
+      padding: 0 !important;
+      height: auto !important;
+    }
+
+    .btn-remove-pay {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1.5px solid #e2e2e2;
+      background: #f4f4f4;
+      color: #c0392b;
+      font-weight: 600;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .btn-remove-pay:disabled {
+      cursor: default;
+      opacity: .7;
+      background: #fce8e0;
+      border-color: #f5c0a0;
+      color: #c0410e;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+
+    .modal-box {
+      background: #f3f3f3;
+      border-radius: 16px;
+      overflow: hidden;
+      width: min(640px, 95vw);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, .22);
+    }
+
+    .map-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 14px 16px 10px;
+    }
+
+    .map-title {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      color: var(--g);
+    }
+
+    .map-title-text {
+      font-size: 20px;
+      color: #1f1f1f;
+    }
+
+    .map-caption {
+      font-size: 12px;
+      color: #7a7a7a;
+      margin-top: 4px;
+    }
+
+    .map-close {
+      border: none;
+      background: none;
+      color: #333;
+      cursor: pointer;
+    }
+
+    #picker-map {
+      width: 100%;
+      height: 300px;
+    }
+
+    .map-actions {
+      display: flex;
+      justify-content: center;
+      padding: 12px 16px 16px;
+    }
+  </style>
+</head>
+
+<body>
+  <form id="frm" method="post" enctype="multipart/form-data">
+    <div class="panel">
+
+      <!-- Profile Picture -->
+      <div class="group">
+        <label class="up">Profile Picture</label>
+        <div class="pfp-area">
+          <img id="pfp-preview" class="pfp-img" src="{{ user.upload.file_path }}" alt="Profile"
+            onerror="this.src='https://ui-avatars.com/api/?name={{ user.business_name }}&background=e8d5a8&color=8b6914&size=64'">
+          <button type="button" class="pfp-change" onclick="getEl('pfp-in').click()">Change Photo</button>
+          <input id="pfp-in" name="photo" type="file" accept="image/*" class="hidden"
+            onchange="previewPfp(this.files[0])">
+        </div>
+      </div>
+
+      <!-- Account Status -->
+      <div class="group">
+        <label class="up">Account Status *</label>
+        <select class="in" name="status" required>
+          <option value="ACTIVE" {% if user.status=='ACTIVE' %}selected{% endif %}>Active</option>
+          <option value="UNDER_REVIEW" {% if user.status=='UNDER_REVIEW' %}selected{% endif %}>Under Review</option>
+          <option value="REJECTED" {% if user.status=='REJECTED' %}selected{% endif %}>Rejected</option>
+          <option value="ARCHIVED" {% if user.status=='ARCHIVED' %}selected{% endif %}>Archived</option>
+        </select>
+      </div>
+
+      <hr>
+
+      <!-- Business Info -->
+      <div class="group"><label class="up">Business Name *</label><input class="in" name="business_name"
+          value="{{ user.business_name }}" required></div>
+      <div class="group"><label class="up">Description</label><input class="in" name="description"
+          value="{{ user.description }}"></div>
+      <div class="group"><label class="up">Social / Website Link</label><input class="in" name="social_link"
+          value="{{ user.social_link }}"></div>
+      <div class="group"><label class="up">Contact Number</label><input class="in" type="tel" name="contact_no"
+          value="{{ user.contact_no }}"></div>
+
+      <hr>
+
+      <!-- Operational Settings -->
+      <div class="g2">
+        <div class="group"><label class="up">Max Active Claims</label><input class="in" type="number" step="1" min="0"
+            name="max_active_claims" value="{{ user.max_active_claims }}"></div>
+        <div class="group"><label class="up">Max Distance (km)</label><input class="in" type="number" step="0.01"
+            min="0" max="100" name="max_distance_km" value="{{ user.max_distance_km }}"></div>
+      </div>
+      <div class="g2" style="margin-top:14px">
+        <div class="group"><label class="up">Min. Biodegradability Score</label><input class="in" type="number"
+            step="0.01" min="0" max="100" name="min_biodeg_score" value="{{ user.min_biodegradability_score }}"></div>
+        <div class="group"><label class="up">Operational Status</label>
+          <select class="in" name="operational_status">
+            <option value="ACTIVE" {% if user.operational_status=='ACTIVE' %}selected{% endif %}>Active</option>
+            <option value="HIBERNATING" {% if user.operational_status=='HIBERNATING' %}selected{% endif %}>Hibernating
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Target Fibers -->
+      <div class="group" style="margin-top:14px;position:relative">
+        <label class="up">Target Fiber Types</label>
+        <div class="t-box" onclick="getEl('ti').focus()">
+          <div id="tags"></div>
+          <input id="ti" placeholder="Add fiber…" autocomplete="off" oninput="handleFiberInput(this.value)"
+            onblur="hideDd('f-ac')">
+          <div id="f-ac" class="f-dd hidden"></div>
+        </div>
+        <input type="hidden" id="fibs" name="target_fibers" value="{{ user.preferred_fiber_types }}">
+      </div>
+
+      <hr>
+
+      <!-- Email & 2FA -->
+      <div class="group"><label class="up">Email Address *</label><input class="in" type="email" name="email"
+          value="{{ user.email }}" required></div>
+      <div class="group">
+        <label class="up">Two-Factor Authentication</label>
+        <input id="2fa-field" name="is_2fa_enabled" type="hidden" value="">
+        <div class="tfa-row">
+          <span class="tfa-status" style="color: #4a7c59;">Enabled</span>
+          <button type="button" class="btn-disable" onclick="disable2FA(this)">Disable 2FA</button>
+        </div>
+      </div>
+
+      <hr>
+
+      <!-- Password -->
+      <div class="group"><label class="up">New Password (leave blank to keep current)</label><input class="in"
+          type="password" name="password"></div>
+      <div class="group"><label class="up">Confirm New Password</label><input class="in" type="password"
+          name="confirm_password"></div>
+
+      <hr>
+
+      <!-- Remove Payment Method -->
+      <div class="group">
+        <label class="up">Payment Method</label>
+        <input id="remove-pay" name="remove_payment_method" type="hidden" value="0">
+        <button type="button" class="btn-remove-pay" id="btn-remove-pay" onclick="stageRemovePayment(this)">Remove
+          Payment Method</button>
+      </div>
+
+      <hr>
+
+      <!-- Location -->
+      <div class="g2">
+        <div class="group"><label class="up">Barangay</label><input id="brgy" class="in" name="barangay" readonly></div>
+        <div class="group"><label class="up">City</label><input id="city" class="in" name="city" readonly></div>
+      </div>
+      <div class="group" style="position:relative;margin-top:14px">
+        <label class="up">Display Address *</label>
+        <div class="pin-wrap">
+          <input id="addr" class="in" name="display_address" placeholder="Loading address…"
+            oninput="srchAddr(this.value)" onblur="hideDd('ac')" required>
+          <button type="button" class="pin" onclick="openMap()">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+          </button>
+        </div>
+        <div id="ac" class="ac-list hidden"></div>
+        <input id="lat" name="lat" type="hidden" value="{{ user.latitude }}">
+        <input id="lng" name="lng" type="hidden" value="{{ user.longitude }}">
+      </div>
+
+      <button type="submit" class="btn-submit">Save Changes</button>
+    </div>
+  </form>
+
+  <!-- Map Picker Modal -->
+  <div id="map-modal" class="modal hidden">
+    <div class="modal-box">
+      <div class="map-head">
+        <div>
+          <div class="map-title">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            <span class="map-title-text">Pick on Map</span>
+          </div>
+          <div class="map-caption">Click or drag the marker to set the location.</div>
+        </div>
+        <button type="button" class="map-close" onclick="closeMap()">
+          <svg style="display:block" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"
+            viewBox="0 0 24 24">
+            <path d="M18 6L6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div id="picker-map"></div>
+      <div class="map-actions">
+        <button type="button" class="btn-submit" style="width:min(220px,100%);margin:0" onclick="confirmMap()">Confirm
+          Location</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- 1. Config ---
+    const UID = '{{ user.id }}'.includes('{{') ? '1' : '{{ user.id }}';
+    const ENDPOINT = `/admin/tuab/${UID}/`;
+    const API_LOCATION_DETAILS = '/api/get-location-details/';
+    const API_FIBER_OPTIONS = '';
+    const FALLBACK_FIBERS = ['Cotton', 'Polyester', 'Rayon', 'Viscose', 'Wool', 'Linen', 'Silk', 'Denim', 'Nylon', 'Bamboo', 'Acrylic'];
+    let FIBERS = FALLBACK_FIBERS;
+
+    // --- 2. Helpers & Baselines ---
+    const getEl = id => document.getElementById(id);
+    const hideDd = id => setTimeout(() => getEl(id)?.classList.add('hidden'), 200);
+    const safeFetch = (url, opts) => fetch(url, opts).then(r => r.ok ? r.json() : null).catch(() => null);
+    const csrf = () => document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    const initial = {};
+    const norm = el => {
+      if (el.type === 'file') return '';
+      if (el.type === 'checkbox' || el.type === 'radio') return String(!!el.checked);
+      const v = el.value?.trim() ?? '';
+      if (v === '') return '';
+      return ['lat', 'lng'].includes(el.name) || el.type === 'number' ? (isNaN(+v) ? '' : String(Number(v))) : v;
+    };
+    const syncInit = el => { if (el?.name) initial[el.name] = norm(el); };
+    const syncAll = () => document.querySelectorAll('#frm [name]').forEach(syncInit);
+
+    // --- 3. Profile Photo ---
+    function previewPfp(file) {
+      if (!file?.type.startsWith('image/')) return;
+      const r = new FileReader();
+      r.onload = e => getEl('pfp-preview').src = e.target.result;
+      r.readAsDataURL(file);
+    }
+
+    // --- 4. Fiber Tags ---
+    let tags = (getEl('fibs').value || '').split(',').map(s => s.trim()).filter(Boolean);
+    const renderTags = () => { getEl('tags').innerHTML = tags.map(t => `<div class="t-chip">${t}<span onclick="toggleTag('${t}')">×</span></div>`).join(''); getEl('fibs').value = tags.join(','); };
+    const handleFiberInput = val => { const m = FIBERS.filter(f => f.toLowerCase().includes(val.toLowerCase()) && !tags.includes(f)); getEl('f-ac').innerHTML = m.map(f => `<div onmousedown="toggleTag('${f}')">${f}</div>`).join(''); getEl('f-ac').classList.toggle('hidden', !val || !m.length); };
+    const toggleTag = f => { tags = tags.includes(f) ? tags.filter(t => t !== f) : [...tags, f]; renderTags(); getEl('ti').value = ''; getEl('f-ac').classList.add('hidden'); };
+
+    // --- 5. Location ---
+    let acTmr, acRes = [], map, mrk, tmpLat, tmpLng;
+    const rawLat = parseFloat(getEl('lat').value), rawLng = parseFloat(getEl('lng').value);
+    const hasLoc = !isNaN(rawLat) && !isNaN(rawLng);
+    const initLat = hasLoc ? rawLat.toFixed(7) : '', initLng = hasLoc ? rawLng.toFixed(7) : '';
+    if (hasLoc) { getEl('lat').value = initLat; getEl('lng').value = initLng; }
+
+    async function syncLocationMetadata(lat, lng, skipAddr = false) {
+      if (!lat || !lng) return;
+      if (!skipAddr) { const d = await safeFetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`, { headers: { 'Accept-Language': 'en-US' } }); if (d?.display_name) getEl('addr').value = d.display_name; }
+      const d = await safeFetch(`${API_LOCATION_DETAILS}?lat=${lat}&lng=${lng}`);
+      if (d) { getEl('city').value = d.city || ''; getEl('brgy').value = d.barangay || ''; }
+    }
+
+    function srchAddr(v) {
+      const ac = getEl('ac');
+      if (v.length < 3) return ac.classList.add('hidden');
+      clearTimeout(acTmr);
+      acTmr = setTimeout(async () => {
+        try { acRes = await (await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(v + ', Philippines')}&limit=5&countrycodes=ph`, { headers: { 'Accept-Language': 'en-US' } })).json(); ac.innerHTML = acRes.map((r, i) => `<div class="ac-item" onmousedown="selAddr(${i})">${r.display_name}</div>`).join(''); ac.classList.remove('hidden'); } catch { }
+      }, 350);
+    }
+
+    function selAddr(i) { getEl('addr').value = acRes[i].display_name; getEl('lat').value = (+acRes[i].lat).toFixed(7); getEl('lng').value = (+acRes[i].lon).toFixed(7); syncLocationMetadata(getEl('lat').value, getEl('lng').value, true); }
+
+    function openMap() {
+      getEl('map-modal').classList.remove('hidden');
+      tmpLat = parseFloat(getEl('lat').value) || 14.56; tmpLng = parseFloat(getEl('lng').value) || 120.99;
+      if (!map) {
+        map = L.map('picker-map').setView([tmpLat, tmpLng], 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+        mrk = L.marker([tmpLat, tmpLng], { draggable: true }).addTo(map);
+        mrk.on('dragend', e => { tmpLat = e.target.getLatLng().lat; tmpLng = e.target.getLatLng().lng; });
+        map.on('click', e => { tmpLat = e.latlng.lat; tmpLng = e.latlng.lng; mrk.setLatLng(e.latlng); });
+      } else { map.setView([tmpLat, tmpLng]); mrk.setLatLng([tmpLat, tmpLng]); }
+    }
+
+    async function confirmMap() { getEl('lat').value = (+tmpLat).toFixed(7); getEl('lng').value = (+tmpLng).toFixed(7); closeMap(); await syncLocationMetadata(getEl('lat').value, getEl('lng').value); }
+    function closeMap() { getEl('map-modal').classList.add('hidden'); }
+
+    // --- 6. Actions ---
+    function disable2FA(btn) { getEl('2fa-field').value = 'false'; btn.textContent = 'Will be disabled on save'; btn.disabled = true; btn.style.opacity = '0.5'; }
+    function stageRemovePayment(btn) { getEl('remove-pay').value = '1'; btn.textContent = 'Will be removed on save'; btn.disabled = true; }
+
+    // --- 7. Submit (PATCH) ---
+    getEl('frm').onsubmit = e => {
+      e.preventDefault();
+      const form = e.target, pw = form.password.value, cpw = form.confirm_password.value;
+      if ((pw || cpw) && pw !== cpw) { alert('Passwords do not match.'); return; }
+
+      const unchanged = el => el.type === 'file' ? el.files.length === 0 : norm(el) === (initial[el.name] ?? norm(el));
+      const fd = new FormData();
+      const photo = getEl('pfp-in');
+      if (photo.files.length > 0) fd.append('photo', photo.files[0]);
+
+      form.querySelectorAll('[name]').forEach(el => {
+        if (el.name === 'csrfmiddlewaretoken' || el.type === 'file' || unchanged(el)) return;
+        fd.append(el.name, el.value);
+      });
+
+      if (!pw) { fd.delete('password'); fd.delete('confirm_password'); } else fd.delete('confirm_password');
+      if (getEl('2fa-field').value === 'false') fd.set('is_2fa_enabled', 'false');
+      if (getEl('remove-pay').value === '1') fd.set('remove_payment_method', '1');
+
+      const payload = Object.fromEntries(fd);
+      console.log('PATCH', ENDPOINT, payload);
+      alert('PATCH ' + ENDPOINT + '\n\n' + JSON.stringify(payload, null, 2));
+
+      /* Production:
+      fetch(ENDPOINT, { method: 'PATCH', headers: { 'X-CSRFToken': csrf() }, body: fd })
+        .then(r => { if (r.ok) window.location.href = '/admin/tuabs/'; else alert('Save failed.'); });
+      */
+    };
+
+    // --- 8. Init ---
+    document.addEventListener('click', e => { if (e.target === getEl('map-modal')) closeMap(); });
+    window.addEventListener('load', async () => {
+      if (API_FIBER_OPTIONS) { const d = await safeFetch(API_FIBER_OPTIONS); if (Array.isArray(d)) FIBERS = d; else if (Array.isArray(d?.fibers)) FIBERS = d.fibers; }
+      renderTags(); syncAll();
+      initial.lat = initLat; initial.lng = initLng;
+      if (hasLoc) { await syncLocationMetadata(rawLat, rawLng, false);['addr', 'city', 'brgy'].forEach(id => syncInit(getEl(id))); }
+    });
+  </script>
+</body>
+
+</html>
