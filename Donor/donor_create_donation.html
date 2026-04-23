@@ -330,15 +330,20 @@
       let brand = card.querySelector('[name=brand]').value.trim();
       let lookupId = card.querySelector('[name=lookup_id]').value;
       
-      if (!clothing || !brand) throw new Error("Clothing and Brand are required fields.");
+      if (!condRaw || weight === '') throw new Error("Weight and Condition are required fields.");
+      if (!lookupId && (!clothing || !brand)) throw new Error("Clothing and Brand are required if no material is selected.");
       
       let itemObj = {
-        clothing_type: clothing,
-        brand: brand,
+        weight_kg: Number(weight),
         condition_rating: condRaw
       };
-      if (weight !== '') itemObj.weight_kg = Number(weight);
-      if (lookupId !== '') itemObj.lookup_id = Number(lookupId);
+
+      if (lookupId !== '') {
+        itemObj.lookup_id = Number(lookupId);
+      } else {
+        itemObj.clothing_type = clothing;
+        itemObj.brand = brand;
+      }
       
       items.push(itemObj);
     });

@@ -515,25 +515,56 @@
           ? Number(card.querySelector('[name=lookup_id]').value) : null
       };
 
+      // New item — no item_id
       if (!current.item_id) {
-        var missing = ['clothing_type', 'brand', 'condition_rating'].filter(function (k) { return !current[k]; });
+        var missing = ['condition_rating'].filter(function (k) { return !current[k]; });
         if (current.weight_kg === null) missing.push('weight_kg');
+        
+        // If lookup_id is present, we don't need brand/clothing_type
+        // If lookup_id is absent, we NEED brand/clothing_type
+        if (!current.lookup_id) {
+            if (!current.clothing_type) missing.push('clothing_type');
+            if (!current.brand) missing.push('brand');
+        }
+
         if (missing.length) throw new Error('New item is missing: ' + missing.join(', '));
-        var obj = {};
-        Object.keys(current).forEach(function (k) {
-          if (k !== 'item_id' && current[k] !== null) obj[k] = current[k];
-        });
+        
+        var obj = {
+            weight_kg: current.weight_kg,
+            condition_rating: current.condition_rating
+        };
+        if (current.lookup_id) {
+            obj.lookup_id = current.lookup_id;
+        } else {
+            obj.clothing_type = current.clothing_type;
+            obj.brand = current.brand;
+        }
         return obj;
       }
 
+      // Existing item — only send changed fields
       var baseline = JSON.parse(card.dataset.initial);
       var patch = { item_id: current.item_id };
-      ['clothing_type', 'weight_kg', 'condition_rating', 'brand', 'lookup_id'].forEach(function (k) {
-        if (JSON.stringify(current[k]) !== JSON.stringify(baseline[k])) patch[k] = current[k];
+
+      // Independent fields — standard diff
+      ['weight_kg', 'condition_rating'].forEach(function (k) {
+        if (JSON.stringify(current[k]) !== JSON.stringify(baseline[k])) {
+          if (current[k] !== null) patch[k] = current[k];
+        }
       });
-      var obj = patch;
-      Object.keys(obj).forEach(function (k) { if (obj[k] === null) delete obj[k]; });
-      return Object.keys(obj).length > 1 ? obj : null;
+
+      // Lookup-coupled fields — special handling
+      if (current.lookup_id) {
+        if (current.lookup_id !== baseline.lookup_id) {
+          patch.lookup_id = current.lookup_id;
+        }
+      } else {
+        // No lookup match — approximation needed
+        patch.clothing_type = current.clothing_type;
+        patch.brand = current.brand;
+      }
+
+      return Object.keys(patch).length > 1 ? patch : null;
     }
 
     document.getElementById('tuab-form').onsubmit = function (e) {
