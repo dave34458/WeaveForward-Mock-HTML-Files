@@ -182,10 +182,10 @@
   const data = {
     cond: ['Good', 'Like New', 'Fair', 'Poor'],
     lup: [
-      { lookup_id: 1, clothing_type: 'Pants', brand: "Levi's", fiber_json: '80% Cotton, 20% Polyester' },
-      { lookup_id: 2, clothing_type: 'Pants', brand: "Levi's", fiber_json: '99% Cotton, 1% Elastane' },
-      { lookup_id: 3, clothing_type: 'Shirt', brand: 'Uniqlo', fiber_json: '100% Cotton' },
-      { lookup_id: 4, clothing_type: 'Shirt', brand: 'H&M', fiber_json: '50% Cotton, 50% Polyester' }
+      { lookup_id: 1, category: '501 Original Fit', clothing_type: 'Pants', brand: "Levi's", fiber_json: '80% Cotton, 20% Polyester' },
+      { lookup_id: 2, category: '511 Slim Fit', clothing_type: 'Pants', brand: "Levi's", fiber_json: '99% Cotton, 1% Elastane' },
+      { lookup_id: 3, category: 'Supima Cotton Crew Neck T-Shirt', clothing_type: 'Shirt', brand: 'Uniqlo', fiber_json: '100% Cotton' },
+      { lookup_id: 4, category: 'Regular Fit Jersey Shirt', clothing_type: 'Shirt', brand: 'H&M', fiber_json: '50% Cotton, 50% Polyester' }
     ]
   };
 
@@ -228,7 +228,7 @@
     
     // Maintain empty option for approximation to align array lengths in Django
     select.innerHTML = isExact 
-      ? '<option value="">- select material -</option>' + matches.map(x => `<option value="${x.lookup_id}">${x.fiber_json}</option>`).join('')
+      ? '<option value="">- select material -</option>' + matches.map(x => `<option value="${x.lookup_id}">${x.fiber_json} - ${x.category}</option>`).join('')
       : '<option value=""></option>';
   }
 

@@ -667,7 +667,7 @@
       fallback.classList.toggle('hidden', !!matches.length);
       sel.innerHTML = '<option value="">- select material -</option>' +
         matches.map(function (r) {
-          return '<option value="' + r.lookup_id + '">' + r.fiber_json + '</option>';
+          return '<option value="' + r.lookup_id + '">' + r.fiber_json + ' - ' + r.category + '</option>';
         }).join('');
 
       if (matches.some(function (r) { return String(r.lookup_id) === prev; })) sel.value = prev;
@@ -903,19 +903,20 @@
 
     // 6.2 Mock Data
     var LOOKUP_TABLE = [
-      { lookup_id: 1, clothing_type: 'Pants', brand: "Levi's", fiber_json: '80% Cotton, 20% Polyester' },
-      { lookup_id: 2, clothing_type: 'Shirt', brand: 'Uniqlo', fiber_json: '100% Cotton' },
-      { lookup_id: 3, clothing_type: 'Jacket', brand: 'Nike', fiber_json: '100% Polyester' },
-      { lookup_id: 4, clothing_type: 'Jeans', brand: "Levi's", fiber_json: '99% Cotton, 1% Elastane' },
-      { lookup_id: 21, clothing_type: 'Jacket', brand: 'H&M', fiber_json: '65% Cotton, 35% Polyester' },
-      { lookup_id: 22, clothing_type: 'Jeans', brand: 'Zara', fiber_json: '98% Cotton, 2% Elastane' }
+      { lookup_id: 1, category: '501 Original Fit', clothing_type: 'Pants', brand: "Levi's", fiber_json: '80% Cotton, 20% Polyester' },
+      { lookup_id: 2, category: 'Supima Cotton Crew Neck T-Shirt', clothing_type: 'Shirt', brand: 'Uniqlo', fiber_json: '100% Cotton' },
+      { lookup_id: 3, category: 'Windrunner Jacket', clothing_type: 'Jacket', brand: 'Nike', fiber_json: '100% Polyester' },
+      { lookup_id: 4, category: '511 Slim Fit', clothing_type: 'Jeans', brand: "Levi's", fiber_json: '99% Cotton, 1% Elastane' },
+      { lookup_id: 7, category: 'Supima Cotton Crew Neck T-Shirt', clothing_type: 'T-Shirt', brand: 'Uniqlo', fiber_json: '100% Cotton' },
+      { lookup_id: 21, category: 'Oversized Twill Jacket', clothing_type: 'Jacket', brand: 'H&M', fiber_json: '65% Cotton, 35% Polyester' },
+      { lookup_id: 22, category: 'Slim Fit Jeans', clothing_type: 'Jeans', brand: 'Zara', fiber_json: '98% Cotton, 2% Elastane' }
     ];
 
     var INITIAL_CARDS = [
       {
         item_id: 1, donation_id: 1, condition_rating: 'GOOD', weight_kg: "0.350",
         lookup: {
-          lookup_id: 7, category: "Tops", brand: "Uniqlo", clothing_type: "T-Shirt",
+          lookup_id: 7, category: "Supima Cotton Crew Neck T-Shirt", brand: "Uniqlo", clothing_type: "T-Shirt",
           fiber_json: "{\"cotton\": 100}", dominant_fiber: "cotton",
           biodeg_score: "88.50", biodeg_tier: "HIGH"
         },
